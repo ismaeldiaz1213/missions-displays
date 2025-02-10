@@ -1,0 +1,15 @@
+video {
+  position: absolute; /* Position it absolutely to cover the entire page */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Ensure it covers the entire viewport while maintaining aspect ratio */
+  margin: 0;
+  padding: 0;
+  pointer-events: none; /* Prevent interaction with the video */
+}
+
+link {
+  z-index: 2;
+}
