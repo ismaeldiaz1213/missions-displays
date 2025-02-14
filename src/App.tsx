@@ -5,6 +5,7 @@ import Home from './Home/Home'
 import RegionSelection from './RegionSelection/RegionSelection'
 import Africa from './Continents/Africa'
 import Asia from './Continents/Asia'
+import NorthAmerica from './Continents/NorthAmerica'
 
 
 const App:React.FC = () => {
@@ -14,7 +15,7 @@ const App:React.FC = () => {
         <Route path="/*" element={<NotFound />} />
         <Route path="/" element={<Home />} />
         <Route path="/region-selection" element={<RegionSelection />} />
-        <Route path="/norte-america" element={<Home />} />
+        <Route path="/norte-america" element={<NorthAmerica />} />
         <Route path="/sur-america" element={<Home />} />
         <Route path="/centro-america" element={<Home />} />
         <Route path="/europa" element={<Home />} />
