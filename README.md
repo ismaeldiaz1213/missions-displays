@@ -1,50 +1,46 @@
-# React + TypeScript + Vite
+# Interactive Missions Displays
+- Goal: Allow church members at Iglesia Bautista Libertad to learn more about the missionaries the church supports through a visual interactive user experience.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Phase 0: Planning (Proof of Concept)
+### Platform
+- PowerPoint seems to be the best approach as it appears to be the easiest to implement as well as the easiest to update given that PowerPoint will sync nicely to the OneDrive which our mini PC's should connect to.
 
-Currently, two official plugins are available:
+### Hardware
+- Attached is all the hardware that was purchased:
+     - 2 Mini PC's
+     - 2 SMART Boards (repurposed)
+     - 2 LED Light Strips
+     - 4 KASA Smart Plugs
+     - 2 600 lb TV wall mounts
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Phase 1: First Product (PowerPoint)
+- Attached are pictures *coming soon* of the working powerpoint
+- Here is the link to the PowerPoint project
+- This is the current product that was launched to the church to use. However, there could still be significant improvement in the automation of updating a missionary.
 
-## Expanding the ESLint configuration
+## Phase 2: Improved Product (React Website)
+- Below will outline the plans and goals for the improvement of this product through the conversion of the powerpoint to a React website. A React website has great potential to automate the creation of a missionary page through the power of a database or some cloud services like AWS or Google Cloud.
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+### Goal 1: New Proof of Concept
+- Below are images of the first concept.
 
-- Configure the top-level `parserOptions` property like this:
+### Goal 2: Automation (SQL?) 
+- Automate the creation of a new missionary. How? Great question. While not the best approach, we will cross that bridge when we get there.
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+### Goal 3: Updates
+- Ensure that updating a missionaries information is just as easy as creating it
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+### Goal 4: Improve Visuals/ User Experience
+- Get a small sample of people to try out this new website and gather their feedback.
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+### Goal 5: Debugg
+- Test, test, test. Try to break it and see where our limitations are.
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
-```
+### Goal 6: Soft Launch
+- Launch it to the church members and get feedback on their thoughts.
+
+## Phase 3: New Launch
+- Once this new website has been tested and we can guarantee that missionaries can get updated automatically, then this new product will be launched with a key emphasis placed on ensuring the user experience is of the highest quality. (surveys will be necessary for this in order to attain a quantitative measure).
+
+## Phase 4: Updates and Expansion
+- Assuming all goes well, other church's can benefit from a website like this. We shall see how that goes though!
