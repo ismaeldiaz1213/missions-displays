@@ -6,6 +6,7 @@ import Grid2 from '@mui/material/Grid2';
 import { blueGrey } from '@mui/material/colors';
 import './na_style.css';
 
+//TODO: Make sure that this is a usable component by everyone
 const Item = styled(Paper)(({ theme }) => ({
   backgroundColor: '#fff',
   ...theme.typography.body2,
@@ -44,6 +45,7 @@ const NorthAmerica: React.FC = () => {
           </Grid2>
         </Grid2>
       </Box>
+      {/* Buttons for interaction need to go here */}
     </>
   );
 };

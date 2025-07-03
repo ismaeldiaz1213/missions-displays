@@ -10,6 +10,7 @@ const RegionSelection: React.FC = () => {
         navigate(`/${continent}`);
     };
 
+    //TODO: Improve this process, I don't like it.
     // Coordinates for the areas (as arrays of numbers)
     const africaCoords = [800, 235, 1120, 650]; // [x1, y1, x2, y2]
     const asiaCoords = [980, 10, 1500, 650]; // [x1, y1, x2, y2]
