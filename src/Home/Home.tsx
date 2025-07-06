@@ -1,6 +1,5 @@
 
 import React from 'react';
-import missionsVideo from '../assets/FinalMissionsVideo.mp4';
 import './style.css';
 import { useNavigate } from 'react-router-dom'; // If you're using React Router
 
@@ -15,7 +14,7 @@ const Home: React.FC = () => {
     <>
         <div className='video'>
                 <video
-                    src={missionsVideo}
+                    src={"/FinalMissionsVideo.mp4"}
                     autoPlay
                     loop
                     muted
