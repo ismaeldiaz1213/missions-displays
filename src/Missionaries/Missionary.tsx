@@ -8,7 +8,7 @@ import {
 import Grid2 from '@mui/material/Grid2';
 import { pdfjs, Document, Page } from 'react-pdf';
 import samplePdf from '../assets/2025_Junio_Carta_de_Oracion.pdf';
-import testPDF from '../assets/testingPDF.pdf';
+//import testPDF from '../assets/testingPDF.pdf';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -47,7 +47,7 @@ const Missionary: React.FC = () => {
       </Box>
       {/* Middle Section with image collage and PDF letter viewer */}
       <Grid2 container spacing={2} mb={4}>
-        <Grid2 xs={12} md={4}>
+        <Grid2 size={{ xs:12, md:4 }}>
           <Paper 
             sx={{ p: 2}}>
             <Typography variant="h6">Column 2</Typography>
@@ -56,12 +56,12 @@ const Missionary: React.FC = () => {
             </Typography>
           </Paper>
         </Grid2>
-        <Grid2 xs={12} md={4}>
+        <Grid2 size={{ xs:12, md:4 }}>
           <Paper sx=
             {{ p: 2 }}
           >
             <Typography variant="h6">Letras del Misionero</Typography>
-            <Document file={testPDF} onLoadSuccess={onDocumentLoadSuccess}>
+            <Document file={samplePdf} onLoadSuccess={onDocumentLoadSuccess}>
               <Page 
                 pageNumber={pageNumber} 
                 renderAnnotationLayer={false}
