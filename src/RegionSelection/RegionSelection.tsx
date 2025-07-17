@@ -1,7 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import mapImage from '../assets/BlankMap-World_gray.svg';
 import { useNavigate } from 'react-router-dom';
 import mapTitle from '../assets/MapSelectionBanner.png';
+import { Modal, Button, Box, Typography, Paper } from '@mui/material';
+import LeafletMapContainer from './LeafletMapContainer';
+
+const style = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: 400,
+  bgcolor: 'background.paper',
+  border: '2px solid #000',
+  boxShadow: 24,
+  p: 4,
+};
 
 const RegionSelection: React.FC = () => {
     const navigate = useNavigate();
@@ -9,25 +23,11 @@ const RegionSelection: React.FC = () => {
     const handleClick = (continent: string) => {
         navigate(`/${continent}`);
     };
-
-    //TODO: Improve this process, I don't like it.
-    // Coordinates for the areas (as arrays of numbers)
-    const africaCoords = [800, 235, 1120, 650]; // [x1, y1, x2, y2]
-    const asiaCoords = [980, 10, 1500, 650]; // [x1, y1, x2, y2]
-    const northAmericaCoords = [220, 10, 400, 200]; // [x1, y1, x2, y2]
+    
+    const [modalOpen, setModalOpen] = useState(false);
 
     return (
-        <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '100vh', // Full screen height
-            width: '100vw',  // Full screen width
-            overflow: 'hidden', // Prevent scrollbars
-            padding: 0,
-            margin: 0
-        }}>
+        <div>
             <img
                 src={mapTitle}
                 alt="Map Banner"
@@ -40,46 +40,43 @@ const RegionSelection: React.FC = () => {
                     objectFit: 'contain',  // Ensure the title image fits correctly
                 }}
             />
-            <img
-                src={mapImage}
-                alt="World Map"
-                useMap="#world-map" // Link the image to the map
-                style={{
-                    width: '100%',
-                    maxHeight: '80vh',
-                    height: '100%',
-                    objectFit: 'contain',  // Maintain aspect ratio of the map image
-                    outlineColor: 'black',
-                    outline: 'solid',
-                }}
-            />
-            <map name="world-map">
-                {/* Define clickable areas for each continent */}
-                <area
-                    shape="rect"
-                    coords={africaCoords.join(',')}  // Convert the array to a comma-separated string
-                    alt="Africa"
-                    title="Africa"
-                    onClick={() => handleClick('africa')}
-                    className="area africa"
-                />
-                <area
-                    shape="rect"
-                    coords={asiaCoords.join(',')}  // Convert the array to a comma-separated string
-                    alt="Asia"
-                    title="Asia"
-                    onClick={() => handleClick('asia')}
-                    className="area asia"
-                />
-                <area
-                    shape="rect"
-                    coords={northAmericaCoords.join(',')}  // Convert the array to a comma-separated string
-                    alt="Norte America"
-                    title="Norte America"
-                    onClick={() => handleClick('norte-america')}
-                    className="area asia"
-                />
-            </map>
+            <LeafletMapContainer></LeafletMapContainer>
+             {/* Bottom Buttons */}
+            <Paper sx={{ p: 2 }}>
+                <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    width="100%"
+                >
+                    <Button variant="contained" onClick={() => navigate('/memory-video')}>
+                    🎥 Memory Video
+                    </Button>
+                    <Button variant="contained" onClick={() => navigate('/timeline')}>
+                    📅 Church Timeline
+                    </Button>
+                    <Button variant="outlined" onClick={() => setModalOpen(true)}>
+                    🙌 Acknowledgments
+                    </Button>
+                </Box>
+            </Paper>
+            {/* Acknowledgments Modal */}
+            <Modal open={modalOpen} onClose={() => setModalOpen(false)}>
+                <Box sx={style}>
+                    <Typography id="modal-modal-title" variant="h6" component="h2">
+                        Volunatarios y Reconocimientos
+                    </Typography>
+                    <Typography id="modal-modal-description" sx={{ mt: 2 }}>
+                        Este proyetcto fue posible gracias a los esfuerzos y apoyo de:
+                        <ul className="list-disc ml-6 mt-2">
+                            <li>Nuestro Salvador - El Senor Jesucristo</li>
+                            <li>El Pastor Roy Carrizales</li>
+                            <li>Los miembros de la Iglesia Bautista Libertad</li>
+                            <li>Equipo Tecnico - Ismael Diaz</li>
+                        </ul>
+                    </Typography>
+                </Box>
+            </Modal>
         </div>
     );
 };
