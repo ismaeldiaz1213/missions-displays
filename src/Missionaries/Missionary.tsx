@@ -5,6 +5,8 @@ import {
   Button,
   Paper,
 } from '@mui/material';
+import ImageList from '@mui/material/ImageList';
+import ImageListItem from '@mui/material/ImageListItem';
 import Grid2 from '@mui/material/Grid2';
 import { pdfjs, Document, Page } from 'react-pdf';
 import samplePdf from '../assets/2025_Junio_Carta_de_Oracion.pdf';
@@ -40,23 +42,45 @@ const Missionary: React.FC = () => {
           Familia Robles - Lancaster, California, USA
         </Typography>
         <Typography variant="body1">
-          El painista Manny Robles con raizes Mexicanas atendio Hiles Anderson College y 
-          fue el pianista numero uno en la Iglesia Bautista Libertad. Ahora esta con
-          West Coast Baptist College como profesor de musica. Amen hermano!
+          Amen hermano!
         </Typography>
       </Box>
       {/* Middle Section with image collage and PDF letter viewer */}
-      <Grid2 container spacing={2} mb={4}>
-        <Grid2 size={{ xs:12, md:4 }}>
+      <Grid2 container spacing={2}>
+        <Grid2 size={{ xs:12, md:7 }}>
           <Paper 
             sx={{ p: 2}}>
-            <Typography variant="h6">Column 2</Typography>
-            <Typography variant="body2">
-              Placeholder text for the second column. Possibly location info or key stats.
-            </Typography>
+            <Typography variant="h6">Fotos y informacion</Typography>
+            <ImageList sx={{ width: 800, height: 600 }} cols={4} rowHeight={164}>
+              {itemData.map((item) => (
+                <ImageListItem key={item.img}>
+                  <img
+                    srcSet={`${item.img}?w=164&h=164&fit=crop&auto=format&dpr=2 2x`}
+                    src={`${item.img}?w=164&h=164&fit=crop&auto=format`}
+                    alt={item.title}
+                    loading="lazy"
+                  />
+                </ImageListItem>
+              ))}
+            </ImageList>
+            {/* Special Notes */}
+            <Box mb={4}>
+              <Typography variant="h5" gutterBottom>
+                Notas Especiales
+              </Typography>
+              <Typography variant="body1">
+                This area can include links, follow-up actions, or a further description of the mission's impact.
+              </Typography>
+            </Box>
+
+            {/* Buttons */}
+            <Box display="flex" gap={2}>
+              <Button variant="outlined">Regresar</Button>
+              <Button variant="contained">Contactar al Misionero</Button>
+            </Box>
           </Paper>
         </Grid2>
-        <Grid2 size={{ xs:12, md:4 }}>
+        <Grid2 size={{ xs:12, md:5 }}>
           <Paper sx=
             {{ p: 2 }}
           >
@@ -94,24 +118,59 @@ const Missionary: React.FC = () => {
           </Paper>
         </Grid2>
       </Grid2>
-
-      {/* Special notes and contact */}
-      <Box mb={4}>
-        <Typography variant="h5" gutterBottom>
-          Notas Especiales
-        </Typography>
-        <Typography variant="body1">
-          This area can include links, follow-up actions, or a further description of the mission's impact.
-        </Typography>
-      </Box>
-
-      {/* Buttons */}
-      <Box display="flex" gap={2}>
-        <Button variant="outlined">Regresar</Button>
-        <Button variant="contained">Contactar al Misionero</Button>
-      </Box>
     </Box>
   );
 };
+
+const itemData = [
+  {
+    img: 'https://images.unsplash.com/photo-1551963831-b3b1ca40c98e',
+    title: 'Breakfast',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1551782450-a2132b4ba21d',
+    title: 'Burger',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1522770179533-24471fcdba45',
+    title: 'Camera',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1444418776041-9c7e33cc5a9c',
+    title: 'Coffee',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1533827432537-70133748f5c8',
+    title: 'Hats',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62',
+    title: 'Honey',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1516802273409-68526ee1bdd6',
+    title: 'Basketball',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1518756131217-31eb79b20e8f',
+    title: 'Fern',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1597645587822-e99fa5d45d25',
+    title: 'Mushrooms',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1567306301408-9b74779a11af',
+    title: 'Tomato basil',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1471357674240-e1a485acb3e1',
+    title: 'Sea star',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1589118949245-7d38baf380d6',
+    title: 'Bike',
+  },
+];
 
 export default Missionary;
