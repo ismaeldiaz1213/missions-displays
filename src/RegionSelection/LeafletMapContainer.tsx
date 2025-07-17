@@ -1,5 +1,6 @@
 import React from 'react';
-import { MapContainer, Marker, Popup, Polygon, TileLayer, useMap } from 'react-leaflet';
+import { MapContainer, Polygon, TileLayer } from 'react-leaflet';
+//import { MapContainer, Marker, Popup, Polygon, TileLayer, useMap } from 'react-leaflet';
 import { useNavigate } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
 

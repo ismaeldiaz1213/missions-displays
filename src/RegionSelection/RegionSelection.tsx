@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import mapImage from '../assets/BlankMap-World_gray.svg';
 import { useNavigate } from 'react-router-dom';
 import mapTitle from '../assets/MapSelectionBanner.png';
 import { Modal, Button, Box, Typography, Paper } from '@mui/material';
@@ -19,10 +18,11 @@ const style = {
 
 const RegionSelection: React.FC = () => {
     const navigate = useNavigate();
-
+    /*
     const handleClick = (continent: string) => {
         navigate(`/${continent}`);
     };
+    */
     
     const [modalOpen, setModalOpen] = useState(false);
 
