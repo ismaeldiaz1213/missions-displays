@@ -27,7 +27,7 @@ export default function ActionAreaCard() {
             El Pianista Robles
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Pianista en la Iglesia Bautista Libertad.
+            Pianista en West Coast Baptist College
           </Typography>
         </CardContent>
       </CardActionArea>

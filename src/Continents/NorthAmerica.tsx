@@ -5,6 +5,12 @@ import ActionAreaCard from './components/MissionaryPreviewCard';
 import Grid2 from '@mui/material/Grid2';
 import { blueGrey } from '@mui/material/colors';
 import './na_style.css';
+import LeafletRegionalMap from './components/LeafletRegionalMap';
+import { NORTH_AMERICA_LAT_CENTER, NORTH_AMERICA_LON_CENTER } from '../constants';
+import backButton from '../assets/leftBackButton.png';
+import nextButton from '../assets/rightNextButton.png';
+import { useNavigate } from 'react-router-dom';
+import returnToMap from '../assets/backToMapButton.png';
 
 //TODO: Make sure that this is a usable component by everyone
 const Item = styled(Paper)(({ theme }) => ({
@@ -19,6 +25,7 @@ const Item = styled(Paper)(({ theme }) => ({
 }));
 
 const NorthAmerica: React.FC = () => {
+  const navigate = useNavigate();
   return (
     <>
       <Box sx={{ flexGrow: 1}}>
@@ -37,15 +44,36 @@ const NorthAmerica: React.FC = () => {
                 </Grid2>
               ))}
             </Grid2>
+            <Grid2 container sx={{padding: 2, justifyContent: 'center'}} size={{xs:12}}>
+              <img 
+                src={backButton}
+                alt='Back Button'
+                style={{cursor: 'pointer'}}
+                onClick={() => navigate('/norte-america#')}
+              />
+              <img 
+                src={nextButton}
+                alt='Next Button'
+                style={{cursor: 'pointer'}}
+                onClick={() => navigate('/norte-america#')}
+              />
+            </Grid2>
           </Grid2>
 
           {/* 1/3 width section */}
           <Grid2 size={{xs:12, md:4}}>
-              <Item>Potentially a map or something goes here idk</Item>
+              <LeafletRegionalMap centerLat={NORTH_AMERICA_LAT_CENTER} centerLong={NORTH_AMERICA_LON_CENTER}/>
+              <Grid2 container sx={{justifyContent: 'center'}}>
+                <img 
+                  src={returnToMap}
+                  alt='Return to map Button'
+                  style={{cursor: 'pointer'}}
+                  onClick={() => navigate('/region-selection')}
+                />
+              </Grid2>
           </Grid2>
         </Grid2>
       </Box>
-      {/* Buttons for interaction need to go here */}
     </>
   );
 };

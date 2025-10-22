@@ -1,0 +1,2 @@
+export const NORTH_AMERICA_LAT_CENTER = 41.35;
+export const NORTH_AMERICA_LON_CENTER = -98.99;

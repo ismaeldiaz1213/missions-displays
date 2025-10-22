@@ -7,6 +7,9 @@ import Africa from './Continents/Africa'
 import Asia from './Continents/Asia'
 import NorthAmerica from './Continents/NorthAmerica'
 import Missionary from './Missionaries/Missionary'
+import Admin from './Administrator/admin'
+import MisionerosPasados from './MisionerosPasados/MisionerosPasados'
+import Timeline from './Timeline/Timeline'
 
 
 const App:React.FC = () => {
@@ -26,6 +29,9 @@ const App:React.FC = () => {
         <Route path="/conferencia-misionera" element={<Home />} />
         <Route path="/recordando" element={<Home />} />
         <Route path="/misionero/:missionary" element={<Missionary/>} /> 
+        <Route path="/administrator" element={<Admin/>} /> 
+        <Route path="/misioneros-pasados" element={<MisionerosPasados/>} /> 
+        <Route path="/timeline" element={<Timeline/>} /> 
       </Routes>
     </>
   )

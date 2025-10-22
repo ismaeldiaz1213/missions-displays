@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import mapTitle from '../assets/MapSelectionBanner.png';
+import misionerosPasadosButton from '../assets/missionerosPasadosButton.png';
 import { Modal, Button, Box, Typography, Paper } from '@mui/material';
 import LeafletMapContainer from './LeafletMapContainer';
 
@@ -11,18 +12,13 @@ const style = {
   transform: 'translate(-50%, -50%)',
   width: 400,
   bgcolor: 'background.paper',
-  border: '2px solid #000',
+  border: '3px solid #000',
   boxShadow: 24,
   p: 4,
 };
 
 const RegionSelection: React.FC = () => {
     const navigate = useNavigate();
-    /*
-    const handleClick = (continent: string) => {
-        navigate(`/${continent}`);
-    };
-    */
     
     const [modalOpen, setModalOpen] = useState(false);
 
@@ -34,7 +30,7 @@ const RegionSelection: React.FC = () => {
                 style={{
                     width: '100%',
                     maxWidth: '100%',  // Prevent it from overflowing
-                    maxHeight: '20vh',
+                    maxHeight: '15vh',
                     height: 'auto',
                     marginBottom: '20px',
                     objectFit: 'contain',  // Ensure the title image fits correctly
@@ -49,11 +45,14 @@ const RegionSelection: React.FC = () => {
                     alignItems="center"
                     width="100%"
                 >
-                    <Button variant="contained" onClick={() => navigate('/memory-video')}>
-                    🎥 Memory Video
-                    </Button>
+                    <img
+                        src={misionerosPasadosButton}
+                        alt='Misioneros Pasados Button'
+                        style={{cursor: 'pointer'}}
+                        onClick={() => navigate('/misioneros-pasados')}
+                    />
                     <Button variant="contained" onClick={() => navigate('/timeline')}>
-                    📅 Church Timeline
+                    📅 Nuestra Historia
                     </Button>
                     <Button variant="outlined" onClick={() => setModalOpen(true)}>
                     🙌 Acknowledgments
@@ -64,7 +63,7 @@ const RegionSelection: React.FC = () => {
             <Modal open={modalOpen} onClose={() => setModalOpen(false)}>
                 <Box sx={style}>
                     <Typography id="modal-modal-title" variant="h6" component="h2">
-                        Volunatarios y Reconocimientos
+                        Agradecimientos
                     </Typography>
                     <Typography id="modal-modal-description" sx={{ mt: 2 }}>
                         Este proyetcto fue posible gracias a los esfuerzos y apoyo de:
@@ -72,7 +71,6 @@ const RegionSelection: React.FC = () => {
                             <li>Nuestro Salvador - El Senor Jesucristo</li>
                             <li>El Pastor Roy Carrizales</li>
                             <li>Los miembros de la Iglesia Bautista Libertad</li>
-                            <li>Equipo Tecnico - Ismael Diaz</li>
                         </ul>
                     </Typography>
                 </Box>
