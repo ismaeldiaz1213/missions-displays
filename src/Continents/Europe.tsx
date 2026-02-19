@@ -25,9 +25,9 @@ const Europe: React.FC = () => {
 
   return (
     <Box sx={{ background: 'linear-gradient(180deg, #FAFBFC 0%, #F0F4F8 50%, #F3E8FF 100%)', minHeight: '100vh', pb: 4 }}>
-      <Box sx={{ background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)', borderBottom: '4px solid #9C27B0', p: 3, mb: 3 }}>
-        <h1 style={{ color: '#9C27B0', margin: 0, marginBottom: '0.5rem' }}>🌍 Europa</h1>
-        <Typography variant="body1" sx={{ color: '#6B7280' }}>{missionaries.length} misioneros activos</Typography>
+      <Box sx={{ background: 'linear-gradient(135deg, #F3E8FF 0%, #FFFAFF 100%)', borderBottom: '4px solid #A855F7', p: 2, mb: 2 }}>
+        <h1 style={{ color: '#7E22CE', margin: 0, marginBottom: '0.25rem', fontSize: '1.75rem' }}>🌍 Europa</h1>
+        <Typography variant="caption" sx={{ color: '#7E22CE', fontSize: '0.9rem', fontWeight: 500 }}>{missionaries.length} misioneros activos</Typography>
       </Box>
       <Grid2 container spacing={3} sx={{ px: 3 }}>
         <Grid2 size={{ xs: 12, md: 8 }}>

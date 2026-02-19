@@ -49,30 +49,19 @@ const NorthAmerica: React.FC = () => {
       {/* Header */}
       <Box
         sx={{
-          background: 'linear-gradient(135deg, #FAFBFC 0%, #F0F4F8 100%)',
-          borderBottom: '6px solid',
-          borderImage: 'linear-gradient(90deg, #2563EB 0%, #1E3A8A 50%, #2563EB 100%) 1',
-          p: 3,
-          mb: 3,
-          boxShadow: '0 10px 25px rgba(30, 58, 138, 0.15)',
+          background: 'linear-gradient(135deg, #DBEAFE 0%, #EFF6FF 100%)',
+          borderBottom: '4px solid #2563EB',
+          p: 2,
+          mb: 2,
+          boxShadow: '0 4px 12px rgba(37, 99, 235, 0.1)',
           position: 'relative',
         }}
       >
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '4px',
-            background: 'linear-gradient(90deg, #2563EB 0%, #1E3A8A 50%, #2563EB 100%)',
-          }}
-        />
-        <h1 className="north-america-title" style={{ color: '#2563EB', margin: 0, marginBottom: '0.5rem' }}>
+        <h1 className="north-america-title" style={{ color: '#1E40AF', margin: 0, marginBottom: '0.25rem', fontSize: '1.75rem' }}>
           🌍 América del Norte
         </h1>
-        <Typography variant="body1" sx={{ color: '#6B7280', mt: 1 }}>
-          {missionaries.length} misioneros activos en esta región
+        <Typography variant="caption" sx={{ color: '#1E40AF', fontSize: '0.9rem', fontWeight: 500 }}>
+          {missionaries.length} misioneros activos
         </Typography>
       </Box>
 
