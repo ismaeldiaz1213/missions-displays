@@ -6,17 +6,17 @@ import Grid2 from '@mui/material/Grid2';
 import Typography from '@mui/material/Typography';
 import './na_style.css';
 import LeafletRegionalMap from './components/LeafletRegionalMap';
-import { ASIA_LAT_CENTER, ASIA_LON_CENTER } from '../constants';
+import { EUROPE_LAT_CENTER, EUROPE_LON_CENTER } from '../constants';
 import backButton from '../assets/leftBackButton.png';
 import nextButton from '../assets/rightNextButton.png';
 import { useNavigate } from 'react-router-dom';
 import returnToMap from '../assets/backToMapButton.png';
 import { getMissionariesByContinent } from '../mockData';
 
-const Asia: React.FC = () => {
+const Europe: React.FC = () => {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(0);
-  const missionaries = getMissionariesByContinent('asia');
+  const missionaries = getMissionariesByContinent('europe');
   const missionariesPerPage = 9;
   const totalPages = Math.ceil(Math.max(missionaries.length, 1) / missionariesPerPage);
   const startIdx = currentPage * missionariesPerPage;
@@ -24,8 +24,8 @@ const Asia: React.FC = () => {
 
   return (
     <Box sx={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F0F4F8 100%)', minHeight: '100vh', pb: 4 }}>
-      <Box sx={{ background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)', borderBottom: '4px solid #00BCD4', p: 3, mb: 3 }}>
-        <h1 style={{ color: '#00BCD4', margin: 0, marginBottom: '0.5rem' }}>🌏 Asia</h1>
+      <Box sx={{ background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)', borderBottom: '4px solid #9C27B0', p: 3, mb: 3 }}>
+        <h1 style={{ color: '#9C27B0', margin: 0, marginBottom: '0.5rem' }}>🌍 Europa</h1>
         <Typography variant="body1" sx={{ color: '#6B7280' }}>{missionaries.length} misioneros activos</Typography>
       </Box>
       <Grid2 container spacing={3} sx={{ px: 3 }}>
@@ -45,8 +45,8 @@ const Asia: React.FC = () => {
         </Grid2>
         <Grid2 size={{ xs: 12, md: 4 }}>
           <Paper sx={{ p: 2, background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)', borderRadius: '12px', position: 'sticky', top: '1rem' }}>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#00BCD4', mb: 2 }}>📍 Mapa Regional</Typography>
-            <LeafletRegionalMap centerLat={ASIA_LAT_CENTER} centerLong={ASIA_LON_CENTER} />
+            <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#9C27B0', mb: 2 }}>📍 Mapa Regional</Typography>
+            <LeafletRegionalMap centerLat={EUROPE_LAT_CENTER} centerLong={EUROPE_LON_CENTER} />
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
               <Box component="img" src={returnToMap} alt="Volver al Mapa" onClick={() => navigate('/region-selection')} sx={{ cursor: 'pointer' }} />
             </Box>
@@ -57,4 +57,4 @@ const Asia: React.FC = () => {
   );
 };
 
-export default Asia;
+export default Europe;

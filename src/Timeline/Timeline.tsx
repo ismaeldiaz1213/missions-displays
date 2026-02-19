@@ -1,5 +1,6 @@
 import { Box } from '@mui/material';
 import React from 'react';
+// @ts-ignore
 import { Chrono } from 'react-chrono';
 
 const Timeline: React.FC = () => { 

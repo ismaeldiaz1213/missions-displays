@@ -1,2 +1,20 @@
 export const NORTH_AMERICA_LAT_CENTER = 41.35;
 export const NORTH_AMERICA_LON_CENTER = -98.99;
+
+export const SOUTH_AMERICA_LAT_CENTER = -8.76689;
+export const SOUTH_AMERICA_LON_CENTER = -51.4728;
+
+export const CENTRAL_AMERICA_LAT_CENTER = 15.2;
+export const CENTRAL_AMERICA_LON_CENTER = -86.2419;
+
+export const EUROPE_LAT_CENTER = 54.5260;
+export const EUROPE_LON_CENTER = 15.2551;
+
+export const AFRICA_LAT_CENTER = -8.7832;
+export const AFRICA_LON_CENTER = 34.5085;
+
+export const ASIA_LAT_CENTER = 34.0479;
+export const ASIA_LON_CENTER = 100.6197;
+
+export const OCEANIA_LAT_CENTER = -22.7359;
+export const OCEANIA_LON_CENTER = 140.0188;
