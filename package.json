@@ -16,6 +16,7 @@
     "@mui/material": "^6.4.3",
     "leaflet": "^1.9.4",
     "react": "^19.0.0-rc.1",
+    "react-chrono": "^2.9.1",
     "react-dom": "^19.0.0-rc.1",
     "react-leaflet": "^5.0.0-rc.2",
     "react-pdf": "^10.0.1",

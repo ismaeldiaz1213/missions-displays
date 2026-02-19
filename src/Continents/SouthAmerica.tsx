@@ -6,19 +6,19 @@ import Grid2 from '@mui/material/Grid2';
 import Typography from '@mui/material/Typography';
 import './na_style.css';
 import LeafletRegionalMap from './components/LeafletRegionalMap';
-import { NORTH_AMERICA_LAT_CENTER, NORTH_AMERICA_LON_CENTER } from '../constants';
+import { SOUTH_AMERICA_LAT_CENTER, SOUTH_AMERICA_LON_CENTER } from '../constants';
 import backButton from '../assets/leftBackButton.png';
 import nextButton from '../assets/rightNextButton.png';
 import { useNavigate } from 'react-router-dom';
 import returnToMap from '../assets/backToMapButton.png';
 import { getMissionariesByContinent } from '../mockData';
 
-const NorthAmerica: React.FC = () => {
+const SouthAmerica: React.FC = () => {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedMissionaryId, setSelectedMissionaryId] = useState<string | null>(null);
   
-  const missionaries = getMissionariesByContinent('north-america');
+  const missionaries = getMissionariesByContinent('south-america');
   const missionariesPerPage = 9;
   const totalPages = Math.ceil(missionaries.length / missionariesPerPage);
 
@@ -41,7 +41,7 @@ const NorthAmerica: React.FC = () => {
   return (
     <Box
       sx={{
-        background: 'linear-gradient(180deg, #FAFBFC 0%, #F0F4F8 50%, #E8F1FC 100%)',
+        background: 'linear-gradient(180deg, #FAFBFC 0%, #F0F4F8 50%, #E8F8F5 100%)',
         minHeight: '100vh',
         pb: 4,
       }}
@@ -49,18 +49,17 @@ const NorthAmerica: React.FC = () => {
       {/* Header */}
       <Box
         sx={{
-          background: 'linear-gradient(135deg, #DBEAFE 0%, #EFF6FF 100%)',
-          borderBottom: '4px solid #2563EB',
+          background: 'linear-gradient(135deg, #DCFCE7 0%, #F0FDF4 100%)',
+          borderBottom: '4px solid #22C55E',
           p: 2,
           mb: 2,
-          boxShadow: '0 4px 12px rgba(37, 99, 235, 0.1)',
-          position: 'relative',
+          boxShadow: '0 4px 12px rgba(34, 197, 94, 0.1)',
         }}
       >
-        <h1 className="north-america-title" style={{ color: '#1E40AF', margin: 0, marginBottom: '0.25rem', fontSize: '1.75rem' }}>
-          🌍 América del Norte
+        <h1 className="north-america-title" style={{ color: '#166534', margin: 0, marginBottom: '0.25rem', fontSize: '1.75rem' }}>
+          🌎 América del Sur
         </h1>
-        <Typography variant="caption" sx={{ color: '#1E40AF', fontSize: '0.9rem', fontWeight: 500 }}>
+        <Typography variant="caption" sx={{ color: '#166534', fontSize: '0.9rem', fontWeight: 500 }}>
           {missionaries.length} misioneros activos
         </Typography>
       </Box>
@@ -69,7 +68,6 @@ const NorthAmerica: React.FC = () => {
         {/* Main Cards Section */}
         <Grid2 size={{ xs: 12, md: 8 }}>
           <Grid2 container spacing={2} sx={{ mb: 3 }}>
-            {/* Render current page of cards in a 3x3 pattern */}
             {currentMissionaries.map((missionary) => (
               <Grid2 size={{ xs: 12, sm: 6, md: 4 }} key={missionary.id}>
                 <ActionAreaCard
@@ -84,15 +82,14 @@ const NorthAmerica: React.FC = () => {
           <Grid2
             container
             sx={{
-              padding: 2.5,
+              padding: 2,
               justifyContent: 'center',
               gap: 2,
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(249,250,251,0.8) 100%)',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(249,250,251,0.7) 100%)',
               backdropFilter: 'blur(10px)',
               borderRadius: '12px',
-              border: '2px solid',
-              borderColor: 'rgba(37, 99, 235, 0.2)',
-              boxShadow: '0 8px 16px -2px rgba(30, 58, 138, 0.15)',
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 4px 6px -1px rgba(76, 175, 80, 0.1)',
             }}
             size={{ xs: 12 }}
           >
@@ -105,7 +102,6 @@ const NorthAmerica: React.FC = () => {
                 cursor: currentPage > 0 ? 'pointer' : 'not-allowed',
                 opacity: currentPage > 0 ? 1 : 0.5,
                 transition: 'all 0.3s ease',
-                '&:hover': currentPage > 0 ? { transform: 'scale(1.1)', filter: 'drop-shadow(0 4px 8px rgba(37, 99, 235, 0.3))' } : {},
               }}
             />
             <Typography sx={{ display: 'flex', alignItems: 'center', color: '#4B5563', fontWeight: 600 }}>
@@ -120,7 +116,6 @@ const NorthAmerica: React.FC = () => {
                 cursor: currentPage < totalPages - 1 ? 'pointer' : 'not-allowed',
                 opacity: currentPage < totalPages - 1 ? 1 : 0.5,
                 transition: 'all 0.3s ease',
-                '&:hover': currentPage < totalPages - 1 ? { transform: 'scale(1.1)', filter: 'drop-shadow(0 4px 8px rgba(37, 99, 235, 0.3))' } : {},
               }}
             />
           </Grid2>
@@ -131,19 +126,19 @@ const NorthAmerica: React.FC = () => {
           <Paper
             sx={{
               p: 2,
-              background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 50%, #F0F4F8 100%)',
+              background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)',
               borderRadius: '12px',
               position: 'sticky',
               top: '1rem',
-              border: '2px solid rgba(37, 99, 235, 0.1)',
-              boxShadow: '0 15px 30px -5px rgba(30, 58, 138, 0.15)',
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 10px 15px -3px rgba(76, 175, 80, 0.1)',
             }}
           >
             <Typography
               variant="h6"
               sx={{
                 fontWeight: 'bold',
-                background: 'linear-gradient(135deg, #2563EB 0%, #1E3A8A 100%)',
+                background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
@@ -153,8 +148,8 @@ const NorthAmerica: React.FC = () => {
               📍 Mapa Regional
             </Typography>
             <LeafletRegionalMap
-              centerLat={NORTH_AMERICA_LAT_CENTER}
-              centerLong={NORTH_AMERICA_LON_CENTER}
+              centerLat={SOUTH_AMERICA_LAT_CENTER}
+              centerLong={SOUTH_AMERICA_LON_CENTER}
               missionaries={missionaries}
               selectedMissionaryId={selectedMissionaryId}
               onMissionarySelect={setSelectedMissionaryId}
@@ -168,7 +163,6 @@ const NorthAmerica: React.FC = () => {
                 sx={{
                   cursor: 'pointer',
                   transition: 'all 0.3s ease',
-                  '&:hover': { transform: 'scale(1.05)', filter: 'drop-shadow(0 4px 8px rgba(37, 99, 235, 0.3))' },
                 }}
               />
             </Box>
@@ -179,4 +173,4 @@ const NorthAmerica: React.FC = () => {
   );
 };
 
-export default NorthAmerica;
+export default SouthAmerica;
