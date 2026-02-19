@@ -6,28 +6,28 @@ import Grid2 from '@mui/material/Grid2';
 import Typography from '@mui/material/Typography';
 import './na_style.css';
 import LeafletRegionalMap from './components/LeafletRegionalMap';
-import { ASIA_LAT_CENTER, ASIA_LON_CENTER } from '../constants';
+import { EUROPE_LAT_CENTER, EUROPE_LON_CENTER } from '../constants';
 import backButton from '../assets/leftBackButton.png';
 import nextButton from '../assets/rightNextButton.png';
 import { useNavigate } from 'react-router-dom';
 import returnToMap from '../assets/backToMapButton.png';
 import { getMissionariesByContinent } from '../mockData';
 
-const Asia: React.FC = () => {
+const Europe: React.FC = () => {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedMissionaryId, setSelectedMissionaryId] = useState<string | null>(null);
-  const missionaries = getMissionariesByContinent('asia');
+  const missionaries = getMissionariesByContinent('europe');
   const missionariesPerPage = 9;
   const totalPages = Math.ceil(Math.max(missionaries.length, 1) / missionariesPerPage);
   const startIdx = currentPage * missionariesPerPage;
   const currentMissionaries = missionaries.slice(startIdx, startIdx + missionariesPerPage);
 
   return (
-    <Box sx={{ background: 'linear-gradient(180deg, #FAFBFC 0%, #F0F4F8 50%, #E0F7FA 100%)', minHeight: '100vh', pb: 4 }}>
-      <Box sx={{ background: 'linear-gradient(135deg, #CFFAFE 0%, #F0FDFA 100%)', borderBottom: '4px solid #06B6D4', p: 2, mb: 2 }}>
-        <h1 style={{ color: '#164E63', margin: 0, marginBottom: '0.25rem', fontSize: '1.75rem' }}>🌏 Asia</h1>
-        <Typography variant="caption" sx={{ color: '#164E63', fontSize: '0.9rem', fontWeight: 500 }}>{missionaries.length} misioneros activos</Typography>
+    <Box sx={{ background: 'linear-gradient(180deg, #FAFBFC 0%, #F0F4F8 50%, #F3E8FF 100%)', minHeight: '100vh', pb: 4 }}>
+      <Box sx={{ background: 'linear-gradient(135deg, #F3E8FF 0%, #FFFAFF 100%)', borderBottom: '4px solid #A855F7', p: 2, mb: 2 }}>
+        <h1 style={{ color: '#7E22CE', margin: 0, marginBottom: '0.25rem', fontSize: '1.75rem' }}>🌍 Europa</h1>
+        <Typography variant="caption" sx={{ color: '#7E22CE', fontSize: '0.9rem', fontWeight: 500 }}>{missionaries.length} misioneros activos</Typography>
       </Box>
       <Grid2 container spacing={3} sx={{ px: 3 }}>
         <Grid2 size={{ xs: 12, md: 8 }}>
@@ -49,10 +49,10 @@ const Asia: React.FC = () => {
         </Grid2>
         <Grid2 size={{ xs: 12, md: 4 }}>
           <Paper sx={{ p: 2, background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)', borderRadius: '12px', position: 'sticky', top: '1rem' }}>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#00BCD4', mb: 2 }}>📍 Mapa Regional</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#9C27B0', mb: 2 }}>📍 Mapa Regional</Typography>
             <LeafletRegionalMap
-              centerLat={ASIA_LAT_CENTER}
-              centerLong={ASIA_LON_CENTER}
+              centerLat={EUROPE_LAT_CENTER}
+              centerLong={EUROPE_LON_CENTER}
               missionaries={missionaries}
               selectedMissionaryId={selectedMissionaryId}
               onMissionarySelect={setSelectedMissionaryId}
@@ -67,4 +67,4 @@ const Asia: React.FC = () => {
   );
 };
 
-export default Asia;
+export default Europe;
