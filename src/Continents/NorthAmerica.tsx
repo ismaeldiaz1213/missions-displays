@@ -16,6 +16,7 @@ import { getMissionariesByContinent } from '../mockData';
 const NorthAmerica: React.FC = () => {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(0);
+  const [selectedMissionaryId, setSelectedMissionaryId] = useState<string | null>(null);
   
   const missionaries = getMissionariesByContinent('north-america');
   const missionariesPerPage = 9;
@@ -40,7 +41,7 @@ const NorthAmerica: React.FC = () => {
   return (
     <Box
       sx={{
-        background: 'linear-gradient(135deg, #FAFBFC 0%, #F0F4F8 100%)',
+        background: 'linear-gradient(180deg, #FAFBFC 0%, #F0F4F8 50%, #E8F1FC 100%)',
         minHeight: '100vh',
         pb: 4,
       }}
@@ -48,14 +49,25 @@ const NorthAmerica: React.FC = () => {
       {/* Header */}
       <Box
         sx={{
-          background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)',
-          borderBottom: '4px solid',
-          borderImage: 'linear-gradient(90deg, #2563EB 0%, #1E3A8A 100%) 1',
+          background: 'linear-gradient(135deg, #FAFBFC 0%, #F0F4F8 100%)',
+          borderBottom: '6px solid',
+          borderImage: 'linear-gradient(90deg, #2563EB 0%, #1E3A8A 50%, #2563EB 100%) 1',
           p: 3,
           mb: 3,
-          boxShadow: '0 10px 15px -3px rgba(30, 58, 138, 0.1)',
+          boxShadow: '0 10px 25px rgba(30, 58, 138, 0.15)',
+          position: 'relative',
         }}
       >
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '4px',
+            background: 'linear-gradient(90deg, #2563EB 0%, #1E3A8A 50%, #2563EB 100%)',
+          }}
+        />
         <h1 className="north-america-title" style={{ color: '#2563EB', margin: 0, marginBottom: '0.5rem' }}>
           🌍 América del Norte
         </h1>
@@ -71,7 +83,10 @@ const NorthAmerica: React.FC = () => {
             {/* Render current page of cards in a 3x3 pattern */}
             {currentMissionaries.map((missionary) => (
               <Grid2 size={{ xs: 12, sm: 6, md: 4 }} key={missionary.id}>
-                <ActionAreaCard missionary={missionary} />
+                <ActionAreaCard
+                  missionary={missionary}
+                  isSelected={selectedMissionaryId === missionary.id}
+                />
               </Grid2>
             ))}
           </Grid2>
@@ -80,14 +95,15 @@ const NorthAmerica: React.FC = () => {
           <Grid2
             container
             sx={{
-              padding: 2,
+              padding: 2.5,
               justifyContent: 'center',
               gap: 2,
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(249,250,251,0.7) 100%)',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(249,250,251,0.8) 100%)',
               backdropFilter: 'blur(10px)',
               borderRadius: '12px',
-              border: '1px solid #E5E7EB',
-              boxShadow: '0 4px 6px -1px rgba(30, 58, 138, 0.1)',
+              border: '2px solid',
+              borderColor: 'rgba(37, 99, 235, 0.2)',
+              boxShadow: '0 8px 16px -2px rgba(30, 58, 138, 0.15)',
             }}
             size={{ xs: 12 }}
           >
@@ -126,12 +142,12 @@ const NorthAmerica: React.FC = () => {
           <Paper
             sx={{
               p: 2,
-              background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)',
+              background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 50%, #F0F4F8 100%)',
               borderRadius: '12px',
               position: 'sticky',
               top: '1rem',
-              border: '1px solid #E5E7EB',
-              boxShadow: '0 10px 15px -3px rgba(30, 58, 138, 0.1)',
+              border: '2px solid rgba(37, 99, 235, 0.1)',
+              boxShadow: '0 15px 30px -5px rgba(30, 58, 138, 0.15)',
             }}
           >
             <Typography
@@ -150,6 +166,9 @@ const NorthAmerica: React.FC = () => {
             <LeafletRegionalMap
               centerLat={NORTH_AMERICA_LAT_CENTER}
               centerLong={NORTH_AMERICA_LON_CENTER}
+              missionaries={missionaries}
+              selectedMissionaryId={selectedMissionaryId}
+              onMissionarySelect={setSelectedMissionaryId}
             />
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
               <Box

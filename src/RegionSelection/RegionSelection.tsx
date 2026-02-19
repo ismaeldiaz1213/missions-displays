@@ -29,11 +29,11 @@ const RegionSelection: React.FC = () => {
                 alt="Map Banner"
                 style={{
                     width: '100%',
-                    maxWidth: '100%',  // Prevent it from overflowing
+                    maxWidth: '100%',
                     maxHeight: '15vh',
                     height: 'auto',
                     marginBottom: '20px',
-                    objectFit: 'contain',  // Ensure the title image fits correctly
+                    objectFit: 'contain',
                 }}
             />
             <LeafletMapContainer></LeafletMapContainer>
@@ -44,6 +44,8 @@ const RegionSelection: React.FC = () => {
                     justifyContent="space-between"
                     alignItems="center"
                     width="100%"
+                    gap={2}
+                    flexWrap="wrap"
                 >
                     <img
                         src={misionerosPasadosButton}
@@ -51,9 +53,29 @@ const RegionSelection: React.FC = () => {
                         style={{cursor: 'pointer'}}
                         onClick={() => navigate('/misioneros-pasados')}
                     />
-                    <Button variant="contained" onClick={() => navigate('/timeline')}>
-                    📅 Nuestra Historia
-                    </Button>
+                    <Paper
+                      sx={{
+                        background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
+                        border: '2px solid #F59E0B',
+                        borderRadius: '12px',
+                        p: 2,
+                        flex: 1,
+                        minWidth: '200px',
+                        textAlign: 'center',
+                        boxShadow: '0 4px 15px rgba(217, 119, 6, 0.15)',
+                      }}
+                    >
+                      <Typography
+                        variant="body1"
+                        sx={{
+                          fontWeight: 600,
+                          color: '#92400E',
+                          fontSize: '0.95rem',
+                        }}
+                      >
+                        💡 Toca un continente o su ícono para ver los misioneros
+                      </Typography>
+                    </Paper>
                     <Button variant="outlined" onClick={() => setModalOpen(true)}>
                     🙌 Acknowledgments
                     </Button>

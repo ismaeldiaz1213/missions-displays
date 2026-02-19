@@ -16,6 +16,7 @@ import { getMissionariesByContinent } from '../mockData';
 const Oceania: React.FC = () => {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(0);
+  const [selectedMissionaryId, setSelectedMissionaryId] = useState<string | null>(null);
   const missionaries = getMissionariesByContinent('oceania');
   const missionariesPerPage = 9;
   const totalPages = Math.ceil(Math.max(missionaries.length, 1) / missionariesPerPage);
@@ -23,7 +24,7 @@ const Oceania: React.FC = () => {
   const currentMissionaries = missionaries.slice(startIdx, startIdx + missionariesPerPage);
 
   return (
-    <Box sx={{ background: 'linear-gradient(135deg, #FAFBFC 0%, #F0F4F8 100%)', minHeight: '100vh', pb: 4 }}>
+    <Box sx={{ background: 'linear-gradient(180deg, #FAFBFC 0%, #F0F4F8 50%, #FFFBF0 100%)', minHeight: '100vh', pb: 4 }}>
       <Box sx={{ background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)', borderBottom: '4px solid #FFC107', p: 3, mb: 3 }}>
         <h1 style={{ color: '#FFC107', margin: 0, marginBottom: '0.5rem' }}>🌏 Oceanía</h1>
         <Typography variant="body1" sx={{ color: '#6B7280' }}>{missionaries.length} misioneros activos</Typography>
@@ -33,7 +34,10 @@ const Oceania: React.FC = () => {
           <Grid2 container spacing={2} sx={{ mb: 3 }}>
             {currentMissionaries.map((m) => (
               <Grid2 size={{ xs: 12, sm: 6, md: 4 }} key={m.id}>
-                <ActionAreaCard missionary={m} />
+                <ActionAreaCard
+                  missionary={m}
+                  isSelected={selectedMissionaryId === m.id}
+                />
               </Grid2>
             ))}
           </Grid2>
@@ -46,7 +50,13 @@ const Oceania: React.FC = () => {
         <Grid2 size={{ xs: 12, md: 4 }}>
           <Paper sx={{ p: 2, background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)', borderRadius: '12px', position: 'sticky', top: '1rem' }}>
             <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#FFC107', mb: 2 }}>📍 Mapa Regional</Typography>
-            <LeafletRegionalMap centerLat={OCEANIA_LAT_CENTER} centerLong={OCEANIA_LON_CENTER} />
+            <LeafletRegionalMap
+              centerLat={OCEANIA_LAT_CENTER}
+              centerLong={OCEANIA_LON_CENTER}
+              missionaries={missionaries}
+              selectedMissionaryId={selectedMissionaryId}
+              onMissionarySelect={setSelectedMissionaryId}
+            />
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
               <Box component="img" src={returnToMap} alt="Volver al Mapa" onClick={() => navigate('/region-selection')} sx={{ cursor: 'pointer' }} />
             </Box>

@@ -16,6 +16,7 @@ import { getMissionariesByContinent } from '../mockData';
 const SouthAmerica: React.FC = () => {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(0);
+  const [selectedMissionaryId, setSelectedMissionaryId] = useState<string | null>(null);
   
   const missionaries = getMissionariesByContinent('south-america');
   const missionariesPerPage = 9;
@@ -40,7 +41,7 @@ const SouthAmerica: React.FC = () => {
   return (
     <Box
       sx={{
-        background: 'linear-gradient(135deg, #FAFBFC 0%, #F0F4F8 100%)',
+        background: 'linear-gradient(180deg, #FAFBFC 0%, #F0F4F8 50%, #E8F8F5 100%)',
         minHeight: '100vh',
         pb: 4,
       }}
@@ -70,7 +71,10 @@ const SouthAmerica: React.FC = () => {
           <Grid2 container spacing={2} sx={{ mb: 3 }}>
             {currentMissionaries.map((missionary) => (
               <Grid2 size={{ xs: 12, sm: 6, md: 4 }} key={missionary.id}>
-                <ActionAreaCard missionary={missionary} />
+                <ActionAreaCard
+                  missionary={missionary}
+                  isSelected={selectedMissionaryId === missionary.id}
+                />
               </Grid2>
             ))}
           </Grid2>
@@ -147,6 +151,9 @@ const SouthAmerica: React.FC = () => {
             <LeafletRegionalMap
               centerLat={SOUTH_AMERICA_LAT_CENTER}
               centerLong={SOUTH_AMERICA_LON_CENTER}
+              missionaries={missionaries}
+              selectedMissionaryId={selectedMissionaryId}
+              onMissionarySelect={setSelectedMissionaryId}
             />
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
               <Box

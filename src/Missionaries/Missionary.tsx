@@ -88,297 +88,340 @@ const Missionary: React.FC = () => {
         backgroundAttachment: 'fixed',
         minHeight: '100vh',
         pb: 3,
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
-      {/* Header Section */}
+      {/* Header Section with Family Picture - Compact */}
       <Box
         sx={{
           background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)',
           color: 'white',
-          p: { xs: 2, md: 3 },
-          mb: 3,
-          boxShadow: '0 10px 30px rgba(30, 58, 138, 0.2)',
+          p: 1.5,
+          boxShadow: '0 8px 20px rgba(30, 58, 138, 0.2)',
         }}
       >
-        <Grid2 container spacing={2} alignItems="flex-start">
-          <Grid2 size={{ xs: 12, sm: 4, md: 3 }}>
+        <Grid2 container spacing={1.5} alignItems="center">
+          <Grid2 size={{ xs: 3, sm: 2 }}>
             <Box
               component="img"
               src={missionaryData.profileImage}
               alt={missionaryData.name}
               sx={{
                 width: '100%',
-                borderRadius: '12px',
-                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
-                border: '4px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                border: '3px solid rgba(255, 255, 255, 0.2)',
               }}
             />
           </Grid2>
-          <Grid2 size={{ xs: 12, sm: 8, md: 9 }}>
+          <Grid2 size={{ xs: 9, sm: 10 }}>
             <Typography
-              variant="h3"
+              variant="h5"
               sx={{
                 fontWeight: 'bold',
-                mb: 1,
                 color: '#fff',
-                fontSize: { xs: '1.75rem', md: '2.5rem' },
+                fontSize: { xs: '1.1rem', md: '1.5rem' },
+                mb: 0.25,
               }}
             >
               {missionaryData.name} {missionaryData.lastName}
             </Typography>
-            <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.9)', mb: 0.5 }}>
-              {missionaryData.organization}
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.85rem' }}>
+              {missionaryData.missionType}
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', mb: 1.5 }}>
-              📍 {missionaryData.location.city}, {missionaryData.location.country}
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          </Grid2>
+        </Grid2>
+      </Box>
+
+      {/* Main 3-Column Content Section */}
+      <Box sx={{ px: { xs: 2, md: 3 }, py: 3, flex: 1 }}>
+        <Grid2 container spacing={3}>
+          {/* Left Column: Missionary Info */}
+          <Grid2 size={{ xs: 12, sm: 12, md: 4 }}>
+            <Paper
+              sx={{
+                background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)',
+                borderRadius: '12px',
+                p: 2.5,
+                boxShadow: '0 10px 15px -3px rgba(30, 58, 138, 0.1)',
+                border: '1px solid rgba(30, 58, 138, 0.05)',
+              }}
+            >
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 'bold',
+                  background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  mb: 2,
+                }}
+              >
+                📋 Información
+              </Typography>
+
+              <Box sx={{ mb: 2.5 }}>
+                <Typography variant="body2" sx={{ color: '#9CA3AF', fontSize: '0.85rem', mb: 0.5 }}>
+                  ORGANIZACIÓN
+                </Typography>
+                <Typography variant="body1" sx={{ color: '#1F2937', fontWeight: 500 }}>
+                  {missionaryData.organization}
+                </Typography>
+              </Box>
+
+              <Box sx={{ mb: 2.5 }}>
+                <Typography variant="body2" sx={{ color: '#9CA3AF', fontSize: '0.85rem', mb: 0.5 }}>
+                  UBICACIÓN
+                </Typography>
+                <Typography variant="body1" sx={{ color: '#1F2937', fontWeight: 500 }}>
+                  📍 {missionaryData.location.city}, {missionaryData.location.country}
+                </Typography>
+              </Box>
+
+              <Box sx={{ mb: 2.5 }}>
+                <Typography variant="body2" sx={{ color: '#9CA3AF', fontSize: '0.85rem', mb: 0.5 }}>
+                  TIPO DE MINISTERIO
+                </Typography>
+                <Typography variant="body1" sx={{ color: '#1F2937', fontWeight: 500 }}>
+                  {missionaryData.missionType}
+                </Typography>
+              </Box>
+
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body2" sx={{ color: '#4B5563', lineHeight: 1.6 }}>
+                  {missionaryData.description}
+                </Typography>
+              </Box>
+
               <Button
                 variant="contained"
-                size="small"
+                fullWidth
                 sx={{
-                  background: 'rgba(255, 255, 255, 0.95)',
-                  color: '#1E3A8A',
+                  background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)',
+                  color: 'white',
                   fontWeight: 600,
+                  mb: 1,
+                  py: 1.5,
+                  fontSize: '1rem',
                   '&:hover': {
-                    background: '#fff',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
                   },
                 }}
                 onClick={() => setContactDialogOpen(true)}
               >
                 📧 Contactar
               </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<ArrowBackIcon />}
-                sx={{
-                  color: '#fff',
-                  borderColor: 'rgba(255, 255, 255, 0.5)',
-                  '&:hover': {
-                    borderColor: '#fff',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                  },
-                }}
-                onClick={() => navigate(-1)}
-              >
-                Atrás
-              </Button>
-            </Box>
+            </Paper>
           </Grid2>
-        </Grid2>
-      </Box>
 
-      {/* Content Section */}
-      <Box sx={{ px: { xs: 2, md: 3 } }}>
-        <Paper
-          sx={{
-            background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)',
-            borderRadius: '12px',
-            boxShadow: '0 10px 15px -3px rgba(30, 58, 138, 0.1)',
-            border: '1px solid rgba(30, 58, 138, 0.05)',
-            p: 3,
-            mb: 3,
-          }}
-        >
-          <Typography
-            variant="h5"
-            sx={{
-              fontWeight: 'bold',
-              background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              mb: 2,
-            }}
-          >
-            📖 Acerca del Ministerio
-          </Typography>
-          <Typography variant="body1" sx={{ color: '#4B5563', mb: 3, lineHeight: 1.8 }}>
-            {missionaryData.description}
-          </Typography>
-
-          {missionaryData.specialNotes && (
-            <>
+          {/* Middle Column: Photos Grid */}
+          <Grid2 size={{ xs: 12, sm: 12, md: 4 }}>
+            <Paper
+              sx={{
+                background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)',
+                borderRadius: '12px',
+                p: 2.5,
+                boxShadow: '0 10px 15px -3px rgba(30, 58, 138, 0.1)',
+                border: '1px solid rgba(30, 58, 138, 0.05)',
+              }}
+            >
               <Typography
                 variant="h6"
                 sx={{
                   fontWeight: 'bold',
-                  background: 'linear-gradient(135deg, #D97706 0%, #F59E0B 100%)',
+                  background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
-                  mb: 1,
+                  mb: 2,
                 }}
               >
-                ⭐ Notas Especiales
+                🖼️ Fotos
               </Typography>
-              <Typography variant="body1" sx={{ color: '#4B5563' }}>
-                {missionaryData.specialNotes}
-              </Typography>
-            </>
-          )}
-        </Paper>
+              {missionaryData.media.length > 0 ? (
+                <ImageList cols={2} rowHeight={140} gap={12}>
+                  {missionaryData.media.map((item, idx) => (
+                    <ImageListItem key={idx} sx={{ aspectRatio: '16/9' }}>
+                      <img
+                        srcSet={`${item.url}?w=200&h=200&fit=crop&auto=format&dpr=2 2x`}
+                        src={`${item.url}?w=200&h=200&fit=crop&auto=format`}
+                        alt={item.title || `Foto ${idx + 1}`}
+                        loading="lazy"
+                        style={{
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 12px rgba(30, 58, 138, 0.1)',
+                          borderWidth: 1,
+                          borderStyle: 'solid',
+                          borderColor: 'rgba(30, 58, 138, 0.1)',
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                        }}
+                      />
+                    </ImageListItem>
+                  ))}
+                </ImageList>
+              ) : (
+                <Typography sx={{ color: '#9CA3AF', textAlign: 'center', py: 3 }}>
+                  No hay fotos disponibles
+                </Typography>
+              )}
+            </Paper>
+          </Grid2>
 
-        {/* Photos Section */}
-        {missionaryData.media.length > 0 && (
+          {/* Right Column: Prayer Letter */}
+          <Grid2 size={{ xs: 12, sm: 12, md: 4 }}>
+            <Paper
+              sx={{
+                background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)',
+                borderRadius: '12px',
+                p: 2.5,
+                boxShadow: '0 10px 15px -3px rgba(30, 58, 138, 0.1)',
+                border: '1px solid rgba(30, 58, 138, 0.05)',
+              }}
+            >
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 'bold',
+                  background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  mb: 2,
+                }}
+              >
+                ✉️ Carta de Oración
+              </Typography>
+              <Box
+                sx={{
+                  backgroundColor: '#f9fafb',
+                  border: '2px solid #E5E7EB',
+                  borderRadius: '8px',
+                  p: 1,
+                  mb: 2,
+                  maxHeight: '380px',
+                  overflow: 'auto',
+                }}
+              >
+                <Document
+                  file={samplePdf}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  loading={<Typography sx={{ color: '#9CA3AF', fontSize: '0.9rem' }}>Cargando PDF...</Typography>}
+                >
+                  <Page
+                    pageNumber={pageNumber}
+                    renderAnnotationLayer={false}
+                    renderTextLayer={false}
+                    scale={0.6}
+                  />
+                </Document>
+              </Box>
+
+              {numPages > 0 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={goToPrevPage}
+                    disabled={pageNumber <= 1}
+                    sx={{
+                      borderColor: '#1E3A8A',
+                      color: '#1E3A8A',
+                      fontSize: '0.75rem',
+                      padding: '4px 8px',
+                      '&:hover': {
+                        borderColor: '#2563EB',
+                        background: 'rgba(37, 99, 235, 0.05)',
+                      },
+                    }}
+                  >
+                    ←
+                  </Button>
+                  <Typography
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      color: '#6B7280',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {pageNumber}/{numPages}
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={goToNextPage}
+                    disabled={pageNumber >= numPages}
+                    sx={{
+                      borderColor: '#1E3A8A',
+                      color: '#1E3A8A',
+                      fontSize: '0.75rem',
+                      padding: '4px 8px',
+                      '&:hover': {
+                        borderColor: '#2563EB',
+                        background: 'rgba(37, 99, 235, 0.05)',
+                      },
+                    }}
+                  >
+                    →
+                  </Button>
+                </Box>
+              )}
+            </Paper>
+          </Grid2>
+        </Grid2>
+      </Box>
+
+      {/* Footer Section: Comments and Back Button */}
+      <Box sx={{ px: { xs: 2, md: 3 }, pb: 3 }}>
+        {missionaryData.specialNotes && (
           <Paper
             sx={{
-              background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)',
+              background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
+              border: '2px solid #F59E0B',
               borderRadius: '12px',
-              p: 3,
-              mb: 3,
+              p: 2.5,
+              mb: 2,
+              boxShadow: '0 4px 15px rgba(217, 119, 6, 0.15)',
             }}
           >
             <Typography
-              variant="h5"
+              variant="h6"
               sx={{
                 fontWeight: 'bold',
-                background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                mb: 2,
+                color: '#92400E',
+                mb: 1,
               }}
             >
-              🖼️ Fotos
+              ⭐ Comentarios Adicionales
             </Typography>
-            <ImageList sx={{ mb: 2 }} cols={3} rowHeight={150} gap={12}>
-              {missionaryData.media.map((item, idx) => (
-                <ImageListItem key={idx}>
-                  <img
-                    srcSet={`${item.url}?w=200&h=200&fit=crop&auto=format&dpr=2 2x`}
-                    src={`${item.url}?w=200&h=200&fit=crop&auto=format`}
-                    alt={item.title || `Foto ${idx + 1}`}
-                    loading="lazy"
-                    style={{
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 12px rgba(30, 58, 138, 0.1)',
-                    }}
-                  />
-                </ImageListItem>
-              ))}
-            </ImageList>
+            <Typography variant="body2" sx={{ color: '#78350F', lineHeight: 1.6 }}>
+              {missionaryData.specialNotes}
+            </Typography>
           </Paper>
         )}
 
-        {/* Prayer Letter */}
-        <Paper
-          sx={{
-            background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)',
-            borderRadius: '12px',
-            p: 3,
-            mb: 3,
-          }}
-        >
-          <Typography
-            variant="h5"
+        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+          <Button
+            variant="contained"
+            startIcon={<ArrowBackIcon />}
             sx={{
-              fontWeight: 'bold',
               background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              mb: 2,
+              color: 'white',
+              fontWeight: 600,
+              px: 4,
+              py: 1.5,
+              fontSize: '1.1rem',
+              '&:hover': {
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+              },
             }}
+            onClick={() => navigate(-1)}
           >
-            ✉️ Carta de Oración
-          </Typography>
-          <Box
-            sx={{
-              backgroundColor: '#f9fafb',
-              border: '2px solid #E5E7EB',
-              borderRadius: '8px',
-              p: 2,
-              mb: 2,
-              maxHeight: '400px',
-              overflow: 'auto',
-            }}
-          >
-            <Document
-              file={samplePdf}
-              onLoadSuccess={onDocumentLoadSuccess}
-              loading={<Typography sx={{ color: '#9CA3AF' }}>Cargando PDF...</Typography>}
-            >
-              <Page
-                pageNumber={pageNumber}
-                renderAnnotationLayer={false}
-                renderTextLayer={false}
-                scale={0.8}
-              />
-            </Document>
-          </Box>
-
-          {numPages > 0 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={goToPrevPage}
-                disabled={pageNumber <= 1}
-                sx={{
-                  borderColor: '#1E3A8A',
-                  color: '#1E3A8A',
-                  '&:hover': {
-                    borderColor: '#2563EB',
-                    background: 'rgba(37, 99, 235, 0.05)',
-                  },
-                }}
-              >
-                ← Atrás
-              </Button>
-              <Typography
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: '#6B7280',
-                  fontWeight: 600,
-                }}
-              >
-                {pageNumber} / {numPages}
-              </Typography>
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={goToNextPage}
-                disabled={pageNumber >= numPages}
-                sx={{
-                  borderColor: '#1E3A8A',
-                  color: '#1E3A8A',
-                  '&:hover': {
-                    borderColor: '#2563EB',
-                    background: 'rgba(37, 99, 235, 0.05)',
-                  },
-                }}
-              >
-                Siguiente →
-              </Button>
-            </Box>
-          )}
-        </Paper>
-
-        {/* Prayer Request Box */}
-        <Paper
-          sx={{
-            p: 2.5,
-            background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
-            border: '2px solid #F59E0B',
-            borderRadius: '12px',
-            boxShadow: '0 4px 15px rgba(217, 119, 6, 0.15)',
-          }}
-        >
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 'bold',
-              color: '#92400E',
-              mb: 1,
-            }}
-          >
-            🙏 Cómo Orar
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#78350F' }}>
-            Únete a nosotros en oración por {missionaryData.name} y su ministerio. Ora por su
-            fortaleza, dirección divina, y un impacto duradero en las comunidades a las que sirven.
-          </Typography>
-        </Paper>
+            Volver
+          </Button>
+        </Box>
       </Box>
 
       {/* Contact Dialog */}

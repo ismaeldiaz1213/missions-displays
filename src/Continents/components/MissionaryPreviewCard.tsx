@@ -8,9 +8,10 @@ import { Missionary } from '../../types';
 
 interface MissionaryPreviewCardProps {
   missionary: Missionary;
+  isSelected?: boolean;
 }
 
-export default function ActionAreaCard({ missionary }: MissionaryPreviewCardProps) {
+export default function ActionAreaCard({ missionary, isSelected = false }: MissionaryPreviewCardProps) {
   const navigate = useNavigate();
   const handleClick = () => {
     navigate(`/misionero/${missionary.id}`);
@@ -20,13 +21,20 @@ export default function ActionAreaCard({ missionary }: MissionaryPreviewCardProp
     <Card
       sx={{
         maxWidth: 345,
-        background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)',
-        boxShadow: '0 4px 6px rgba(30, 58, 138, 0.1)',
-        border: '1px solid #E5E7EB',
+        background: isSelected
+          ? 'linear-gradient(135deg, #FCD34D 0%, #FDE68A 100%)'
+          : 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)',
+        boxShadow: isSelected
+          ? '0 0 0 3px #F59E0B, 0 8px 16px rgba(217, 119, 6, 0.3)'
+          : '0 4px 6px rgba(30, 58, 138, 0.1)',
+        border: isSelected ? '3px solid #F59E0B' : '1px solid #E5E7EB',
         transition: 'all 0.3s ease',
+        transform: isSelected ? 'scale(1.02)' : 'scale(1)',
         '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: '0 10px 15px rgba(30, 58, 138, 0.15)',
+          transform: isSelected ? 'scale(1.02)' : 'translateY(-4px)',
+          boxShadow: isSelected
+            ? '0 0 0 3px #F59E0B, 0 12px 20px rgba(217, 119, 6, 0.4)'
+            : '0 10px 15px rgba(30, 58, 138, 0.15)',
         },
       }}
     >
