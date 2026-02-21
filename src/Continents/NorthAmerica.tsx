@@ -6,6 +6,7 @@ import Grid2 from '@mui/material/Grid2';
 import Typography from '@mui/material/Typography';
 import './na_style.css';
 import LeafletRegionalMap from './components/LeafletRegionalMap';
+import ContinentHeader from './components/ContinentHeader';
 import { NORTH_AMERICA_LAT_CENTER, NORTH_AMERICA_LON_CENTER } from '../constants';
 import backButton from '../assets/leftBackButton.png';
 import nextButton from '../assets/rightNextButton.png';
@@ -47,22 +48,14 @@ const NorthAmerica: React.FC = () => {
       }}
     >
       {/* Header */}
-      <Box
-        sx={{
-          background: 'linear-gradient(135deg, #DBEAFE 0%, #EFF6FF 100%)',
-          borderBottom: '4px solid #2563EB',
-          p: 2,
-          mb: 2,
-          boxShadow: '0 4px 12px rgba(37, 99, 235, 0.1)',
-          position: 'relative',
-        }}
-      >
-        <h1 className="north-america-title" style={{ color: '#1E40AF', margin: 0, marginBottom: '0.25rem', fontSize: '1.75rem' }}>
-          🌍 América del Norte
-        </h1>
-        <Typography variant="caption" sx={{ color: '#1E40AF', fontSize: '0.9rem', fontWeight: 500 }}>
-          {missionaries.length} misioneros activos
-        </Typography>
+      <Box sx={{ px: 3 }}>
+        <ContinentHeader
+          emoji="🌍"
+          title="América del Norte"
+          count={missionaries.length}
+          color="#1E40AF"
+          backgroundColor="#DBEAFE"
+        />
       </Box>
 
       <Grid2 container spacing={3} sx={{ px: 3 }}>

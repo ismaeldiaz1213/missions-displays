@@ -6,6 +6,7 @@ import Grid2 from '@mui/material/Grid2';
 import Typography from '@mui/material/Typography';
 import './na_style.css';
 import LeafletRegionalMap from './components/LeafletRegionalMap';
+import ContinentHeader from './components/ContinentHeader';
 import { CENTRAL_AMERICA_LAT_CENTER, CENTRAL_AMERICA_LON_CENTER } from '../constants';
 import backButton from '../assets/leftBackButton.png';
 import nextButton from '../assets/rightNextButton.png';
@@ -40,9 +41,14 @@ const CentralAmerica: React.FC = () => {
 
   return (
     <Box sx={{ background: 'linear-gradient(180deg, #FAFBFC 0%, #F0F4F8 50%, #FFF8F0 100%)', minHeight: '100vh', pb: 4 }}>
-      <Box sx={{ background: 'linear-gradient(135deg, #FFEDD5 0%, #FEF7F2 100%)', borderBottom: '4px solid #F97316', p: 2, mb: 2 }}>
-        <h1 style={{ color: '#9A3412', margin: 0, marginBottom: '0.25rem', fontSize: '1.75rem' }}>🌎 América Central</h1>
-        <Typography variant="caption" sx={{ color: '#9A3412', fontSize: '0.9rem', fontWeight: 500 }}>{missionaries.length} misioneros activos</Typography>
+      <Box sx={{ px: 3 }}>
+        <ContinentHeader
+          emoji="🌎"
+          title="América Central"
+          count={missionaries.length}
+          color="#9A3412"
+          backgroundColor="#FFEDD5"
+        />
       </Box>
       <Grid2 container spacing={3} sx={{ px: 3 }}>
         <Grid2 size={{ xs: 12, md: 8 }}>

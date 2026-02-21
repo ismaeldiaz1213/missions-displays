@@ -6,6 +6,7 @@ import Grid2 from '@mui/material/Grid2';
 import Typography from '@mui/material/Typography';
 import './na_style.css';
 import LeafletRegionalMap from './components/LeafletRegionalMap';
+import ContinentHeader from './components/ContinentHeader';
 import { SOUTH_AMERICA_LAT_CENTER, SOUTH_AMERICA_LON_CENTER } from '../constants';
 import backButton from '../assets/leftBackButton.png';
 import nextButton from '../assets/rightNextButton.png';
@@ -47,21 +48,14 @@ const SouthAmerica: React.FC = () => {
       }}
     >
       {/* Header */}
-      <Box
-        sx={{
-          background: 'linear-gradient(135deg, #DCFCE7 0%, #F0FDF4 100%)',
-          borderBottom: '4px solid #22C55E',
-          p: 2,
-          mb: 2,
-          boxShadow: '0 4px 12px rgba(34, 197, 94, 0.1)',
-        }}
-      >
-        <h1 className="north-america-title" style={{ color: '#166534', margin: 0, marginBottom: '0.25rem', fontSize: '1.75rem' }}>
-          🌎 América del Sur
-        </h1>
-        <Typography variant="caption" sx={{ color: '#166534', fontSize: '0.9rem', fontWeight: 500 }}>
-          {missionaries.length} misioneros activos
-        </Typography>
+      <Box sx={{ px: 3 }}>
+        <ContinentHeader
+          emoji="🌎"
+          title="América del Sur"
+          count={missionaries.length}
+          color="#166534"
+          backgroundColor="#DCFCE7"
+        />
       </Box>
 
       <Grid2 container spacing={3} sx={{ px: 3 }}>
