@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Missionary } from '../../types';
 import { Box, Typography, Button } from '@mui/material';
+import { resolveUrl } from '../../storageUrl';
 
 type RegionMapProps = {
   centerLat: number;
@@ -14,13 +15,12 @@ type RegionMapProps = {
   selectedMissionaryId?: string | null;
 };
 
-const createMissionaryIcon = (missionary: Missionary, isSelected: boolean) => {
+const createMissionaryIcon = (src: string, isSelected: boolean) => {
   const size = isSelected ? 52 : 44;
   const ring = isSelected
     ? '0 0 0 3px #F59E0B, 0 4px 16px rgba(0,0,0,0.4)'
     : '0 3px 10px rgba(0,0,0,0.3)';
   const border = isSelected ? '3px solid #F59E0B' : '2.5px solid #fff';
-  const src = missionary.profileImage || '/default-missionary.svg';
 
   return L.divIcon({
     className: '',
@@ -48,6 +48,18 @@ const LeafletRegionalMap: React.FC<RegionMapProps> = ({
   centerLat, centerLong, missionaries = [], onMissionarySelect, selectedMissionaryId,
 }) => {
   const navigate = useNavigate();
+  // Resolved S3 image URLs keyed by missionary id
+  const [resolvedImgs, setResolvedImgs] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (missionaries.length === 0) return;
+    Promise.all(
+      missionaries.map(async (m) => {
+        const url = await resolveUrl(m.profileImage, '/default-missionary.svg');
+        return [m.id, url] as [string, string];
+      })
+    ).then((pairs) => setResolvedImgs(Object.fromEntries(pairs)));
+  }, [missionaries]);
 
   return (
     <MapContainer
@@ -65,7 +77,7 @@ const LeafletRegionalMap: React.FC<RegionMapProps> = ({
         <Marker
           key={missionary.id}
           position={[missionary.location.latitude, missionary.location.longitude]}
-          icon={createMissionaryIcon(missionary, selectedMissionaryId === missionary.id)}
+          icon={createMissionaryIcon(resolvedImgs[missionary.id] ?? '/default-missionary.svg', selectedMissionaryId === missionary.id)}
           eventHandlers={{ click: () => onMissionarySelect?.(missionary.id) }}
         >
           <Popup>
@@ -73,11 +85,8 @@ const LeafletRegionalMap: React.FC<RegionMapProps> = ({
               <Box sx={{ display: 'flex', gap: 1.5, mb: 1.25 }}>
                 <Box
                   component="img"
-                  src={missionary.profileImage || '/default-missionary.svg'}
+                  src={resolvedImgs[missionary.id] ?? '/default-missionary.svg'}
                   alt={missionary.name}
-                  onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                    e.currentTarget.src = '/default-missionary.svg';
-                  }}
                   sx={{ width: 64, height: 64, borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
                 />
                 <Box sx={{ flex: 1 }}>

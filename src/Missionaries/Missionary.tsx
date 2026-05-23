@@ -1,16 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Grid2, Button, CircularProgress, Typography } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { pdfjs } from 'react-pdf';
+import { Amplify } from 'aws-amplify';
+import { Box, Button, CircularProgress, Typography, Chip } from '@mui/material';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { pdfjs, Document, Page } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 import type { Missionary as MissionaryType } from '../types';
-import MissionaryHeader from './components/MissionaryHeader';
-import MissionaryInfoPanel from './components/MissionaryInfoPanel';
-import MissionaryMediaGallery from './components/MissionaryMediaGallery';
-import MissionaryPrayerLetter from './components/MissionaryPrayerLetter';
-import MissionaryNotes from './components/MissionaryNotes';
 import ContactDialog from './components/ContactDialog';
+import returnToMap from '../assets/backToMapButton.png';
 import outputs from '../../amplify_outputs.json';
+import { resolveUrl } from '../storageUrl';
+
+Amplify.configure(outputs as Parameters<typeof Amplify.configure>[0]);
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -20,27 +24,28 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 const API_ENDPOINT = (outputs as { custom?: { API?: { endpoint?: string } } })?.custom?.API?.endpoint ?? '';
 
 const DEFAULTS: MissionaryType = {
-  id: '',
-  name: '',
-  lastName: '',
-  organization: '',
-  continent: '',
+  id: '', name: '', lastName: '', organization: '', continent: '',
   location: { city: '', country: '', latitude: 0, longitude: 0 },
-  description: '',
-  media: [],
-  contactInfo: [],
-  missionType: '',
+  description: '', media: [], contactInfo: [], missionType: '',
 };
+
+type Section = 'about' | 'carta';
 
 const Missionary: React.FC = () => {
   const { missionary: missionaryId } = useParams<{ missionary: string }>();
   const navigate = useNavigate();
-  const [numPages, setNumPages] = useState<number>(0);
-  const [pageNumber, setPageNumber] = useState<number>(1);
-  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const photosRef = useRef<HTMLDivElement>(null);
+
   const [missionaryData, setMissionaryData] = useState<MissionaryType>(DEFAULTS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activeSection, setActiveSection] = useState<Section>('about');
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [numPages, setNumPages] = useState(0);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [resolvedProfileImage, setResolvedProfileImage] = useState('/default-missionary.svg');
+  const [resolvedMediaUrls, setResolvedMediaUrls] = useState<string[]>([]);
 
   useEffect(() => {
     if (!missionaryId) { setLoading(false); return; }
@@ -59,24 +64,49 @@ const Missionary: React.FC = () => {
     fetchMissionary();
   }, [missionaryId]);
 
-  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-    setNumPages(numPages);
-    setPageNumber(1);
-  }
+  // Resolve profile image
+  useEffect(() => {
+    resolveUrl(missionaryData.profileImage, '/default-missionary.svg').then(setResolvedProfileImage);
+  }, [missionaryData.profileImage]);
+
+  // Resolve all media photos
+  useEffect(() => {
+    if (missionaryData.media.length === 0) { setResolvedMediaUrls([]); return; }
+    Promise.all(missionaryData.media.map((item) => resolveUrl(item.url, ''))).then((urls) =>
+      setResolvedMediaUrls(urls.filter(Boolean))
+    );
+  }, [missionaryData.media]);
+
+  // Resolve prayer letter URL (S3 key → signed URL, or use directly if already a full URL)
+  useEffect(() => {
+    resolveUrl(missionaryData.prayerLetter, '').then((url) => setPdfUrl(url || null));
+  }, [missionaryData.prayerLetter]);
+
+  const scrollToPhotos = () => {
+    setActiveSection('about');
+    setTimeout(() => photosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  };
+
+  const m = missionaryData;
+  const displayName = [m.name, m.lastName].filter(Boolean).join(' ');
+  const hasMedia = resolvedMediaUrls.length > 0;
+  const hasPrayerLetter = !!pdfUrl;
+  const hasContactInfo = m.contactInfo.length > 0;
+  const locationText = [m.location?.city, m.location?.country].filter(Boolean).join(', ');
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: '#F0F4F8' }}>
+        <CircularProgress sx={{ color: '#2563EB' }} />
       </Box>
     );
   }
 
   if (error) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', gap: 2 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: '#F0F4F8', gap: 2 }}>
         <Typography color="error">{error}</Typography>
-        <Button variant="contained" startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)}
+        <Button variant="contained" onClick={() => navigate(-1)}
           sx={{ background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)', color: 'white' }}>
           Volver
         </Button>
@@ -84,70 +114,302 @@ const Missionary: React.FC = () => {
     );
   }
 
-  return (
+  // ── NAV LINK STYLE ──────────────────────────────────────────────────────────
+  const navLink = (label: string, active: boolean, onClick: () => void) => (
     <Box
+      component="button"
+      onClick={onClick}
       sx={{
-        background: 'linear-gradient(135deg, #FAFBFC 0%, #F0F4F8 100%)',
-        backgroundAttachment: 'fixed',
-        minHeight: '100vh',
-        pb: 3,
-        display: 'flex',
-        flexDirection: 'column',
+        background: 'none', border: 'none', cursor: 'pointer',
+        color: active ? '#fff' : 'rgba(255,255,255,0.65)',
+        fontWeight: active ? 700 : 500,
+        fontSize: '0.95rem',
+        px: 1.5, py: 0.75,
+        borderRadius: '6px',
+        borderBottom: active ? '2px solid #fff' : '2px solid transparent',
+        transition: 'all 0.2s ease',
+        whiteSpace: 'nowrap',
+        '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.1)' },
       }}
     >
-      <MissionaryHeader missionary={missionaryData} />
+      {label}
+    </Box>
+  );
 
-      <Box sx={{ px: { xs: 2, md: 3 }, py: 3, flex: 1 }}>
-        <Grid2 container spacing={3}>
-          <Grid2 size={{ xs: 12, sm: 12, md: 4 }}>
-            <MissionaryInfoPanel
-              missionary={missionaryData}
-              onContactClick={() => setContactDialogOpen(true)}
-            />
-          </Grid2>
+  return (
+    <Box sx={{ minHeight: '100vh', background: 'linear-gradient(180deg, #F0F4F8 0%, #E8F1FC 100%)', display: 'flex', flexDirection: 'column' }}>
 
-          <Grid2 size={{ xs: 12, sm: 12, md: 4 }}>
-            <MissionaryMediaGallery missionary={missionaryData} />
-          </Grid2>
+      {/* ── STICKY NAVBAR ─────────────────────────────────────────────────── */}
+      <Box component="nav" sx={{
+        position: 'sticky', top: 0, zIndex: 1000,
+        background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 60%, #1D4ED8 100%)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), 0 4px 24px rgba(30,58,138,0.45)',
+        px: 4, py: 1.25,
+        display: 'flex', alignItems: 'center', gap: 3,
+      }}>
+        {/* Profile photo */}
+        <Box
+          component="img"
+          src={resolvedProfileImage}
+          alt={displayName}
+          onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.src = '/default-missionary.svg'; }}
+          sx={{
+            width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', flexShrink: 0,
+            border: '2.5px solid rgba(255,255,255,0.45)',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.25)',
+          }}
+        />
 
-          <Grid2 size={{ xs: 12, sm: 12, md: 4 }}>
-            <MissionaryPrayerLetter
-              numPages={numPages}
-              pageNumber={pageNumber}
-              onLoadSuccess={onDocumentLoadSuccess}
-              onNextPage={() => setPageNumber(p => Math.min(p + 1, numPages))}
-              onPrevPage={() => setPageNumber(p => Math.max(p - 1, 1))}
-            />
-          </Grid2>
-        </Grid2>
+        {/* Name + ministry */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '1.2rem', lineHeight: 1.2, textShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
+            {displayName || 'Misionero'}
+          </Typography>
+          {m.missionType && (
+            <Typography sx={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.85rem', lineHeight: 1.3 }}>
+              {m.missionType}
+            </Typography>
+          )}
+        </Box>
+
+        {/* Nav links */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          {navLink('Sobre Nosotros', activeSection === 'about', () => setActiveSection('about'))}
+          {hasMedia && navLink('Fotos', false, scrollToPhotos)}
+          {hasPrayerLetter && navLink('Carta de Oración', activeSection === 'carta', () => { setActiveSection('carta'); setPageNumber(1); })}
+        </Box>
+
+        {/* Contact button */}
+        {hasContactInfo && (
+          <Button
+            onClick={() => setContactDialogOpen(true)}
+            variant="outlined"
+            size="small"
+            sx={{
+              color: '#fff', borderColor: 'rgba(255,255,255,0.45)', fontWeight: 600,
+              fontSize: '0.85rem', px: 2, borderRadius: '20px', whiteSpace: 'nowrap',
+              '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,0.12)' },
+            }}
+          >
+            Contactar
+          </Button>
+        )}
       </Box>
 
-      <Box sx={{ px: { xs: 2, md: 3 }, pb: 3 }}>
-        <MissionaryNotes notes={missionaryData.specialNotes} />
+      {/* ── ABOUT SECTION ─────────────────────────────────────────────────── */}
+      {activeSection === 'about' && (
+        <Box sx={{ flex: 1, maxWidth: 920, mx: 'auto', width: '100%', px: 3, py: 4 }}>
 
-        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-          <Button
-            variant="contained"
-            startIcon={<ArrowBackIcon />}
-            sx={{
-              background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)',
-              color: 'white',
-              fontWeight: 600,
-              px: 4,
-              py: 1.5,
-              fontSize: '1.1rem',
-              '&:hover': { boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)' },
-            }}
-            onClick={() => navigate(-1)}
-          >
-            Volver
-          </Button>
+          {/* Info chips row */}
+          {(locationText || m.organization || m.startDate) && (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25, mb: 4 }}>
+              {locationText && (
+                <Chip
+                  label={`📍 ${locationText}`}
+                  sx={{ bgcolor: '#fff', border: '1.5px solid rgba(37,99,235,0.18)', color: '#1E3A8A', fontWeight: 600, fontSize: '0.88rem', boxShadow: '0 2px 8px rgba(30,58,138,0.1)' }}
+                />
+              )}
+              {m.organization && (
+                <Chip
+                  label={`🏛 ${m.organization}`}
+                  sx={{ bgcolor: '#fff', border: '1.5px solid rgba(37,99,235,0.18)', color: '#1E3A8A', fontWeight: 600, fontSize: '0.88rem', boxShadow: '0 2px 8px rgba(30,58,138,0.1)' }}
+                />
+              )}
+              {m.startDate && (
+                <Chip
+                  label={`📅 Desde ${m.startDate}`}
+                  sx={{ bgcolor: '#fff', border: '1.5px solid rgba(37,99,235,0.18)', color: '#1E3A8A', fontWeight: 600, fontSize: '0.88rem', boxShadow: '0 2px 8px rgba(30,58,138,0.1)' }}
+                />
+              )}
+            </Box>
+          )}
+
+          {/* Description */}
+          {m.description && (
+            <Box sx={{ mb: 3 }}>
+              <Typography sx={{ color: '#1E3A8A', fontWeight: 800, fontSize: '1.15rem', mb: 1.25, display: 'flex', alignItems: 'center', gap: 1 }}>
+                Descripción
+              </Typography>
+              <Box sx={{
+                bgcolor: '#fff', borderRadius: '16px', p: 3.5,
+                borderLeft: '5px solid #2563EB',
+                boxShadow: '0 4px 24px rgba(30,58,138,0.08)',
+              }}>
+                <Typography sx={{ color: '#374151', fontSize: '1.05rem', lineHeight: 1.8, fontWeight: 400 }}>
+                  {m.description}
+                </Typography>
+              </Box>
+            </Box>
+          )}
+
+          {/* Special notes */}
+          {m.specialNotes && (
+            <Box sx={{
+              bgcolor: 'rgba(37,99,235,0.06)', borderRadius: '12px', p: 2.5, mb: 3,
+              border: '1px solid rgba(37,99,235,0.15)',
+            }}>
+              <Typography sx={{ color: '#1E3A8A', fontWeight: 700, fontSize: '0.85rem', mb: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Notas
+              </Typography>
+              <Typography sx={{ color: '#374151', fontSize: '0.95rem', lineHeight: 1.7 }}>
+                {m.specialNotes}
+              </Typography>
+            </Box>
+          )}
+
+          {/* Location map */}
+          {m.location?.latitude !== 0 && m.location?.longitude !== 0 && (
+            <Box sx={{ mb: 4 }}>
+              <Typography sx={{ color: '#1E3A8A', fontWeight: 800, fontSize: '1.15rem', mb: 1.25 }}>
+                Ubicación
+              </Typography>
+              <Box sx={{
+                borderRadius: '16px', overflow: 'hidden', height: 280,
+                boxShadow: '0 4px 24px rgba(30,58,138,0.12)',
+                border: '2px solid rgba(37,99,235,0.1)',
+              }}>
+                <MapContainer
+                  center={[m.location.latitude, m.location.longitude]}
+                  zoom={5}
+                  scrollWheelZoom={false}
+                  zoomControl={true}
+                  style={{ height: '100%', width: '100%' }}
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                    url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                  />
+                  <Marker
+                    position={[m.location.latitude, m.location.longitude]}
+                    icon={L.divIcon({
+                      className: '',
+                      html: `<div style="width:18px;height:18px;border-radius:50%;background:#2563EB;border:3px solid #fff;box-shadow:0 2px 10px rgba(30,58,138,0.5);"></div>`,
+                      iconSize: [18, 18],
+                      iconAnchor: [9, 9],
+                    })}
+                  />
+                </MapContainer>
+              </Box>
+            </Box>
+          )}
+
+          {/* Photo gallery */}
+          {hasMedia && (
+            <Box ref={photosRef} sx={{ mt: 2 }}>
+              <Typography sx={{ color: '#1E3A8A', fontWeight: 800, fontSize: '1.3rem', mb: 2.5, pb: 1, borderBottom: '2px solid rgba(37,99,235,0.15)' }}>
+                Fotos
+              </Typography>
+              <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                gap: 2,
+              }}>
+                {resolvedMediaUrls.map((url, i) => (
+                  <Box
+                    key={i}
+                    component="img"
+                    src={url}
+                    alt={m.media[i]?.title || `Foto ${i + 1}`}
+                    onError={(e: React.SyntheticEvent<HTMLImageElement>) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                    sx={{
+                      width: '100%', aspectRatio: '4/3', objectFit: 'cover',
+                      borderRadius: '12px',
+                      boxShadow: '0 4px 16px rgba(30,58,138,0.15)',
+                      border: '2px solid rgba(255,255,255,0.8)',
+                      transition: 'transform 0.25s ease, box-shadow 0.25s ease',
+                      '&:hover': { transform: 'scale(1.03)', boxShadow: '0 8px 28px rgba(30,58,138,0.25)' },
+                      cursor: 'pointer',
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
         </Box>
+      )}
+
+      {/* ── CARTA DE ORACIÓN SECTION ──────────────────────────────────────── */}
+      {activeSection === 'carta' && (
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', px: 3, py: 4 }}>
+          <Typography sx={{ color: '#1E3A8A', fontWeight: 800, fontSize: '1.3rem', mb: 3 }}>
+            Carta de Oración
+          </Typography>
+
+          {pdfUrl ? (
+            <Box sx={{ width: '100%', maxWidth: 700 }}>
+              <Box sx={{
+                bgcolor: '#fff', borderRadius: '16px', overflow: 'hidden',
+                boxShadow: '0 8px 40px rgba(30,58,138,0.15)',
+                border: '2px solid rgba(37,99,235,0.1)',
+              }}>
+                <Document
+                  file={pdfUrl}
+                  onLoadSuccess={({ numPages }) => { setNumPages(numPages); setPageNumber(1); }}
+                  loading={
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                      <CircularProgress sx={{ color: '#2563EB' }} />
+                    </Box>
+                  }
+                >
+                  <Page
+                    pageNumber={pageNumber}
+                    renderAnnotationLayer={false}
+                    renderTextLayer={false}
+                    width={Math.min(660, window.innerWidth - 80)}
+                  />
+                </Document>
+              </Box>
+
+              {numPages > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2, mt: 2.5 }}>
+                  <Button
+                    onClick={() => setPageNumber(p => Math.max(p - 1, 1))}
+                    disabled={pageNumber <= 1}
+                    variant="outlined"
+                    sx={{ borderColor: '#2563EB', color: '#2563EB', minWidth: 40, '&:hover': { bgcolor: 'rgba(37,99,235,0.06)' } }}
+                  >
+                    ←
+                  </Button>
+                  <Typography sx={{ color: '#4B5563', fontWeight: 600 }}>
+                    {pageNumber} / {numPages}
+                  </Typography>
+                  <Button
+                    onClick={() => setPageNumber(p => Math.min(p + 1, numPages))}
+                    disabled={pageNumber >= numPages}
+                    variant="outlined"
+                    sx={{ borderColor: '#2563EB', color: '#2563EB', minWidth: 40, '&:hover': { bgcolor: 'rgba(37,99,235,0.06)' } }}
+                  >
+                    →
+                  </Button>
+                </Box>
+              )}
+            </Box>
+          ) : (
+            <Box sx={{ textAlign: 'center', color: '#9CA3AF', py: 8 }}>
+              <Typography>No hay carta de oración disponible.</Typography>
+            </Box>
+          )}
+        </Box>
+      )}
+
+      {/* ── BACK BUTTON ───────────────────────────────────────────────────── */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        <Box
+          component="img"
+          src={returnToMap}
+          alt="Volver al mapa"
+          onClick={() => navigate('/region-selection')}
+          sx={{
+            height: 60, width: 'auto', cursor: 'pointer',
+            transition: 'transform 0.25s ease',
+            '&:hover': { transform: 'scale(1.06)' },
+          }}
+        />
       </Box>
 
       <ContactDialog
         open={contactDialogOpen}
-        missionary={missionaryData}
+        missionary={m}
         onClose={() => setContactDialogOpen(false)}
       />
     </Box>

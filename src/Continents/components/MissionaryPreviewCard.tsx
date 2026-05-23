@@ -1,9 +1,11 @@
+import { useState, useEffect } from 'react';
 import Card from '@mui/material/Card';
 import CardActionArea from '@mui/material/CardActionArea';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import { useNavigate } from 'react-router-dom';
 import { Missionary } from '../../types';
+import { resolveUrl } from '../../storageUrl';
 
 interface MissionaryPreviewCardProps {
   missionary: Missionary;
@@ -12,6 +14,11 @@ interface MissionaryPreviewCardProps {
 
 export default function ActionAreaCard({ missionary, isSelected = false }: MissionaryPreviewCardProps) {
   const navigate = useNavigate();
+  const [imgSrc, setImgSrc] = useState('/default-missionary.svg');
+
+  useEffect(() => {
+    resolveUrl(missionary.profileImage, '/default-missionary.svg').then(setImgSrc);
+  }, [missionary.profileImage]);
 
   return (
     <Card
@@ -41,11 +48,9 @@ export default function ActionAreaCard({ missionary, isSelected = false }: Missi
         {/* Photo fills the entire card */}
         <Box
           component="img"
-          src={missionary.profileImage || '/default-missionary.svg'}
+          src={imgSrc}
           alt={`${missionary.name} ${missionary.lastName}`}
-          onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-            e.currentTarget.src = '/default-missionary.svg';
-          }}
+          onError={() => setImgSrc('/default-missionary.svg')}
           sx={{
             width: '100%',
             height: '100%',
