@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { MapContainer, Polygon, TileLayer, Marker, Popup } from 'react-leaflet';
+import React from 'react';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -13,175 +13,79 @@ import {
   OCEANIA_LAT_CENTER, OCEANIA_LON_CENTER,
 } from '../constants';
 
+interface Continent {
+  id: string;
+  name: string;
+  route: string;
+  colorA: string; // gradient start
+  colorB: string; // gradient end (darker)
+  center: [number, number];
+  w: number;
+}
+
+const continents: Continent[] = [
+  { id: 'north-america',   name: 'Norte América',  route: '/norte-america',  colorA: '#3B82F6', colorB: '#1D4ED8', center: [NORTH_AMERICA_LAT_CENTER,  NORTH_AMERICA_LON_CENTER],  w: 152 },
+  { id: 'central-america', name: 'Centro América', route: '/centro-america', colorA: '#F59E0B', colorB: '#B45309', center: [CENTRAL_AMERICA_LAT_CENTER, CENTRAL_AMERICA_LON_CENTER], w: 152 },
+  { id: 'south-america',   name: 'Sur América',    route: '/sur-america',    colorA: '#22C55E', colorB: '#15803D', center: [SOUTH_AMERICA_LAT_CENTER,  SOUTH_AMERICA_LON_CENTER],  w: 128 },
+  { id: 'europe',          name: 'Europa',          route: '/europa',         colorA: '#A855F7', colorB: '#6D28D9', center: [EUROPE_LAT_CENTER,          EUROPE_LON_CENTER],          w: 96  },
+  { id: 'africa',          name: 'África',          route: '/africa',         colorA: '#EF4444', colorB: '#B91C1C', center: [AFRICA_LAT_CENTER,          AFRICA_LON_CENTER],          w: 96  },
+  { id: 'asia',            name: 'Asia',            route: '/asia',           colorA: '#06B6D4', colorB: '#0E7490', center: [ASIA_LAT_CENTER,            ASIA_LON_CENTER],            w: 80  },
+  { id: 'oceania',         name: 'Oceanía',         route: '/oceania',        colorA: '#EAB308', colorB: '#A16207', center: [OCEANIA_LAT_CENTER,         OCEANIA_LON_CENTER],         w: 104 },
+];
+
+const createLabel = ({ name, colorA, colorB, w }: Continent) =>
+  L.divIcon({
+    className: '',
+    html: `
+      <div style="
+        background: linear-gradient(180deg, ${colorA} 0%, ${colorB} 100%);
+        color: #fff;
+        padding: 10px 18px;
+        border-radius: 50px;
+        font-size: 14px;
+        font-weight: 800;
+        white-space: nowrap;
+        width: ${w}px;
+        text-align: center;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+        cursor: pointer;
+        border: 1.5px solid rgba(255,255,255,0.4);
+        letter-spacing: 0.3px;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      "
+      onmouseover="this.style.filter='brightness(1.12)';this.style.transform='scale(1.06)';"
+      onmouseout="this.style.filter='brightness(1)';this.style.transform='scale(1)';">
+        ${name}
+      </div>`,
+    iconSize: [w, 44],
+    iconAnchor: [w / 2, 22],
+  });
+
 const LeafletMapContainer: React.FC = () => {
   const navigate = useNavigate();
-  const [hoveredContinent, setHoveredContinent] = useState<string | null>(null);
-
-  // Continent polygons (approximate bounding coordinates)
-  const continentPolygons = [
-    {
-      id: 'north-america',
-      name: 'Norte América',
-      route: '/norte-america',
-      color: '#2563EB',
-      coordinates: [
-        [72.0, -168.0],
-        [72.0, -52.0],
-        [7.0, -52.0],
-        [7.0, -168.0],
-      ] as [number, number][],
-      center: [NORTH_AMERICA_LAT_CENTER, NORTH_AMERICA_LON_CENTER] as [number, number],
-    },
-    {
-      id: 'south-america',
-      name: 'Sud América',
-      route: '/sur-america',
-      color: '#4CAF50',
-      coordinates: [
-        [15.0, -32.0],
-        [15.0, -82.0],
-        [-56.0, -82.0],
-        [-56.0, -32.0],
-      ] as [number, number][],
-      center: [SOUTH_AMERICA_LAT_CENTER, SOUTH_AMERICA_LON_CENTER] as [number, number],
-    },
-    {
-      id: 'central-america',
-      name: 'Centro América',
-      route: '/centro-america',
-      color: '#FF9800',
-      coordinates: [
-        [18.0, -77.0],
-        [18.0, -92.0],
-        [7.0, -92.0],
-        [7.0, -77.0],
-      ] as [number, number][],
-      center: [CENTRAL_AMERICA_LAT_CENTER, CENTRAL_AMERICA_LON_CENTER] as [number, number],
-    },
-    {
-      id: 'europe',
-      name: 'Europa',
-      route: '/europa',
-      color: '#9C27B0',
-      coordinates: [
-        [71.0, -10.0],
-        [71.0, 40.0],
-        [35.0, 40.0],
-        [35.0, -10.0],
-      ] as [number, number][],
-      center: [EUROPE_LAT_CENTER, EUROPE_LON_CENTER] as [number, number],
-    },
-    {
-      id: 'africa',
-      name: 'África',
-      route: '/africa',
-      color: '#F44336',
-      coordinates: [
-        [37.0, -17.0],
-        [37.0, 55.0],
-        [-35.0, 55.0],
-        [-35.0, -17.0],
-      ] as [number, number][],
-      center: [AFRICA_LAT_CENTER, AFRICA_LON_CENTER] as [number, number],
-    },
-    {
-      id: 'asia',
-      name: 'Asia',
-      route: '/asia',
-      color: '#00BCD4',
-      coordinates: [
-        [77.0, 26.0],
-        [77.0, 150.0],
-        [-10.0, 150.0],
-        [-10.0, 26.0],
-      ] as [number, number][],
-      center: [ASIA_LAT_CENTER, ASIA_LON_CENTER] as [number, number],
-    },
-    {
-      id: 'oceania',
-      name: 'Oceanía',
-      route: '/oceania',
-      color: '#FFC107',
-      coordinates: [
-        [-10.0, 113.0],
-        [-10.0, 180.0],
-        [-47.0, 180.0],
-        [-47.0, 113.0],
-      ] as [number, number][],
-      center: [OCEANIA_LAT_CENTER, OCEANIA_LON_CENTER] as [number, number],
-    },
-  ];
-
-  // Create custom icon marker
-  const createContinentIcon = (color: string) =>
-    L.divIcon({
-      className: 'continent-marker',
-      html: `
-        <div style="
-          width: 50px;
-          height: 50px;
-          background: linear-gradient(135deg, ${color} 0%, rgba(255,255,255,0.1) 100%);
-          border: 3px solid ${color};
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 24px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-          cursor: pointer;
-          transition: all 0.3s ease;
-        ">
-          🌍
-        </div>
-      `,
-      iconSize: [50, 50],
-      iconAnchor: [25, 25],
-    });
 
   return (
-    <MapContainer center={[20.0, 0.0]} zoom={2.5} scrollWheelZoom={false} style={{ height: '70vh', width: '100%' }}>
+    <MapContainer
+      center={[22, 12]}
+      zoom={2.5}
+      zoomSnap={0.5}
+      zoomDelta={0.5}
+      scrollWheelZoom={false}
+      zoomControl={true}
+      style={{ height: '100%', width: '100%' }}
+    >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
       />
-
-      {/* Render all continent polygons with interactive features */}
-      {continentPolygons.map((continent) => (
-        <div key={continent.id}>
-          {/* Polygon outline */}
-          <Polygon
-            positions={continent.coordinates}
-            pathOptions={{
-              color: continent.color,
-              weight: 3,
-              opacity: hoveredContinent === continent.id ? 1 : 0.5,
-              fillOpacity: hoveredContinent === continent.id ? 0.25 : 0.1,
-              fillColor: continent.color,
-            }}
-            eventHandlers={{
-              click: () => navigate(continent.route),
-              mouseover: () => setHoveredContinent(continent.id),
-              mouseout: () => setHoveredContinent(null),
-            }}
-          />
-
-          {/* Icon marker at continent center */}
-          <Marker
-            position={continent.center}
-            icon={createContinentIcon(continent.color)}
-            eventHandlers={{
-              click: () => navigate(continent.route),
-            }}
-          >
-            <Popup>
-              <div style={{ textAlign: 'center', fontWeight: 'bold', color: continent.color }}>
-                {continent.name}
-                <br />
-                <small style={{ fontSize: '0.8em', color: '#666' }}>Haz clic para ver misioneros</small>
-              </div>
-            </Popup>
-          </Marker>
-        </div>
+      {continents.map((c) => (
+        <Marker
+          key={c.id}
+          position={c.center}
+          icon={createLabel(c)}
+          eventHandlers={{ click: () => navigate(c.route) }}
+        />
       ))}
     </MapContainer>
   );
