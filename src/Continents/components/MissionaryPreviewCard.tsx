@@ -1,8 +1,7 @@
 import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import CardMedia from '@mui/material/CardMedia';
-import Typography from '@mui/material/Typography';
 import CardActionArea from '@mui/material/CardActionArea';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
 import { useNavigate } from 'react-router-dom';
 import { Missionary } from '../../types';
 
@@ -13,75 +12,95 @@ interface MissionaryPreviewCardProps {
 
 export default function ActionAreaCard({ missionary, isSelected = false }: MissionaryPreviewCardProps) {
   const navigate = useNavigate();
-  const handleClick = () => {
-    navigate(`/misionero/${missionary.id}`);
-  };
 
   return (
     <Card
       sx={{
-        maxWidth: 345,
-        background: isSelected
-          ? 'linear-gradient(135deg, #FCD34D 0%, #FDE68A 100%)'
-          : 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)',
+        height: '100%',
+        position: 'relative',
+        borderRadius: '10px',
+        overflow: 'hidden',
         boxShadow: isSelected
-          ? '0 0 0 3px #F59E0B, 0 8px 16px rgba(217, 119, 6, 0.3)'
-          : '0 4px 6px rgba(30, 58, 138, 0.1)',
-        border: isSelected ? '3px solid #F59E0B' : '1px solid #E5E7EB',
-        transition: 'all 0.3s ease',
+          ? '0 0 0 4px #F59E0B, 0 6px 20px rgba(217,119,6,0.4)'
+          : '0 4px 12px rgba(30,58,138,0.2)',
+        border: isSelected ? '2px solid #F59E0B' : 'none',
+        transition: 'all 0.25s ease',
         transform: isSelected ? 'scale(1.02)' : 'scale(1)',
         '&:hover': {
-          transform: isSelected ? 'scale(1.02)' : 'translateY(-4px)',
+          transform: isSelected ? 'scale(1.02)' : 'scale(1.02)',
           boxShadow: isSelected
-            ? '0 0 0 3px #F59E0B, 0 12px 20px rgba(217, 119, 6, 0.4)'
-            : '0 10px 15px rgba(30, 58, 138, 0.15)',
+            ? '0 0 0 4px #F59E0B, 0 10px 24px rgba(217,119,6,0.5)'
+            : '0 8px 24px rgba(30,58,138,0.3)',
         },
       }}
     >
-      <CardActionArea onClick={handleClick}>
-        <CardMedia
+      <CardActionArea
+        onClick={() => navigate(`/misionero/${missionary.id}`)}
+        sx={{ height: '100%', display: 'block' }}
+      >
+        {/* Photo fills the entire card */}
+        <Box
           component="img"
-          height="200"
-          image={missionary.profileImage}
+          src={missionary.profileImage}
           alt={`${missionary.name} ${missionary.lastName}`}
-          sx={{ objectFit: 'cover' }}
+          sx={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+          }}
         />
-        <CardContent>
+
+        {/* Text overlaid at the bottom with gradient */}
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            background: isSelected
+              ? 'linear-gradient(transparent 0%, rgba(180,100,0,0.92) 100%)'
+              : 'linear-gradient(transparent 0%, rgba(15,30,86,0.92) 100%)',
+            px: 1.5,
+            pt: 4,
+            pb: 1.25,
+          }}
+        >
           <Typography
-            gutterBottom
-            variant="h6"
-            component="div"
             sx={{
-              background: 'linear-gradient(135deg, #2563EB 0%, #1E3A8A 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontWeight: 'bold',
+              color: '#fff',
+              fontWeight: 700,
+              fontSize: '1rem',
+              lineHeight: 1.2,
+              mb: 0.3,
+              textShadow: '0 1px 3px rgba(0,0,0,0.4)',
             }}
           >
             {missionary.name} {missionary.lastName}
           </Typography>
-          <Typography variant="body2" sx={{ color: '#6B7280', mb: 1 }}>
-            {missionary.missionType}
-          </Typography>
-          <Typography variant="caption" sx={{ color: '#9CA3AF' }}>
-            📍 {missionary.location.city}, {missionary.location.country}
-          </Typography>
           <Typography
-            variant="body2"
             sx={{
-              color: '#4B5563',
-              mt: 1,
-              fontSize: '0.875rem',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
+              color: 'rgba(255,255,255,0.85)',
+              fontSize: '0.85rem',
+              display: 'block',
+              lineHeight: 1.3,
             }}
           >
-            {missionary.description}
+            📍 {missionary.location.city}, {missionary.location.country}
           </Typography>
-        </CardContent>
+          {missionary.missionType && (
+            <Typography
+              sx={{
+                color: 'rgba(255,255,255,0.65)',
+                fontSize: '0.82rem',
+                display: 'block',
+                mt: 0.2,
+              }}
+            >
+              {missionary.missionType}
+            </Typography>
+          )}
+        </Box>
       </CardActionArea>
     </Card>
   );
