@@ -20,7 +20,7 @@ const createMissionaryIcon = (missionary: Missionary, isSelected: boolean) => {
     ? '0 0 0 3px #F59E0B, 0 4px 16px rgba(0,0,0,0.4)'
     : '0 3px 10px rgba(0,0,0,0.3)';
   const border = isSelected ? '3px solid #F59E0B' : '2.5px solid #fff';
-  const src = missionary.profileImage ?? '';
+  const src = missionary.profileImage || '/default-missionary.svg';
 
   return L.divIcon({
     className: '',
@@ -37,7 +37,7 @@ const createMissionaryIcon = (missionary: Missionary, isSelected: boolean) => {
         flex-shrink:0;
       ">
         <img src="${src}" style="width:100%;height:100%;object-fit:cover;display:block;"
-          onerror="this.style.display='none'" />
+          onerror="this.src='/default-missionary.svg'" />
       </div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
@@ -73,19 +73,24 @@ const LeafletRegionalMap: React.FC<RegionMapProps> = ({
               <Box sx={{ display: 'flex', gap: 1.5, mb: 1.25 }}>
                 <Box
                   component="img"
-                  src={missionary.profileImage}
+                  src={missionary.profileImage || '/default-missionary.svg'}
                   alt={missionary.name}
+                  onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                    e.currentTarget.src = '/default-missionary.svg';
+                  }}
                   sx={{ width: 64, height: 64, borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
                 />
                 <Box sx={{ flex: 1 }}>
                   <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#1E3A8A', mb: 0.2 }}>
-                    {missionary.name} {missionary.lastName}
+                    {[missionary.name, missionary.lastName].filter(Boolean).join(' ') || 'Misionero'}
                   </Typography>
-                  <Typography sx={{ fontSize: '0.8rem', color: '#666', mb: 0.2 }}>
-                    {missionary.missionType}
-                  </Typography>
+                  {missionary.missionType && (
+                    <Typography sx={{ fontSize: '0.8rem', color: '#666', mb: 0.2 }}>
+                      {missionary.missionType}
+                    </Typography>
+                  )}
                   <Typography sx={{ fontSize: '0.75rem', color: '#999' }}>
-                    📍 {missionary.location.city}, {missionary.location.country}
+                    📍 {[missionary.location?.city, missionary.location?.country].filter(Boolean).join(', ') || '—'}
                   </Typography>
                 </Box>
               </Box>

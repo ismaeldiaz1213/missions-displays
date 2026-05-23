@@ -8,13 +8,14 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import { uploadData } from 'aws-amplify/storage';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import { uploadData, remove } from 'aws-amplify/storage';
 import type { Missionary, ContactInfo } from '../types';
 import { formatBytes } from './StorageIndicator';
 
 const FREE_TIER_BYTES = 5 * 1024 * 1024 * 1024;
-const MAX_IMAGE_BYTES = 50 * 1024 * 1024;   // 50 MB per image
-const MAX_PDF_BYTES = 100 * 1024 * 1024;    // 100 MB per PDF
+const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
+const MAX_PDF_BYTES = 100 * 1024 * 1024;
 
 const CONTINENTS = [
   { value: 'north-america', label: 'Norte América' },
@@ -61,6 +62,9 @@ const uploadFile = async (file: File, path: string): Promise<string> => {
   return path;
 };
 
+// Only attempt S3 deletion for paths that look like S3 storage keys (not local/http paths)
+const isS3Key = (p?: string) => !!p && !p.startsWith('/') && !p.startsWith('http');
+
 const MissionaryForm: React.FC<Props> = ({
   open, missionary, defaultContinent, storageUsedBytes, onSave, onClose, apiFetch,
 }) => {
@@ -75,6 +79,11 @@ const MissionaryForm: React.FC<Props> = ({
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+
+  // Track paths to delete from S3 on save
+  const [profileToRemove, setProfileToRemove] = useState<string | null>(null);
+  const [prayerToRemove, setPrayerToRemove] = useState<string | null>(null);
+  const [mediaToRemove, setMediaToRemove] = useState<string[]>([]);
 
   const profileRef = useRef<HTMLInputElement>(null);
   const prayerRef = useRef<HTMLInputElement>(null);
@@ -99,13 +108,29 @@ const MissionaryForm: React.FC<Props> = ({
   const removeContact = (i: number) =>
     setForm((f) => ({ ...f, contactInfo: f.contactInfo.filter((_, idx) => idx !== i) }));
 
+  const removeCurrentProfileImage = () => {
+    if (form.profileImage) setProfileToRemove(form.profileImage);
+    set('profileImage', '');
+    setProfileFile(null);
+  };
+
+  const removeCurrentPrayerLetter = () => {
+    if (form.prayerLetter) setPrayerToRemove(form.prayerLetter);
+    set('prayerLetter', '');
+    setPrayerFile(null);
+  };
+
+  const removeMediaItem = (url: string) => {
+    setMediaToRemove((prev) => [...prev, url]);
+    setForm((f) => ({ ...f, media: f.media.filter((u) => u !== url) }));
+  };
+
   const handleSave = async () => {
     if (!form.name || !form.lastName || !form.organization || !form.location.city) {
       setError('Nombre, apellido, organización y ciudad son obligatorios.');
       return;
     }
 
-    // Check if uploading would exceed the 5 GB free tier
     const newFilesBytes = [profileFile, prayerFile, ...mediaFiles]
       .filter(Boolean)
       .reduce((acc, f) => acc + (f?.size ?? 0), 0);
@@ -121,6 +146,19 @@ const MissionaryForm: React.FC<Props> = ({
     setUploading(true);
 
     try {
+      // Delete removed files from S3 (silently ignore failures for non-S3 paths)
+      if (profileToRemove && isS3Key(profileToRemove)) {
+        try { await remove({ path: profileToRemove }); } catch (e) { console.warn('S3 delete skipped:', e); }
+      }
+      if (prayerToRemove && isS3Key(prayerToRemove)) {
+        try { await remove({ path: prayerToRemove }); } catch (e) { console.warn('S3 delete skipped:', e); }
+      }
+      for (const path of mediaToRemove) {
+        if (isS3Key(path)) {
+          try { await remove({ path }); } catch (e) { console.warn('S3 delete skipped:', e); }
+        }
+      }
+
       let profileImage = form.profileImage;
       let prayerLetter = form.prayerLetter;
       let media = [...form.media];
@@ -217,6 +255,8 @@ const MissionaryForm: React.FC<Props> = ({
           </Divider>
 
           <Box display="grid" gridTemplateColumns="1fr 1fr 1fr" gap={2}>
+
+            {/* Profile image */}
             <Box>
               <Typography variant="caption" color="#aaa" display="block" mb={1}>Foto de perfil</Typography>
               <input ref={profileRef} type="file" accept="image/*" hidden onChange={(e) => {
@@ -226,13 +266,23 @@ const MissionaryForm: React.FC<Props> = ({
               }} />
               <Button variant="outlined" size="small" startIcon={<CloudUploadIcon />}
                 onClick={() => profileRef.current?.click()} sx={{ borderColor: '#555', color: '#ccc' }}>
-                Seleccionar imagen
+                {form.profileImage ? 'Reemplazar' : 'Seleccionar imagen'}
               </Button>
-              {profileFile && <Typography variant="caption" color="#90caf9" display="block" mt={0.5}>{profileFile.name}</Typography>}
-              {!profileFile && form.profileImage && form.profileImage !== 'PLACEHOLDER' &&
-                <Typography variant="caption" color="#666" display="block" mt={0.5}>Imagen actual guardada</Typography>}
+              {profileFile && (
+                <Typography variant="caption" color="#90caf9" display="block" mt={0.5}>{profileFile.name}</Typography>
+              )}
+              {!profileFile && form.profileImage && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.75 }}>
+                  <Typography variant="caption" color="#666" sx={{ flex: 1 }}>Foto actual guardada</Typography>
+                  <IconButton size="small" onClick={removeCurrentProfileImage}
+                    sx={{ color: '#ef5350', p: 0.25 }} title="Quitar foto de perfil">
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              )}
             </Box>
 
+            {/* Prayer letter PDF */}
             <Box>
               <Typography variant="caption" color="#aaa" display="block" mb={1}>Carta de oración (PDF)</Typography>
               <input ref={prayerRef} type="file" accept="application/pdf" hidden onChange={(e) => {
@@ -242,12 +292,23 @@ const MissionaryForm: React.FC<Props> = ({
               }} />
               <Button variant="outlined" size="small" startIcon={<CloudUploadIcon />}
                 onClick={() => prayerRef.current?.click()} sx={{ borderColor: '#555', color: '#ccc' }}>
-                Seleccionar PDF
+                {form.prayerLetter ? 'Reemplazar' : 'Seleccionar PDF'}
               </Button>
-              {prayerFile && <Typography variant="caption" color="#90caf9" display="block" mt={0.5}>{prayerFile.name}</Typography>}
-              {!prayerFile && form.prayerLetter && <Typography variant="caption" color="#666" display="block" mt={0.5}>PDF actual guardado</Typography>}
+              {prayerFile && (
+                <Typography variant="caption" color="#90caf9" display="block" mt={0.5}>{prayerFile.name}</Typography>
+              )}
+              {!prayerFile && form.prayerLetter && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.75 }}>
+                  <Typography variant="caption" color="#666" sx={{ flex: 1 }}>PDF actual guardado</Typography>
+                  <IconButton size="small" onClick={removeCurrentPrayerLetter}
+                    sx={{ color: '#ef5350', p: 0.25 }} title="Quitar PDF">
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              )}
             </Box>
 
+            {/* Media photos */}
             <Box>
               <Typography variant="caption" color="#aaa" display="block" mb={1}>Álbum de fotos</Typography>
               <input ref={mediaRef} type="file" accept="image/*" multiple hidden onChange={(e) => {
@@ -258,7 +319,7 @@ const MissionaryForm: React.FC<Props> = ({
               }} />
               <Button variant="outlined" size="small" startIcon={<CloudUploadIcon />}
                 onClick={() => mediaRef.current?.click()} sx={{ borderColor: '#555', color: '#ccc' }}>
-                Seleccionar fotos
+                Añadir fotos
               </Button>
               {mediaFiles.length > 0 && (
                 <Typography variant="caption" color="#90caf9" display="block" mt={0.5}>
@@ -266,9 +327,21 @@ const MissionaryForm: React.FC<Props> = ({
                 </Typography>
               )}
               {form.media.length > 0 && (
-                <Typography variant="caption" color="#666" display="block" mt={0.5}>
-                  {form.media.length} foto(s) actuales
-                </Typography>
+                <Box sx={{ mt: 0.75 }}>
+                  {form.media.map((url, i) => (
+                    <Box key={url} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
+                      <Typography variant="caption" color="#666" sx={{
+                        flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        Foto {i + 1}
+                      </Typography>
+                      <IconButton size="small" onClick={() => removeMediaItem(url)}
+                        sx={{ color: '#ef5350', p: 0.25 }} title="Quitar foto">
+                        <DeleteOutlineIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  ))}
+                </Box>
               )}
             </Box>
           </Box>

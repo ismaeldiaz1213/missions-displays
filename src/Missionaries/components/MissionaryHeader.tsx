@@ -20,8 +20,11 @@ const MissionaryHeader: React.FC<MissionaryHeaderProps> = ({ missionary }) => {
         <Grid2 size={{ xs: 2.5, sm: 2 }}>
           <Box
             component="img"
-            src={missionary.profileImage}
+            src={missionary.profileImage || '/default-missionary.svg'}
             alt={missionary.name}
+            onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+              e.currentTarget.src = '/default-missionary.svg';
+            }}
             sx={{
               width: '100%',
               borderRadius: '6px',
@@ -40,11 +43,13 @@ const MissionaryHeader: React.FC<MissionaryHeaderProps> = ({ missionary }) => {
               mb: 0.1,
             }}
           >
-            {missionary.name} {missionary.lastName}
+            {[missionary.name, missionary.lastName].filter(Boolean).join(' ') || 'Misionero'}
           </Typography>
-          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.8rem', fontWeight: 500 }}>
-            {missionary.missionType}
-          </Typography>
+          {missionary.missionType && (
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.8rem', fontWeight: 500 }}>
+              {missionary.missionType}
+            </Typography>
+          )}
         </Grid2>
       </Grid2>
     </Box>

@@ -41,8 +41,11 @@ export default function ActionAreaCard({ missionary, isSelected = false }: Missi
         {/* Photo fills the entire card */}
         <Box
           component="img"
-          src={missionary.profileImage}
+          src={missionary.profileImage || '/default-missionary.svg'}
           alt={`${missionary.name} ${missionary.lastName}`}
+          onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+            e.currentTarget.src = '/default-missionary.svg';
+          }}
           sx={{
             width: '100%',
             height: '100%',
@@ -76,7 +79,7 @@ export default function ActionAreaCard({ missionary, isSelected = false }: Missi
               textShadow: '0 1px 3px rgba(0,0,0,0.4)',
             }}
           >
-            {missionary.name} {missionary.lastName}
+            {[missionary.name, missionary.lastName].filter(Boolean).join(' ') || 'Misionero'}
           </Typography>
           <Typography
             sx={{
@@ -86,7 +89,7 @@ export default function ActionAreaCard({ missionary, isSelected = false }: Missi
               lineHeight: 1.3,
             }}
           >
-            📍 {missionary.location.city}, {missionary.location.country}
+            📍 {[missionary.location?.city, missionary.location?.country].filter(Boolean).join(', ') || '—'}
           </Typography>
           {missionary.missionType && (
             <Typography

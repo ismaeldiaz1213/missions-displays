@@ -31,38 +31,44 @@ const MissionaryInfoPanel: React.FC<MissionaryInfoPanelProps> = ({ missionary, o
         📋 Información
       </Typography>
 
-      <Box sx={{ mb: 2.5 }}>
-        <Typography variant="body2" sx={{ color: '#9CA3AF', fontSize: '0.85rem', mb: 0.5 }}>
-          ORGANIZACIÓN
-        </Typography>
-        <Typography variant="body1" sx={{ color: '#1F2937', fontWeight: 500 }}>
-          {missionary.organization}
-        </Typography>
-      </Box>
+      {missionary.organization && (
+        <Box sx={{ mb: 2.5 }}>
+          <Typography variant="body2" sx={{ color: '#9CA3AF', fontSize: '0.85rem', mb: 0.5 }}>
+            ORGANIZACIÓN
+          </Typography>
+          <Typography variant="body1" sx={{ color: '#1F2937', fontWeight: 500 }}>
+            {missionary.organization}
+          </Typography>
+        </Box>
+      )}
 
       <Box sx={{ mb: 2.5 }}>
         <Typography variant="body2" sx={{ color: '#9CA3AF', fontSize: '0.85rem', mb: 0.5 }}>
           UBICACIÓN
         </Typography>
         <Typography variant="body1" sx={{ color: '#1F2937', fontWeight: 500 }}>
-          📍 {missionary.location.city}, {missionary.location.country}
+          📍 {[missionary.location?.city, missionary.location?.country].filter(Boolean).join(', ') || '—'}
         </Typography>
       </Box>
 
-      <Box sx={{ mb: 2.5 }}>
-        <Typography variant="body2" sx={{ color: '#9CA3AF', fontSize: '0.85rem', mb: 0.5 }}>
-          TIPO DE MINISTERIO
-        </Typography>
-        <Typography variant="body1" sx={{ color: '#1F2937', fontWeight: 500 }}>
-          {missionary.missionType}
-        </Typography>
-      </Box>
+      {missionary.missionType && (
+        <Box sx={{ mb: 2.5 }}>
+          <Typography variant="body2" sx={{ color: '#9CA3AF', fontSize: '0.85rem', mb: 0.5 }}>
+            TIPO DE MINISTERIO
+          </Typography>
+          <Typography variant="body1" sx={{ color: '#1F2937', fontWeight: 500 }}>
+            {missionary.missionType}
+          </Typography>
+        </Box>
+      )}
 
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="body2" sx={{ color: '#4B5563', lineHeight: 1.6 }}>
-          {missionary.description}
-        </Typography>
-      </Box>
+      {missionary.description && (
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="body2" sx={{ color: '#4B5563', lineHeight: 1.6 }}>
+            {missionary.description}
+          </Typography>
+        </Box>
+      )}
 
       <Button
         variant="contained"

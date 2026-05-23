@@ -21,7 +21,7 @@ export interface Missionary {
     latitude: number;
     longitude: number;
   };
-  profileImage: string;
+  profileImage?: string;
   description: string;
   prayerLetter?: string;
   media: MissionaryMedia[];
