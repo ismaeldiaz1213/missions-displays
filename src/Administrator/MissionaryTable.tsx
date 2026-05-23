@@ -9,6 +9,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import { fetchAuthSession } from 'aws-amplify/auth';
+import { remove } from 'aws-amplify/storage';
+import { isS3Key } from '../storageUrl';
 import type { Missionary } from '../types';
 import MissionaryForm from './MissionaryForm';
 import outputs from '../../amplify_outputs.json';
@@ -84,6 +86,16 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
     if (!deleteTarget) return;
     setDeleting(true);
     try {
+      // Collect all S3 keys attached to this missionary
+      const s3Keys: string[] = [
+        deleteTarget.profileImage,
+        deleteTarget.prayerLetter,
+        ...(deleteTarget.media ?? []).map((item) => item.url),
+      ].filter((p): p is string => isS3Key(p));
+
+      // Remove S3 files first (best-effort — don't block delete if one fails)
+      await Promise.allSettled(s3Keys.map((path) => remove({ path })));
+
       await apiFetch(`missionaries/${deleteTarget.id}`, 'DELETE');
       setDeleteTarget(null);
       load();
