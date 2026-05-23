@@ -4,6 +4,7 @@ import {
   TableHead, TableRow, Paper, IconButton, Select, MenuItem,
   FormControl, InputLabel, Typography, CircularProgress,
   Dialog, DialogTitle, DialogContent, DialogActions,
+  useTheme, useMediaQuery, Card, CardContent, CardActions,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -38,6 +39,8 @@ interface Props {
 }
 
 const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [missionaries, setMissionaries] = useState<Missionary[]>([]);
   const [continent, setContinent] = useState('north-america');
   const [loading, setLoading] = useState(false);
@@ -126,7 +129,7 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' }, gap: 2, mb: 3 }}>
         <FormControl sx={{ minWidth: 220, ...inputSx }}>
           <InputLabel>Continente</InputLabel>
           <Select value={continent} label="Continente" onChange={(e) => setContinent(e.target.value)}
@@ -134,8 +137,9 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
             {CONTINENTS.map((c) => <MenuItem key={c.value} value={c.value}>{c.label}</MenuItem>)}
           </Select>
         </FormControl>
-        <Button variant="contained" startIcon={<AddIcon />}
-          onClick={() => { setEditing(null); setFormOpen(true); }}>
+        <Button variant="contained" startIcon={<AddIcon />} size={isMobile ? 'large' : 'medium'}
+          onClick={() => { setEditing(null); setFormOpen(true); }}
+          sx={{ fontWeight: 700, py: { xs: 1.5, sm: 1 } }}>
           Añadir Misionero
         </Button>
       </Box>
@@ -148,7 +152,45 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
 
       {loading ? (
         <Box sx={{ textAlign: 'center', py: 6 }}><CircularProgress /></Box>
+      ) : missionaries.length === 0 ? (
+        <Box sx={{ textAlign: 'center', py: 6, color: '#555' }}>
+          {apiError ? 'Error cargando datos.' : 'No hay misioneros para este continente todavía.'}
+        </Box>
+      ) : isMobile ? (
+        /* ── Mobile: card list ── */
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          {missionaries.map((m) => (
+            <Card key={m.id} sx={{ bgcolor: '#141414', border: '1px solid #2a2a2a', borderRadius: 2 }}>
+              <CardContent sx={{ pb: 0 }}>
+                <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>
+                  {m.name} {m.lastName}
+                </Typography>
+                <Typography sx={{ color: '#aaa', fontSize: '0.85rem' }}>{m.organization}</Typography>
+                {(m.location.city || m.location.country) && (
+                  <Typography sx={{ color: '#666', fontSize: '0.8rem', mt: 0.25 }}>
+                    📍 {[m.location.city, m.location.country].filter(Boolean).join(', ')}
+                  </Typography>
+                )}
+                {m.missionType && (
+                  <Typography sx={{ color: '#666', fontSize: '0.8rem' }}>⛪ {m.missionType}</Typography>
+                )}
+              </CardContent>
+              <CardActions sx={{ justifyContent: 'flex-end', pt: 0.5 }}>
+                <Button size="small" startIcon={loadingEditId === m.id ? <CircularProgress size={12} /> : <EditIcon />}
+                  onClick={() => openEdit(m)} disabled={loadingEditId === m.id}
+                  sx={{ color: '#90caf9', textTransform: 'none', fontWeight: 600 }}>
+                  Editar
+                </Button>
+                <Button size="small" startIcon={<DeleteIcon />} onClick={() => setDeleteTarget(m)}
+                  sx={{ color: '#ef5350', textTransform: 'none', fontWeight: 600 }}>
+                  Eliminar
+                </Button>
+              </CardActions>
+            </Card>
+          ))}
+        </Box>
       ) : (
+        /* ── Desktop: table ── */
         <TableContainer component={Paper} sx={{ bgcolor: '#141414', border: '1px solid #2a2a2a' }}>
           <Table>
             <TableHead>
@@ -163,13 +205,7 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
               </TableRow>
             </TableHead>
             <TableBody>
-              {missionaries.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} sx={{ color: '#555', textAlign: 'center', py: 6, border: 'none' }}>
-                    {apiError ? 'Error cargando datos.' : 'No hay misioneros para este continente todavía.'}
-                  </TableCell>
-                </TableRow>
-              ) : missionaries.map((m) => (
+              {missionaries.map((m) => (
                 <TableRow key={m.id} hover sx={{ '&:hover': { bgcolor: '#1f1f1f' } }}>
                   <TableCell sx={cellSx}>{m.name} {m.lastName}</TableCell>
                   <TableCell sx={subCellSx}>{m.organization}</TableCell>

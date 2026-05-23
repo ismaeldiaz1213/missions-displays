@@ -3,12 +3,13 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, TextField, Select, MenuItem, FormControl, InputLabel,
   Box, Typography, IconButton, CircularProgress, Divider,
-  Stack,
+  Stack, useTheme, useMediaQuery,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import CloseIcon from '@mui/icons-material/Close';
 import { uploadData, remove } from 'aws-amplify/storage';
 import type { Missionary, ContactInfo } from '../types';
 import { formatBytes } from './StorageIndicator';
@@ -69,6 +70,8 @@ const isS3Key = (p?: string) => !!p && !p.startsWith('/') && !p.startsWith('http
 const MissionaryForm: React.FC<Props> = ({
   open, missionary, defaultContinent, storageUsedBytes, onSave, onClose, apiFetch,
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const id = missionary?.id ?? crypto.randomUUID();
   const [form, setForm] = useState<FormData>(() =>
     missionary
@@ -224,23 +227,42 @@ const MissionaryForm: React.FC<Props> = ({
   const formChanged = JSON.stringify(form) !== initialForm.current;
   const canSave = requiredFilled && (formChanged || filesChanged);
 
+  const captionSx = { fontSize: isMobile ? '0.9rem' : '0.75rem', fontWeight: 600 };
+
   const inputSx = {
-    '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: '#555' } },
-    '& .MuiInputLabel-root': { color: '#aaa' },
+    '& .MuiOutlinedInput-root': {
+      color: '#fff',
+      '& fieldset': { borderColor: '#555' },
+      '& input, & textarea': { fontSize: isMobile ? '1.05rem' : undefined },
+    },
+    '& .MuiInputLabel-root': { color: '#aaa', fontSize: isMobile ? '1rem' : undefined },
+    '& .MuiSelect-select': { fontSize: isMobile ? '1.05rem' : undefined },
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth fullScreen={isMobile}
       PaperProps={{ sx: { bgcolor: '#1a1a1a', color: '#fff' } }}>
-      <DialogTitle sx={{ borderBottom: '1px solid #333' }}>
-        {missionary ? 'Editar Misionero' : 'Añadir Misionero'}
+      <DialogTitle sx={{ borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', fontSize: { xs: '1.25rem', sm: '1.5rem' }, fontWeight: 700 }}>
+        <Box sx={{ flex: 1 }}>{missionary ? 'Editar Misionero' : 'Añadir Misionero'}</Box>
+        <IconButton onClick={onClose} size="small" sx={{ color: '#ef5350', '&:hover': { bgcolor: 'rgba(239,83,80,0.12)' } }}>
+          <CloseIcon />
+        </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ pt: 3 }}>
+      <DialogContent sx={{ pt: 2 }}>
         <Stack spacing={3}>
 
+          {/* Required fields legend — hidden once all required fields are filled */}
+          {!requiredFilled && (
+            <Box sx={{ bgcolor: 'rgba(239,83,80,0.1)', border: '1px solid rgba(239,83,80,0.3)', borderRadius: 1.5, px: 2, py: 1 }}>
+              <Typography variant="caption" sx={{ color: '#ef9a9a', ...captionSx }}>
+                * Campos obligatorios — deben llenarse para poder guardar
+              </Typography>
+            </Box>
+          )}
+
           {/* Basic info */}
-          <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2} pt={1.5}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, pt: 0.5 }}>
             <TextField label="Nombre *" value={form.name} onChange={(e) => set('name', e.target.value)} sx={inputSx}
               InputLabelProps={{ sx: { '& .MuiFormLabel-asterisk': { color: '#ef5350' } } }} />
             <TextField label="Apellido *" value={form.lastName} onChange={(e) => set('lastName', e.target.value)} sx={inputSx}
@@ -260,9 +282,9 @@ const MissionaryForm: React.FC<Props> = ({
 
           {/* Location */}
           <Divider sx={{ borderColor: '#333' }}>
-            <Typography variant="caption" color="#aaa">Ubicación</Typography>
+            <Typography variant="caption" color="#aaa" sx={captionSx}>Ubicación</Typography>
           </Divider>
-          <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
             <TextField label="Ciudad *" value={form.location.city} onChange={(e) => setLocation('city', e.target.value)} sx={inputSx}
               InputLabelProps={{ sx: { '& .MuiFormLabel-asterisk': { color: '#ef5350' } } }} />
             <TextField label="País" value={form.location.country} onChange={(e) => setLocation('country', e.target.value)} sx={inputSx} />
@@ -281,14 +303,14 @@ const MissionaryForm: React.FC<Props> = ({
 
           {/* File uploads */}
           <Divider sx={{ borderColor: '#333' }}>
-            <Typography variant="caption" color="#aaa">Archivos</Typography>
+            <Typography variant="caption" color="#aaa" sx={captionSx}>Archivos</Typography>
           </Divider>
 
-          <Box display="grid" gridTemplateColumns="1fr 1fr 1fr" gap={2}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
 
             {/* Profile image */}
             <Box>
-              <Typography variant="caption" color="#aaa" display="block" mb={1}>Foto de perfil</Typography>
+              <Typography variant="caption" color="#aaa" display="block" mb={1} sx={captionSx}>Foto de perfil</Typography>
               <input ref={profileRef} type="file" accept="image/*" hidden onChange={(e) => {
                 const f = e.target.files?.[0] ?? null;
                 if (f && f.size > MAX_IMAGE_BYTES) { setError(`Imagen demasiado grande (${formatBytes(f.size)}). Máximo 50 MB.`); return; }
@@ -320,7 +342,7 @@ const MissionaryForm: React.FC<Props> = ({
 
             {/* Prayer letter PDF */}
             <Box>
-              <Typography variant="caption" color="#aaa" display="block" mb={1}>Carta de oración (PDF)</Typography>
+              <Typography variant="caption" color="#aaa" display="block" mb={1} sx={captionSx}>Carta de oración (PDF)</Typography>
               <input ref={prayerRef} type="file" accept="application/pdf" hidden onChange={(e) => {
                 const f = e.target.files?.[0] ?? null;
                 if (f && f.size > MAX_PDF_BYTES) { setError(`PDF demasiado grande (${formatBytes(f.size)}). Máximo 100 MB.`); return; }
@@ -354,7 +376,7 @@ const MissionaryForm: React.FC<Props> = ({
 
             {/* Media photos */}
             <Box>
-              <Typography variant="caption" color="#aaa" display="block" mb={1}>Álbum de fotos</Typography>
+              <Typography variant="caption" color="#aaa" display="block" mb={1} sx={captionSx}>Álbum de fotos</Typography>
               <input ref={mediaRef} type="file" accept="image/*" multiple hidden onChange={(e) => {
                 const files = Array.from(e.target.files ?? []);
                 const oversized = files.find(f => f.size > MAX_IMAGE_BYTES);
@@ -398,7 +420,7 @@ const MissionaryForm: React.FC<Props> = ({
 
           {/* Contact info */}
           <Divider sx={{ borderColor: '#333' }}>
-            <Typography variant="caption" color="#aaa">Información de Contacto</Typography>
+            <Typography variant="caption" color="#aaa" sx={captionSx}>Información de Contacto</Typography>
           </Divider>
 
           {form.contactInfo.map((c, i) => (
@@ -418,7 +440,8 @@ const MissionaryForm: React.FC<Props> = ({
             </Box>
           ))}
 
-          <Button startIcon={<AddIcon />} onClick={addContact} sx={{ color: '#90caf9', alignSelf: 'flex-start' }}>
+          <Button startIcon={<AddIcon />} onClick={addContact} size={isMobile ? 'large' : 'medium'}
+            sx={{ color: '#90caf9', alignSelf: 'flex-start', fontSize: isMobile ? '1rem' : undefined }}>
             Añadir contacto
           </Button>
 
@@ -426,10 +449,12 @@ const MissionaryForm: React.FC<Props> = ({
         </Stack>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2, borderTop: '1px solid #333' }}>
-        <Button onClick={onClose} sx={{ color: '#aaa' }}>Cancelar</Button>
+      <DialogActions sx={{ p: 2, borderTop: '1px solid #333', gap: 1, flexDirection: { xs: 'column-reverse', sm: 'row' } }}>
+        <Button onClick={onClose} fullWidth={isMobile} sx={{ color: '#aaa' }}>Cancelar</Button>
         <Button variant="contained" onClick={handleSave} disabled={uploading || !canSave}
-          startIcon={uploading ? <CircularProgress size={16} /> : null}>
+          fullWidth={isMobile} size={isMobile ? 'large' : 'medium'}
+          startIcon={uploading ? <CircularProgress size={16} /> : null}
+          sx={{ fontWeight: 700 }}>
           {uploading ? 'Guardando...' : 'Guardar'}
         </Button>
       </DialogActions>

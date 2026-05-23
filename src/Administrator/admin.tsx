@@ -4,7 +4,7 @@ import { getCurrentUser, signInWithRedirect, signOut, fetchAuthSession } from 'a
 import { Hub } from 'aws-amplify/utils';
 import {
   Box, Button, Typography, CircularProgress, Paper,
-  AppBar, Toolbar, Chip,
+  AppBar, Toolbar, Chip, useTheme, useMediaQuery,
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -20,6 +20,8 @@ const isConfigured =
 type AuthState = 'loading' | 'unauthenticated' | 'authenticated';
 
 const Admin: React.FC = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [authState, setAuthState] = useState<AuthState>('loading');
   const [userEmail, setUserEmail] = useState('');
   const [storageUsedBytes, setStorageUsedBytes] = useState(0);
@@ -89,18 +91,19 @@ const Admin: React.FC = () => {
   return (
     <Box sx={{ bgcolor: '#0a0a0a', minHeight: '100vh', color: '#fff' }}>
       <AppBar position="static" elevation={0} sx={{ bgcolor: '#141414', borderBottom: '1px solid #2a2a2a' }}>
-        <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            Portal Administrativo — Misioneros
+        <Toolbar sx={{ gap: 1, flexWrap: 'wrap', py: { xs: 1, sm: 0 } }}>
+          <Typography variant={isMobile ? 'body1' : 'h6'} sx={{ flexGrow: 1, fontWeight: 700, fontSize: { xs: '0.95rem', sm: '1.25rem' } }}>
+            {isMobile ? 'Admin — Misioneros' : 'Portal Administrativo — Misioneros'}
           </Typography>
-          <StorageIndicator
-            compact
-            refreshTrigger={storageRefresh}
-            onUsageLoaded={setStorageUsedBytes}
-          />
-          <Chip label={userEmail} variant="outlined" size="small" sx={{ mr: 2, color: '#aaa', borderColor: '#444' }} />
-          <Button startIcon={<LogoutIcon />} onClick={() => signOut()} sx={{ color: '#aaa', textTransform: 'none' }}>
-            Salir
+          {!isMobile && (
+            <StorageIndicator compact refreshTrigger={storageRefresh} onUsageLoaded={setStorageUsedBytes} />
+          )}
+          {!isMobile && (
+            <Chip label={userEmail} variant="outlined" size="small" sx={{ color: '#aaa', borderColor: '#444' }} />
+          )}
+          <Button startIcon={<LogoutIcon />} onClick={() => signOut()} size="small"
+            sx={{ color: '#aaa', textTransform: 'none', minWidth: 0 }}>
+            {isMobile ? '' : 'Salir'}
           </Button>
         </Toolbar>
       </AppBar>
