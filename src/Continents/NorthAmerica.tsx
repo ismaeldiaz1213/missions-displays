@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import ActionAreaCard from './components/MissionaryPreviewCard';
 import Grid2 from '@mui/material/Grid2';
 import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
 import './na_style.css';
 import LeafletRegionalMap from './components/LeafletRegionalMap';
 import ContinentHeader from './components/ContinentHeader';
@@ -12,14 +13,35 @@ import backButton from '../assets/leftBackButton.png';
 import nextButton from '../assets/rightNextButton.png';
 import { useNavigate } from 'react-router-dom';
 import returnToMap from '../assets/backToMapButton.png';
-import { getMissionariesByContinent } from '../mockData';
+import type { Missionary } from '../types';
+import outputs from '../../amplify_outputs.json';
+
+const API_ENDPOINT = (outputs as { custom?: { API?: { endpoint?: string } } })?.custom?.API?.endpoint ?? '';
 
 const NorthAmerica: React.FC = () => {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedMissionaryId, setSelectedMissionaryId] = useState<string | null>(null);
-  
-  const missionaries = getMissionariesByContinent('north-america');
+  const [missionaries, setMissionaries] = useState<Missionary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchMissionaries = async () => {
+      try {
+        const res = await fetch(`${API_ENDPOINT}missionaries/continent/north-america`);
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        const data: Missionary[] = await res.json();
+        setMissionaries(data ?? []);
+      } catch (err) {
+        setError(String(err));
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMissionaries();
+  }, []);
+
   const missionariesPerPage = 9;
   const totalPages = Math.ceil(missionaries.length / missionariesPerPage);
 
@@ -38,6 +60,22 @@ const NorthAmerica: React.FC = () => {
       setCurrentPage(currentPage - 1);
     }
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography color="error">{error}</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -62,8 +100,24 @@ const NorthAmerica: React.FC = () => {
         {/* Main Cards Section */}
         <Grid2 size={{ xs: 12, md: 8 }}>
           <Grid2 container spacing={2} sx={{ mb: 3 }}>
-            {/* Render current page of cards in a 3x3 pattern */}
-            {currentMissionaries.map((missionary) => (
+            {missionaries.length === 0 ? (
+              <Grid2 size={{ xs: 12 }}>
+                <Box
+                  sx={{
+                    textAlign: 'center',
+                    py: 10,
+                    color: '#9CA3AF',
+                  }}
+                >
+                  <Typography variant="h6" sx={{ mb: 1 }}>
+                    Próximamente
+                  </Typography>
+                  <Typography variant="body2">
+                    Aún no hay misioneros registrados para esta región.
+                  </Typography>
+                </Box>
+              </Grid2>
+            ) : currentMissionaries.map((missionary) => (
               <Grid2 size={{ xs: 12, sm: 6, md: 4 }} key={missionary.id}>
                 <ActionAreaCard
                   missionary={missionary}
@@ -74,7 +128,7 @@ const NorthAmerica: React.FC = () => {
           </Grid2>
 
           {/* Pagination Controls */}
-          <Grid2
+          {missionaries.length > 0 && <Grid2
             container
             sx={{
               padding: 2.5,
@@ -116,7 +170,7 @@ const NorthAmerica: React.FC = () => {
                 '&:hover': currentPage < totalPages - 1 ? { transform: 'scale(1.1)', filter: 'drop-shadow(0 4px 8px rgba(37, 99, 235, 0.3))' } : {},
               }}
             />
-          </Grid2>
+          </Grid2>}
         </Grid2>
 
         {/* Right Sidebar - Map */}
@@ -148,7 +202,7 @@ const NorthAmerica: React.FC = () => {
             <LeafletRegionalMap
               centerLat={NORTH_AMERICA_LAT_CENTER}
               centerLong={NORTH_AMERICA_LON_CENTER}
-              missionaries={missionaries}
+              missionaries={currentMissionaries}
               selectedMissionaryId={selectedMissionaryId}
               onMissionarySelect={setSelectedMissionaryId}
             />

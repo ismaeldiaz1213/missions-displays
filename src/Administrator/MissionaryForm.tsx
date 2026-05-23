@@ -10,6 +10,11 @@ import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { uploadData } from 'aws-amplify/storage';
 import type { Missionary, ContactInfo } from '../types';
+import { formatBytes } from './StorageIndicator';
+
+const FREE_TIER_BYTES = 5 * 1024 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 50 * 1024 * 1024;   // 50 MB per image
+const MAX_PDF_BYTES = 100 * 1024 * 1024;    // 100 MB per PDF
 
 const CONTINENTS = [
   { value: 'north-america', label: 'Norte América' },
@@ -27,6 +32,7 @@ interface Props {
   open: boolean;
   missionary: Missionary | null;
   defaultContinent: string;
+  storageUsedBytes: number;
   onSave: () => void;
   onClose: () => void;
   apiFetch: (path: string, method?: string, body?: unknown) => Promise<unknown>;
@@ -56,7 +62,7 @@ const uploadFile = async (file: File, path: string): Promise<string> => {
 };
 
 const MissionaryForm: React.FC<Props> = ({
-  open, missionary, defaultContinent, onSave, onClose, apiFetch,
+  open, missionary, defaultContinent, storageUsedBytes, onSave, onClose, apiFetch,
 }) => {
   const id = missionary?.id ?? crypto.randomUUID();
   const [form, setForm] = useState<FormData>(() =>
@@ -98,6 +104,19 @@ const MissionaryForm: React.FC<Props> = ({
       setError('Nombre, apellido, organización y ciudad son obligatorios.');
       return;
     }
+
+    // Check if uploading would exceed the 5 GB free tier
+    const newFilesBytes = [profileFile, prayerFile, ...mediaFiles]
+      .filter(Boolean)
+      .reduce((acc, f) => acc + (f?.size ?? 0), 0);
+    if (storageUsedBytes + newFilesBytes > FREE_TIER_BYTES) {
+      setError(
+        `Esta subida (${formatBytes(newFilesBytes)}) excedería el límite gratuito de 5 GB. ` +
+        `Almacenamiento usado: ${formatBytes(storageUsedBytes)}.`
+      );
+      return;
+    }
+
     setError('');
     setUploading(true);
 
@@ -200,7 +219,11 @@ const MissionaryForm: React.FC<Props> = ({
           <Box display="grid" gridTemplateColumns="1fr 1fr 1fr" gap={2}>
             <Box>
               <Typography variant="caption" color="#aaa" display="block" mb={1}>Foto de perfil</Typography>
-              <input ref={profileRef} type="file" accept="image/*" hidden onChange={(e) => setProfileFile(e.target.files?.[0] ?? null)} />
+              <input ref={profileRef} type="file" accept="image/*" hidden onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                if (f && f.size > MAX_IMAGE_BYTES) { setError(`Imagen demasiado grande (${formatBytes(f.size)}). Máximo 50 MB.`); return; }
+                setProfileFile(f);
+              }} />
               <Button variant="outlined" size="small" startIcon={<CloudUploadIcon />}
                 onClick={() => profileRef.current?.click()} sx={{ borderColor: '#555', color: '#ccc' }}>
                 Seleccionar imagen
@@ -212,7 +235,11 @@ const MissionaryForm: React.FC<Props> = ({
 
             <Box>
               <Typography variant="caption" color="#aaa" display="block" mb={1}>Carta de oración (PDF)</Typography>
-              <input ref={prayerRef} type="file" accept="application/pdf" hidden onChange={(e) => setPrayerFile(e.target.files?.[0] ?? null)} />
+              <input ref={prayerRef} type="file" accept="application/pdf" hidden onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                if (f && f.size > MAX_PDF_BYTES) { setError(`PDF demasiado grande (${formatBytes(f.size)}). Máximo 100 MB.`); return; }
+                setPrayerFile(f);
+              }} />
               <Button variant="outlined" size="small" startIcon={<CloudUploadIcon />}
                 onClick={() => prayerRef.current?.click()} sx={{ borderColor: '#555', color: '#ccc' }}>
                 Seleccionar PDF
@@ -223,7 +250,12 @@ const MissionaryForm: React.FC<Props> = ({
 
             <Box>
               <Typography variant="caption" color="#aaa" display="block" mb={1}>Álbum de fotos</Typography>
-              <input ref={mediaRef} type="file" accept="image/*" multiple hidden onChange={(e) => setMediaFiles(Array.from(e.target.files ?? []))} />
+              <input ref={mediaRef} type="file" accept="image/*" multiple hidden onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                const oversized = files.find(f => f.size > MAX_IMAGE_BYTES);
+                if (oversized) { setError(`"${oversized.name}" es demasiado grande (${formatBytes(oversized.size)}). Máximo 50 MB por imagen.`); return; }
+                setMediaFiles(files);
+              }} />
               <Button variant="outlined" size="small" startIcon={<CloudUploadIcon />}
                 onClick={() => mediaRef.current?.click()} sx={{ borderColor: '#555', color: '#ccc' }}>
                 Seleccionar fotos

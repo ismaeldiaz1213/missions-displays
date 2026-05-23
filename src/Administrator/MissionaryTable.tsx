@@ -30,7 +30,12 @@ const inputSx = {
   '& .MuiInputLabel-root': { color: '#aaa' },
 };
 
-const MissionaryTable: React.FC = () => {
+interface Props {
+  storageUsedBytes: number;
+  onSaveComplete: () => void;
+}
+
+const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) => {
   const [missionaries, setMissionaries] = useState<Missionary[]>([]);
   const [continent, setContinent] = useState('north-america');
   const [loading, setLoading] = useState(false);
@@ -167,7 +172,8 @@ const MissionaryTable: React.FC = () => {
           open={formOpen}
           missionary={editing}
           defaultContinent={continent}
-          onSave={() => { setFormOpen(false); setEditing(null); load(); }}
+          storageUsedBytes={storageUsedBytes}
+          onSave={() => { setFormOpen(false); setEditing(null); load(); onSaveComplete(); }}
           onClose={() => { setFormOpen(false); setEditing(null); }}
           apiFetch={apiFetch}
         />
