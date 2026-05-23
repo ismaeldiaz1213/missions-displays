@@ -44,6 +44,7 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
   const [apiError, setApiError] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Missionary | null>(null);
+  const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Missionary | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -81,6 +82,19 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
   }, [continent, apiFetch]);
 
   useEffect(() => { load(); }, [load]);
+
+  const openEdit = async (m: Missionary) => {
+    setLoadingEditId(m.id);
+    try {
+      const full = await apiFetch(`missionaries/${m.id}`) as Missionary;
+      setEditing(full);
+    } catch {
+      setEditing(m);
+    } finally {
+      setLoadingEditId(null);
+      setFormOpen(true);
+    }
+  };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -164,9 +178,11 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
                   <TableCell sx={subCellSx}>{m.missionType}</TableCell>
                   <TableCell sx={subCellSx}>{m.startDate ?? '—'}</TableCell>
                   <TableCell sx={{ borderColor: '#333' }}>
-                    <IconButton size="small" onClick={() => { setEditing(m); setFormOpen(true); }}
+                    <IconButton size="small" onClick={() => openEdit(m)} disabled={loadingEditId === m.id}
                       sx={{ color: '#90caf9', mr: 0.5 }}>
-                      <EditIcon fontSize="small" />
+                      {loadingEditId === m.id
+                        ? <CircularProgress size={14} sx={{ color: '#90caf9' }} />
+                        : <EditIcon fontSize="small" />}
                     </IconButton>
                     <IconButton size="small" onClick={() => setDeleteTarget(m)} sx={{ color: '#ef5350' }}>
                       <DeleteIcon fontSize="small" />

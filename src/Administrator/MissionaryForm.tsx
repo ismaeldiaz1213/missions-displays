@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, TextField, Select, MenuItem, FormControl, InputLabel,
@@ -12,6 +12,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { uploadData, remove } from 'aws-amplify/storage';
 import type { Missionary, ContactInfo } from '../types';
 import { formatBytes } from './StorageIndicator';
+import { resolveUrl } from '../storageUrl';
 
 const FREE_TIER_BYTES = 5 * 1024 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
@@ -88,6 +89,25 @@ const MissionaryForm: React.FC<Props> = ({
   const profileRef = useRef<HTMLInputElement>(null);
   const prayerRef = useRef<HTMLInputElement>(null);
   const mediaRef = useRef<HTMLInputElement>(null);
+
+  // Snapshot of form at open time — used to detect unsaved changes
+  const initialForm = useRef(JSON.stringify(form));
+
+  // Resolved preview URLs for existing S3 files
+  const [profilePreview, setProfilePreview] = useState<string | null>(null);
+  const [mediaPreviews, setMediaPreviews] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!form.profileImage) { setProfilePreview(null); return; }
+    resolveUrl(form.profileImage, '').then((url) => setProfilePreview(url || null));
+  }, [form.profileImage]);
+
+  useEffect(() => {
+    if (form.media.length === 0) { setMediaPreviews({}); return; }
+    Promise.all(
+      form.media.map(async (url) => [url, await resolveUrl(url, '')] as [string, string])
+    ).then((pairs) => setMediaPreviews(Object.fromEntries(pairs.filter(([, v]) => v))));
+  }, [form.media]);
 
   const set = (field: keyof FormData, value: unknown) =>
     setForm((f) => ({ ...f, [field]: value }));
@@ -198,6 +218,12 @@ const MissionaryForm: React.FC<Props> = ({
     }
   };
 
+  const requiredFilled = !!form.name.trim() && !!form.lastName.trim() && !!form.organization.trim() && !!form.location.city.trim();
+  const filesChanged = !!profileFile || !!prayerFile || mediaFiles.length > 0
+    || profileToRemove !== null || prayerToRemove !== null || mediaToRemove.length > 0;
+  const formChanged = JSON.stringify(form) !== initialForm.current;
+  const canSave = requiredFilled && (formChanged || filesChanged);
+
   const inputSx = {
     '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: '#555' } },
     '& .MuiInputLabel-root': { color: '#aaa' },
@@ -214,10 +240,13 @@ const MissionaryForm: React.FC<Props> = ({
         <Stack spacing={3}>
 
           {/* Basic info */}
-          <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2}>
-            <TextField label="Nombre" value={form.name} onChange={(e) => set('name', e.target.value)} sx={inputSx} />
-            <TextField label="Apellido" value={form.lastName} onChange={(e) => set('lastName', e.target.value)} sx={inputSx} />
-            <TextField label="Organización" value={form.organization} onChange={(e) => set('organization', e.target.value)} sx={inputSx} />
+          <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2} pt={1.5}>
+            <TextField label="Nombre *" value={form.name} onChange={(e) => set('name', e.target.value)} sx={inputSx}
+              InputLabelProps={{ sx: { '& .MuiFormLabel-asterisk': { color: '#ef5350' } } }} />
+            <TextField label="Apellido *" value={form.lastName} onChange={(e) => set('lastName', e.target.value)} sx={inputSx}
+              InputLabelProps={{ sx: { '& .MuiFormLabel-asterisk': { color: '#ef5350' } } }} />
+            <TextField label="Organización *" value={form.organization} onChange={(e) => set('organization', e.target.value)} sx={inputSx}
+              InputLabelProps={{ sx: { '& .MuiFormLabel-asterisk': { color: '#ef5350' } } }} />
             <TextField label="Tipo de Misión" value={form.missionType} onChange={(e) => set('missionType', e.target.value)} sx={inputSx} />
             <TextField label="Fecha de Inicio" type="date" value={form.startDate ?? ''} onChange={(e) => set('startDate', e.target.value)} InputLabelProps={{ shrink: true }} sx={inputSx} />
             <FormControl sx={inputSx}>
@@ -234,7 +263,8 @@ const MissionaryForm: React.FC<Props> = ({
             <Typography variant="caption" color="#aaa">Ubicación</Typography>
           </Divider>
           <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2}>
-            <TextField label="Ciudad" value={form.location.city} onChange={(e) => setLocation('city', e.target.value)} sx={inputSx} />
+            <TextField label="Ciudad *" value={form.location.city} onChange={(e) => setLocation('city', e.target.value)} sx={inputSx}
+              InputLabelProps={{ sx: { '& .MuiFormLabel-asterisk': { color: '#ef5350' } } }} />
             <TextField label="País" value={form.location.country} onChange={(e) => setLocation('country', e.target.value)} sx={inputSx} />
             <TextField label="Estado / Provincia" value={form.location.state ?? ''} onChange={(e) => setLocation('state', e.target.value)} sx={inputSx} />
             <Box />
@@ -264,21 +294,27 @@ const MissionaryForm: React.FC<Props> = ({
                 if (f && f.size > MAX_IMAGE_BYTES) { setError(`Imagen demasiado grande (${formatBytes(f.size)}). Máximo 50 MB.`); return; }
                 setProfileFile(f);
               }} />
+              {/* Preview with badge delete */}
+              {(profileFile || profilePreview) && (
+                <Box sx={{ position: 'relative', display: 'inline-block', mb: 1 }}>
+                  <Box component="img"
+                    src={profileFile ? URL.createObjectURL(profileFile) : (profilePreview ?? '')}
+                    sx={{ display: 'block', width: 80, height: 80, objectFit: 'cover', borderRadius: '8px', border: '1.5px solid #444' }}
+                  />
+                  {!profileFile && (
+                    <IconButton size="small" onClick={removeCurrentProfileImage} title="Quitar foto de perfil"
+                      sx={{ position: 'absolute', top: -6, right: -6, bgcolor: '#ef5350', color: '#fff', p: 0.2, '&:hover': { bgcolor: '#c62828' }, width: 20, height: 20 }}>
+                      <DeleteOutlineIcon sx={{ fontSize: 13 }} />
+                    </IconButton>
+                  )}
+                </Box>
+              )}
               <Button variant="outlined" size="small" startIcon={<CloudUploadIcon />}
-                onClick={() => profileRef.current?.click()} sx={{ borderColor: '#555', color: '#ccc' }}>
-                {form.profileImage ? 'Reemplazar' : 'Seleccionar imagen'}
+                onClick={() => profileRef.current?.click()} sx={{ borderColor: '#555', color: '#ccc', display: 'block' }}>
+                {form.profileImage || profileFile ? 'Reemplazar' : 'Seleccionar imagen'}
               </Button>
               {profileFile && (
                 <Typography variant="caption" color="#90caf9" display="block" mt={0.5}>{profileFile.name}</Typography>
-              )}
-              {!profileFile && form.profileImage && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.75 }}>
-                  <Typography variant="caption" color="#666" sx={{ flex: 1 }}>Foto actual guardada</Typography>
-                  <IconButton size="small" onClick={removeCurrentProfileImage}
-                    sx={{ color: '#ef5350', p: 0.25 }} title="Quitar foto de perfil">
-                    <DeleteOutlineIcon fontSize="small" />
-                  </IconButton>
-                </Box>
               )}
             </Box>
 
@@ -290,21 +326,29 @@ const MissionaryForm: React.FC<Props> = ({
                 if (f && f.size > MAX_PDF_BYTES) { setError(`PDF demasiado grande (${formatBytes(f.size)}). Máximo 100 MB.`); return; }
                 setPrayerFile(f);
               }} />
+              {/* PDF card with badge delete */}
+              {!prayerFile && form.prayerLetter && (
+                <Box sx={{ position: 'relative', display: 'inline-block', mb: 1 }}>
+                  <Box sx={{
+                    width: 80, height: 80, borderRadius: '8px', border: '1.5px solid #444',
+                    bgcolor: '#2a2a2a', display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', gap: 0.5,
+                  }}>
+                    <Typography sx={{ fontSize: '1.6rem', lineHeight: 1 }}>📄</Typography>
+                    <Typography variant="caption" sx={{ color: '#aaa', fontSize: '0.65rem' }}>PDF</Typography>
+                  </Box>
+                  <IconButton size="small" onClick={removeCurrentPrayerLetter} title="Quitar PDF"
+                    sx={{ position: 'absolute', top: -6, right: -6, bgcolor: '#ef5350', color: '#fff', p: 0.2, '&:hover': { bgcolor: '#c62828' }, width: 20, height: 20 }}>
+                    <DeleteOutlineIcon sx={{ fontSize: 13 }} />
+                  </IconButton>
+                </Box>
+              )}
               <Button variant="outlined" size="small" startIcon={<CloudUploadIcon />}
-                onClick={() => prayerRef.current?.click()} sx={{ borderColor: '#555', color: '#ccc' }}>
+                onClick={() => prayerRef.current?.click()} sx={{ borderColor: '#555', color: '#ccc', display: 'block' }}>
                 {form.prayerLetter ? 'Reemplazar' : 'Seleccionar PDF'}
               </Button>
               {prayerFile && (
                 <Typography variant="caption" color="#90caf9" display="block" mt={0.5}>{prayerFile.name}</Typography>
-              )}
-              {!prayerFile && form.prayerLetter && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.75 }}>
-                  <Typography variant="caption" color="#666" sx={{ flex: 1 }}>PDF actual guardado</Typography>
-                  <IconButton size="small" onClick={removeCurrentPrayerLetter}
-                    sx={{ color: '#ef5350', p: 0.25 }} title="Quitar PDF">
-                    <DeleteOutlineIcon fontSize="small" />
-                  </IconButton>
-                </Box>
               )}
             </Box>
 
@@ -327,17 +371,23 @@ const MissionaryForm: React.FC<Props> = ({
                 </Typography>
               )}
               {form.media.length > 0 && (
-                <Box sx={{ mt: 0.75 }}>
+                <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                   {form.media.map((url, i) => (
-                    <Box key={url} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-                      <Typography variant="caption" color="#666" sx={{
-                        flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>
-                        Foto {i + 1}
-                      </Typography>
+                    <Box key={url} sx={{ position: 'relative' }}>
+                      <Box component="img"
+                        src={mediaPreviews[url] ?? ''}
+                        alt={`Foto ${i + 1}`}
+                        sx={{ width: 64, height: 64, objectFit: 'cover', borderRadius: '6px', border: '1.5px solid #444', display: 'block' }}
+                      />
                       <IconButton size="small" onClick={() => removeMediaItem(url)}
-                        sx={{ color: '#ef5350', p: 0.25 }} title="Quitar foto">
-                        <DeleteOutlineIcon fontSize="small" />
+                        title="Quitar foto"
+                        sx={{
+                          position: 'absolute', top: -6, right: -6,
+                          bgcolor: '#ef5350', color: '#fff', p: 0.2,
+                          '&:hover': { bgcolor: '#c62828' },
+                          width: 20, height: 20,
+                        }}>
+                        <DeleteOutlineIcon sx={{ fontSize: 13 }} />
                       </IconButton>
                     </Box>
                   ))}
@@ -378,7 +428,7 @@ const MissionaryForm: React.FC<Props> = ({
 
       <DialogActions sx={{ p: 2, borderTop: '1px solid #333' }}>
         <Button onClick={onClose} sx={{ color: '#aaa' }}>Cancelar</Button>
-        <Button variant="contained" onClick={handleSave} disabled={uploading}
+        <Button variant="contained" onClick={handleSave} disabled={uploading || !canSave}
           startIcon={uploading ? <CircularProgress size={16} /> : null}>
           {uploading ? 'Guardando...' : 'Guardar'}
         </Button>
