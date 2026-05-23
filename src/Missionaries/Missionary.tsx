@@ -11,6 +11,7 @@ import 'react-pdf/dist/Page/TextLayer.css';
 import type { Missionary as MissionaryType } from '../types';
 import ContactDialog from './components/ContactDialog';
 import returnToMap from '../assets/backToMapButton.png';
+import iblLogo from '../assets/ibl_logo.png';
 import outputs from '../../amplify_outputs.json';
 import { resolveUrl } from '../storageUrl';
 
@@ -433,7 +434,7 @@ const Missionary: React.FC = () => {
       )}
 
       {/* ── BACK BUTTON ───────────────────────────────────────────────────── */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4, gap: 2.5 }}>
         <Box
           component="img"
           src={returnToMap}
@@ -445,6 +446,7 @@ const Missionary: React.FC = () => {
             '&:hover': { transform: 'scale(1.06)' },
           }}
         />
+        <Box component="img" src={iblLogo} alt="IBL" sx={{ height: 44, width: 'auto', opacity: 0.55 }} />
       </Box>
 
       <ContactDialog

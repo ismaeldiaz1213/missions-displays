@@ -7,6 +7,7 @@ import ContinentHeader from './components/ContinentHeader';
 import backButton from '../assets/leftBackButton.png';
 import nextButton from '../assets/rightNextButton.png';
 import returnToMap from '../assets/backToMapButton.png';
+import iblLogo from '../assets/ibl_logo.png';
 import type { Missionary } from '../types';
 import outputs from '../../amplify_outputs.json';
 
@@ -57,8 +58,8 @@ const ContinentPageLayout: React.FC<Props> = ({ title, slug, centerLat, centerLo
   const handlePrev = () => { if (currentPage > 0) setCurrentPage(p => p - 1); };
 
   if (loading) return (
-    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-      <CircularProgress />
+    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: '#F0F4F8' }}>
+      <CircularProgress sx={{ color: '#2563EB' }} />
     </Box>
   );
 
@@ -137,12 +138,13 @@ const ContinentPageLayout: React.FC<Props> = ({ title, slug, centerLat, centerLo
           />
         </Box>
 
-        <Box sx={{ display: 'flex', justifyContent: 'center', pb: 2.5 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', pb: 2.5, gap: 2 }}>
           <Box
             component="img" src={returnToMap} alt="Volver al Mapa"
             onClick={() => navigate('/region-selection')}
             sx={{ height: '48px', width: 'auto', cursor: 'pointer', transition: 'transform 0.2s', '&:active': { transform: 'scale(0.96)' } }}
           />
+          <Box component="img" src={iblLogo} alt="IBL" sx={{ height: 36, width: 'auto', opacity: 0.55 }} />
         </Box>
       </Box>
     );
@@ -186,7 +188,9 @@ const ContinentPageLayout: React.FC<Props> = ({ title, slug, centerLat, centerLo
       </Box>
 
       <Box sx={{ flexShrink: 0, display: 'flex', alignItems: 'center', px: 3, py: 1.25 }}>
-        <Box sx={{ flex: 1 }} />
+        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+          <Box component="img" src={iblLogo} alt="IBL" sx={{ height: 36, width: 'auto', opacity: 0.55 }} />
+        </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Box component="img" src={backButton} alt="Atrás" onClick={handlePrev}
             sx={{ height: '52px', width: 'auto', cursor: currentPage > 0 ? 'pointer' : 'not-allowed', opacity: currentPage > 0 ? 1 : 0.45, transition: 'all 0.25s ease', '&:hover': currentPage > 0 ? { transform: 'scale(1.08)' } : {} }} />
