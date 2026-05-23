@@ -7,13 +7,15 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sandbox": "npx amplify sandbox"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.4.3",
     "@mui/material": "^6.4.3",
+    "aws-amplify": "^6.17.0",
     "leaflet": "^1.9.4",
     "react": "^19.0.0-rc.1",
     "react-chrono": "^2.9.1",
@@ -23,11 +25,19 @@
     "react-router-dom": "^7.1.5"
   },
   "devDependencies": {
+    "@aws-amplify/backend": "^1.22.0",
+    "@aws-amplify/backend-cli": "^1.8.2",
+    "@aws-sdk/client-dynamodb": "^3.1053.0",
+    "@aws-sdk/lib-dynamodb": "^3.1053.0",
     "@eslint/js": "^9.19.0",
+    "@types/aws-lambda": "^8.10.161",
     "@types/leaflet": "^1.9.20",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
+    "aws-cdk-lib": "^2.257.0",
+    "constructs": "^10.6.0",
+    "esbuild": "^0.28.0",
     "eslint": "^9.19.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.18",

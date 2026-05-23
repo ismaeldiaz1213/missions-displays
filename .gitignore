@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Amplify Gen 2 — generated per environment, never commit real values
+amplify_outputs.json
+.amplify

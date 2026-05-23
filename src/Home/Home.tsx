@@ -20,7 +20,6 @@ const Home: React.FC = () => {
                     muted
                     playsInline
                     onClick={handleClick}
-                    style={{ pointerEvents: 'auto' }} // Prevent user interaction
                 />
         </div>
     </>

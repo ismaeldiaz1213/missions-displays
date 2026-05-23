@@ -31,7 +31,7 @@ const App:React.FC = () => {
         <Route path="/africa" element={<Africa />} />
         <Route path="/oceania" element={<Oceania />} />
         <Route path="/misionero/:missionary" element={<Missionary/>} /> 
-        <Route path="/administrator" element={<Admin/>} /> 
+        <Route path="/admin" element={<Admin/>} />
         <Route path="/misioneros-pasados" element={<MisionerosPasados/>} /> 
         <Route path="/timeline" element={<Timeline/>} /> 
       </Routes>
