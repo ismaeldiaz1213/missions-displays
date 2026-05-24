@@ -58,7 +58,7 @@ const ContinentPageLayout: React.FC<Props> = ({ title, slug, centerLat, centerLo
   const handlePrev = () => { if (currentPage > 0) setCurrentPage(p => p - 1); };
 
   // Shared inline content for the cards+map area
-  const contentArea = (isMobileLayout: boolean) => {
+  const contentArea = () => {
     if (loading) return (
       <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <CircularProgress sx={{ color: '#2563EB' }} />
@@ -79,7 +79,7 @@ const ContinentPageLayout: React.FC<Props> = ({ title, slug, centerLat, centerLo
         <ContinentHeader title={title} count={loading ? undefined : missionaries.length} />
 
         <Box sx={{ flex: 1, px: 1.5, pt: 1.5, pb: 0, display: 'flex', flexDirection: 'column' }}>
-          {contentArea(true) ?? (missionaries.length === 0 ? (
+          {contentArea() ?? (missionaries.length === 0 ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 8, color: '#9CA3AF' }}>
               <Typography variant="h6" sx={{ mb: 1 }}>Próximamente</Typography>
               <Typography variant="body2" textAlign="center">Aún no hay misioneros registrados para esta región.</Typography>
@@ -160,7 +160,7 @@ const ContinentPageLayout: React.FC<Props> = ({ title, slug, centerLat, centerLo
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex', gap: 2, px: 3, pt: 1.5, pb: 0 }}>
         <Box sx={{ flex: 2, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          {contentArea(false) ?? (missionaries.length === 0 ? (
+          {contentArea() ?? (missionaries.length === 0 ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9CA3AF' }}>
               <Typography variant="h6" sx={{ mb: 1 }}>Próximamente</Typography>
               <Typography variant="body2">Aún no hay misioneros registrados para esta región.</Typography>
