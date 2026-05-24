@@ -4,7 +4,7 @@ import { Box, Typography } from '@mui/material';
 interface ContinentHeaderProps {
   emoji?: string;
   title: string;
-  count: number;
+  count?: number;
   color?: string;
   backgroundColor?: string;
 }
@@ -20,6 +20,9 @@ const ContinentHeader: React.FC<ContinentHeaderProps> = ({ title, count }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        position: 'sticky',
+        top: 0,
+        zIndex: 10,
       }}
     >
       <Typography
@@ -34,7 +37,7 @@ const ContinentHeader: React.FC<ContinentHeaderProps> = ({ title, count }) => {
         {title}
       </Typography>
 
-      {count > 0 && (
+      {count != null && count > 0 && (
         <Box
           sx={{
             background: 'rgba(255,255,255,0.18)',

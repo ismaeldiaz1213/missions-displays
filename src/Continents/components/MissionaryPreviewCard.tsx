@@ -14,9 +14,12 @@ interface MissionaryPreviewCardProps {
 
 export default function ActionAreaCard({ missionary, isSelected = false }: MissionaryPreviewCardProps) {
   const navigate = useNavigate();
-  const [imgSrc, setImgSrc] = useState('/default-missionary.svg');
+  const [imgSrc, setImgSrc] = useState<string | null>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   useEffect(() => {
+    setImgSrc(null);
+    setImageLoaded(false);
     resolveUrl(missionary.profileImage, '/default-missionary.svg').then(setImgSrc);
   }, [missionary.profileImage]);
 
@@ -45,19 +48,35 @@ export default function ActionAreaCard({ missionary, isSelected = false }: Missi
         onClick={() => navigate(`/misionero/${missionary.id}`)}
         sx={{ height: '100%', display: 'block' }}
       >
-        {/* Photo fills the entire card */}
-        <Box
-          component="img"
-          src={imgSrc}
-          alt={`${missionary.name} ${missionary.lastName}`}
-          onError={() => setImgSrc('/default-missionary.svg')}
-          sx={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            display: 'block',
-          }}
-        />
+        {/* Skeleton shown while image loads */}
+        <Box sx={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(160deg, #1E3A8A 0%, #2563EB 100%)',
+          opacity: imageLoaded ? 0 : 1,
+          transition: 'opacity 0.4s ease',
+          zIndex: 0,
+        }} />
+
+        {/* Photo — hidden until fully loaded, then fades in */}
+        {imgSrc && (
+          <Box
+            component="img"
+            src={imgSrc}
+            alt={`${missionary.name} ${missionary.lastName}`}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => { setImgSrc('/default-missionary.svg'); setImageLoaded(true); }}
+            sx={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+              opacity: imageLoaded ? 1 : 0,
+              transition: 'opacity 0.4s ease',
+              position: 'relative',
+              zIndex: 1,
+            }}
+          />
+        )}
 
         {/* Text overlaid at the bottom with gradient */}
         <Box
@@ -72,6 +91,7 @@ export default function ActionAreaCard({ missionary, isSelected = false }: Missi
             px: 1.5,
             pt: 4,
             pb: 1.25,
+            zIndex: 2,
           }}
         >
           <Typography
