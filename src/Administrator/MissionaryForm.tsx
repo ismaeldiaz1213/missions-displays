@@ -3,7 +3,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, TextField, Select, MenuItem, FormControl, InputLabel,
   Box, Typography, IconButton, CircularProgress, Divider,
-  Stack, useTheme, useMediaQuery,
+  Stack, useTheme, useMediaQuery, LinearProgress,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
@@ -82,7 +82,12 @@ const MissionaryForm: React.FC<Props> = ({
   const [prayerFile, setPrayerFile] = useState<File | null>(null);
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState('');
+  const [saveProgress, setSaveProgress] = useState(0);
+  const [saveStep, setSaveStep] = useState('');
+  const [savedOk, setSavedOk] = useState(false);
+  const [fileError, setFileError] = useState('');   // inline — file type/size issues
+  const [saveError, setSaveError] = useState('');   // dialog — shown when save fails
+  const [showFieldErrors, setShowFieldErrors] = useState(false);
 
   // Track paths to delete from S3 on save
   const [profileToRemove, setProfileToRemove] = useState<string | null>(null);
@@ -93,8 +98,11 @@ const MissionaryForm: React.FC<Props> = ({
   const prayerRef = useRef<HTMLInputElement>(null);
   const mediaRef = useRef<HTMLInputElement>(null);
 
-  // Snapshot of form at open time — used to detect unsaved changes
-  const initialForm = useRef(JSON.stringify(form));
+  // Snapshot of form at open time — used to detect unsaved changes.
+  // JSON.stringify with a replacer normalizes undefined → null so the comparison
+  // is stable across re-renders even when optional fields are absent in the raw data.
+  const stableStringify = (v: unknown) => JSON.stringify(v, (_, val) => val ?? null);
+  const initialForm = useRef(stableStringify(form));
 
   // Resolved preview URLs for existing S3 files
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
@@ -149,8 +157,9 @@ const MissionaryForm: React.FC<Props> = ({
   };
 
   const handleSave = async () => {
-    if (!form.name || !form.lastName || !form.organization || !form.location.city) {
-      setError('Nombre, apellido, organización y ciudad son obligatorios.');
+    setShowFieldErrors(true);
+    if (!form.name.trim() || !form.lastName.trim() || !form.organization.trim() || !form.location.city.trim()) {
+      setFileError('Por favor completa los campos obligatorios marcados en rojo.');
       return;
     }
 
@@ -158,28 +167,50 @@ const MissionaryForm: React.FC<Props> = ({
       .filter(Boolean)
       .reduce((acc, f) => acc + (f?.size ?? 0), 0);
     if (storageUsedBytes + newFilesBytes > FREE_TIER_BYTES) {
-      setError(
+      setFileError(
         `Esta subida (${formatBytes(newFilesBytes)}) excedería el límite gratuito de 5 GB. ` +
         `Almacenamiento usado: ${formatBytes(storageUsedBytes)}.`
       );
       return;
     }
 
-    setError('');
+    setFileError('');
     setUploading(true);
+    setSaveProgress(0);
+    setSaveStep('Preparando...');
+
+    // Calculate total weighted steps for progress tracking
+    const hasDeletes = (profileToRemove && isS3Key(profileToRemove)) ||
+      (prayerToRemove && isS3Key(prayerToRemove)) || mediaToRemove.some(isS3Key);
+    const totalUploads = (profileFile ? 1 : 0) + (prayerFile ? 1 : 0) + mediaFiles.length;
+    // Weights: deletes=5, each upload=15 (capped so API call always gets 20)
+    const uploadWeight = totalUploads > 0 ? Math.min(15, 60 / totalUploads) : 0;
+    const deleteWeight = hasDeletes ? 5 : 0;
+    const apiWeight = 20;
+    const totalWeight = deleteWeight + totalUploads * uploadWeight + apiWeight;
+    let done = 0;
+    const advance = (weight: number, label: string) => {
+      done += weight;
+      setSaveProgress(Math.round((done / totalWeight) * 100));
+      setSaveStep(label);
+    };
 
     try {
-      // Delete removed files from S3 (silently ignore failures for non-S3 paths)
-      if (profileToRemove && isS3Key(profileToRemove)) {
-        try { await remove({ path: profileToRemove }); } catch (e) { console.warn('S3 delete skipped:', e); }
-      }
-      if (prayerToRemove && isS3Key(prayerToRemove)) {
-        try { await remove({ path: prayerToRemove }); } catch (e) { console.warn('S3 delete skipped:', e); }
-      }
-      for (const path of mediaToRemove) {
-        if (isS3Key(path)) {
-          try { await remove({ path }); } catch (e) { console.warn('S3 delete skipped:', e); }
+      // Delete removed files from S3
+      if (hasDeletes) {
+        setSaveStep('Eliminando archivos anteriores...');
+        if (profileToRemove && isS3Key(profileToRemove)) {
+          try { await remove({ path: profileToRemove }); } catch (e) { console.warn('S3 delete skipped:', e); }
         }
+        if (prayerToRemove && isS3Key(prayerToRemove)) {
+          try { await remove({ path: prayerToRemove }); } catch (e) { console.warn('S3 delete skipped:', e); }
+        }
+        for (const path of mediaToRemove) {
+          if (isS3Key(path)) {
+            try { await remove({ path }); } catch (e) { console.warn('S3 delete skipped:', e); }
+          }
+        }
+        advance(deleteWeight, 'Archivos eliminados.');
       }
 
       let profileImage = form.profileImage;
@@ -187,18 +218,25 @@ const MissionaryForm: React.FC<Props> = ({
       const media = [...form.media];
 
       if (profileFile) {
+        setSaveStep('Subiendo foto de perfil...');
         const ext = profileFile.name.split('.').pop();
         profileImage = await uploadFile(profileFile, `images/${id}-profile.${ext}`);
+        advance(uploadWeight, 'Foto de perfil subida.');
       }
       if (prayerFile) {
+        setSaveStep('Subiendo carta de oración...');
         prayerLetter = await uploadFile(prayerFile, `pdfs/${id}-prayer-letter.pdf`);
+        advance(uploadWeight, 'Carta de oración subida.');
       }
       for (let i = 0; i < mediaFiles.length; i++) {
+        setSaveStep(`Subiendo foto ${i + 1} de ${mediaFiles.length}...`);
         const ext = mediaFiles[i].name.split('.').pop();
         const path = await uploadFile(mediaFiles[i], `images/${id}-media-${Date.now()}-${i}.${ext}`);
         media.push(path);
+        advance(uploadWeight, `Foto ${i + 1} subida.`);
       }
 
+      setSaveStep('Guardando información...');
       const payload: Missionary = {
         ...form,
         id,
@@ -212,10 +250,11 @@ const MissionaryForm: React.FC<Props> = ({
       } else {
         await apiFetch('missionaries', 'POST', payload);
       }
-
-      onSave();
+      advance(apiWeight, '¡Guardado!');
+      setSaveProgress(100);
+      setSavedOk(true);
     } catch (err) {
-      setError(`Error al guardar: ${String(err)}`);
+      setSaveError(String(err));
     } finally {
       setUploading(false);
     }
@@ -224,7 +263,7 @@ const MissionaryForm: React.FC<Props> = ({
   const requiredFilled = !!form.name.trim() && !!form.lastName.trim() && !!form.organization.trim() && !!form.location.city.trim();
   const filesChanged = !!profileFile || !!prayerFile || mediaFiles.length > 0
     || profileToRemove !== null || prayerToRemove !== null || mediaToRemove.length > 0;
-  const formChanged = JSON.stringify(form) !== initialForm.current;
+  const formChanged = stableStringify(form) !== initialForm.current;
   const canSave = requiredFilled && (formChanged || filesChanged);
 
   const captionSx = { fontSize: isMobile ? '0.9rem' : '0.75rem', fontWeight: 600 };
@@ -233,13 +272,20 @@ const MissionaryForm: React.FC<Props> = ({
     '& .MuiOutlinedInput-root': {
       color: '#fff',
       '& fieldset': { borderColor: '#555' },
+      '&.Mui-error fieldset': { borderColor: '#ef5350' },
       '& input, & textarea': { fontSize: isMobile ? '1.05rem' : undefined },
     },
     '& .MuiInputLabel-root': { color: '#aaa', fontSize: isMobile ? '1rem' : undefined },
+    '& .MuiInputLabel-root.Mui-error': { color: '#ef9a9a' },
+    '& .MuiFormHelperText-root.Mui-error': { color: '#ef9a9a' },
     '& .MuiSelect-select': { fontSize: isMobile ? '1.05rem' : undefined },
   };
 
+  // Returns true when a required field is empty AND the user has attempted to save
+  const reqErr = (val: string) => showFieldErrors && !val.trim();
+
   return (
+    <>
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth fullScreen={isMobile}
       PaperProps={{ sx: { bgcolor: '#1a1a1a', color: '#fff' } }}>
       <DialogTitle sx={{ borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', fontSize: { xs: '1.25rem', sm: '1.5rem' }, fontWeight: 700 }}>
@@ -249,7 +295,26 @@ const MissionaryForm: React.FC<Props> = ({
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ pt: 2 }}>
+      {/* Progress bar — shown during save */}
+      {uploading && (
+        <Box sx={{ px: 3, pt: 1.5, pb: 1 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.75 }}>
+            <Typography variant="caption" sx={{ color: '#90caf9', fontWeight: 600, fontSize: '0.85rem' }}>
+              {saveStep}
+            </Typography>
+            <Typography variant="caption" sx={{ color: '#666', fontWeight: 600 }}>
+              {saveProgress}%
+            </Typography>
+          </Box>
+          <LinearProgress
+            variant="determinate"
+            value={saveProgress}
+            sx={{ height: 6, borderRadius: 3, bgcolor: '#2a2a2a', '& .MuiLinearProgress-bar': { borderRadius: 3 } }}
+          />
+        </Box>
+      )}
+
+      <DialogContent sx={{ pt: 2, opacity: uploading ? 0.45 : 1, pointerEvents: uploading ? 'none' : 'auto', transition: 'opacity 0.2s' }}>
         <Stack spacing={3}>
 
           {/* Required fields legend — hidden once all required fields are filled */}
@@ -264,10 +329,13 @@ const MissionaryForm: React.FC<Props> = ({
           {/* Basic info */}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, pt: 0.5 }}>
             <TextField label="Nombre *" value={form.name} onChange={(e) => set('name', e.target.value)} sx={inputSx}
+              error={reqErr(form.name)} helperText={reqErr(form.name) ? 'Obligatorio' : ''}
               InputLabelProps={{ sx: { '& .MuiFormLabel-asterisk': { color: '#ef5350' } } }} />
             <TextField label="Apellido *" value={form.lastName} onChange={(e) => set('lastName', e.target.value)} sx={inputSx}
+              error={reqErr(form.lastName)} helperText={reqErr(form.lastName) ? 'Obligatorio' : ''}
               InputLabelProps={{ sx: { '& .MuiFormLabel-asterisk': { color: '#ef5350' } } }} />
             <TextField label="Organización *" value={form.organization} onChange={(e) => set('organization', e.target.value)} sx={inputSx}
+              error={reqErr(form.organization)} helperText={reqErr(form.organization) ? 'Obligatorio' : ''}
               InputLabelProps={{ sx: { '& .MuiFormLabel-asterisk': { color: '#ef5350' } } }} />
             <TextField label="Tipo de Misión" value={form.missionType} onChange={(e) => set('missionType', e.target.value)} sx={inputSx} />
             <TextField label="Fecha de Inicio" type="date" value={form.startDate ?? ''} onChange={(e) => set('startDate', e.target.value)} InputLabelProps={{ shrink: true }} sx={inputSx} />
@@ -286,6 +354,7 @@ const MissionaryForm: React.FC<Props> = ({
           </Divider>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
             <TextField label="Ciudad *" value={form.location.city} onChange={(e) => setLocation('city', e.target.value)} sx={inputSx}
+              error={reqErr(form.location.city)} helperText={reqErr(form.location.city) ? 'Obligatorio' : ''}
               InputLabelProps={{ sx: { '& .MuiFormLabel-asterisk': { color: '#ef5350' } } }} />
             <TextField label="País" value={form.location.country} onChange={(e) => setLocation('country', e.target.value)} sx={inputSx} />
             <TextField label="Estado / Provincia" value={form.location.state ?? ''} onChange={(e) => setLocation('state', e.target.value)} sx={inputSx} />
@@ -313,7 +382,10 @@ const MissionaryForm: React.FC<Props> = ({
               <Typography variant="caption" color="#aaa" display="block" mb={1} sx={captionSx}>Foto de perfil</Typography>
               <input ref={profileRef} type="file" accept="image/*" hidden onChange={(e) => {
                 const f = e.target.files?.[0] ?? null;
-                if (f && f.size > MAX_IMAGE_BYTES) { setError(`Imagen demasiado grande (${formatBytes(f.size)}). Máximo 50 MB.`); return; }
+                if (!f) return;
+                if (!f.type.startsWith('image/')) { setFileError('La foto de perfil debe ser una imagen (JPG, PNG, etc.), no un PDF u otro archivo.'); e.target.value = ''; return; }
+                if (f.size > MAX_IMAGE_BYTES) { setFileError(`Imagen demasiado grande (${formatBytes(f.size)}). Máximo 50 MB.`); e.target.value = ''; return; }
+                setFileError('');
                 setProfileFile(f);
               }} />
               {/* Preview with badge delete */}
@@ -345,7 +417,10 @@ const MissionaryForm: React.FC<Props> = ({
               <Typography variant="caption" color="#aaa" display="block" mb={1} sx={captionSx}>Carta de oración (PDF)</Typography>
               <input ref={prayerRef} type="file" accept="application/pdf" hidden onChange={(e) => {
                 const f = e.target.files?.[0] ?? null;
-                if (f && f.size > MAX_PDF_BYTES) { setError(`PDF demasiado grande (${formatBytes(f.size)}). Máximo 100 MB.`); return; }
+                if (!f) return;
+                if (f.type !== 'application/pdf') { setFileError('La carta de oración debe ser un archivo PDF. Si tienes una imagen, conviértela a PDF primero.'); e.target.value = ''; return; }
+                if (f.size > MAX_PDF_BYTES) { setFileError(`PDF demasiado grande (${formatBytes(f.size)}). Máximo 100 MB.`); e.target.value = ''; return; }
+                setFileError('');
                 setPrayerFile(f);
               }} />
               {/* PDF card with badge delete */}
@@ -379,8 +454,11 @@ const MissionaryForm: React.FC<Props> = ({
               <Typography variant="caption" color="#aaa" display="block" mb={1} sx={captionSx}>Álbum de fotos</Typography>
               <input ref={mediaRef} type="file" accept="image/*" multiple hidden onChange={(e) => {
                 const files = Array.from(e.target.files ?? []);
+                const nonImage = files.find(f => !f.type.startsWith('image/'));
+                if (nonImage) { setFileError(`"${nonImage.name}" no es una imagen válida. El álbum solo acepta imágenes (JPG, PNG, etc.).`); e.target.value = ''; return; }
                 const oversized = files.find(f => f.size > MAX_IMAGE_BYTES);
-                if (oversized) { setError(`"${oversized.name}" es demasiado grande (${formatBytes(oversized.size)}). Máximo 50 MB por imagen.`); return; }
+                if (oversized) { setFileError(`"${oversized.name}" es demasiado grande (${formatBytes(oversized.size)}). Máximo 50 MB por imagen.`); e.target.value = ''; return; }
+                setFileError('');
                 setMediaFiles(files);
               }} />
               <Button variant="outlined" size="small" startIcon={<CloudUploadIcon />}
@@ -396,11 +474,17 @@ const MissionaryForm: React.FC<Props> = ({
                 <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                   {form.media.map((url, i) => (
                     <Box key={url} sx={{ position: 'relative' }}>
-                      <Box component="img"
-                        src={mediaPreviews[url] ?? ''}
-                        alt={`Foto ${i + 1}`}
-                        sx={{ width: 64, height: 64, objectFit: 'cover', borderRadius: '6px', border: '1.5px solid #444', display: 'block' }}
-                      />
+                      {mediaPreviews[url] ? (
+                        <Box component="img"
+                          src={mediaPreviews[url]}
+                          alt={`Foto ${i + 1}`}
+                          sx={{ width: 64, height: 64, objectFit: 'cover', borderRadius: '6px', border: '1.5px solid #444', display: 'block' }}
+                        />
+                      ) : (
+                        <Box sx={{ width: 64, height: 64, borderRadius: '6px', border: '1.5px solid #444', bgcolor: '#2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <CircularProgress size={20} sx={{ color: '#555' }} />
+                        </Box>
+                      )}
                       <IconButton size="small" onClick={() => removeMediaItem(url)}
                         title="Quitar foto"
                         sx={{
@@ -445,7 +529,12 @@ const MissionaryForm: React.FC<Props> = ({
             Añadir contacto
           </Button>
 
-          {error && <Typography color="error.main" variant="body2">{error}</Typography>}
+          {fileError && (
+            <Box sx={{ bgcolor: 'rgba(239,83,80,0.1)', border: '1px solid rgba(239,83,80,0.35)', borderRadius: 1.5, px: 2, py: 1.25, display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+              <Typography sx={{ fontSize: '1.1rem', lineHeight: 1.4 }}>⚠️</Typography>
+              <Typography variant="body2" sx={{ color: '#ef9a9a', lineHeight: 1.5 }}>{fileError}</Typography>
+            </Box>
+          )}
         </Stack>
       </DialogContent>
 
@@ -453,12 +542,49 @@ const MissionaryForm: React.FC<Props> = ({
         <Button onClick={onClose} fullWidth={isMobile} sx={{ color: '#aaa' }}>Cancelar</Button>
         <Button variant="contained" onClick={handleSave} disabled={uploading || !canSave}
           fullWidth={isMobile} size={isMobile ? 'large' : 'medium'}
-          startIcon={uploading ? <CircularProgress size={16} /> : null}
-          sx={{ fontWeight: 700 }}>
-          {uploading ? 'Guardando...' : 'Guardar'}
+          startIcon={uploading ? <CircularProgress size={16} sx={{ color: 'inherit' }} /> : null}
+          sx={{ fontWeight: 700, minWidth: 140 }}>
+          {uploading ? saveStep : 'Guardar'}
         </Button>
       </DialogActions>
     </Dialog>
+
+      {/* ── SAVE ERROR ───────────────────────────────────────────────────── */}
+      <Dialog open={!!saveError} onClose={() => setSaveError('')}
+        slotProps={{ paper: { sx: { bgcolor: '#1a1a1a', color: '#fff', borderRadius: 3, textAlign: 'center', px: 4, py: 3, maxWidth: 400 } } }}>
+        <Typography sx={{ fontSize: '3rem', mb: 1 }}>❌</Typography>
+        <Typography variant="h6" fontWeight={700} sx={{ mb: 0.75 }}>Error al guardar</Typography>
+        <Typography variant="body2" sx={{ color: '#aaa', mb: 0.75 }}>
+          Algo salió mal durante el proceso de guardado. Por favor intenta de nuevo.
+        </Typography>
+        <Typography variant="caption" sx={{ color: '#666', display: 'block', mb: 3, fontFamily: 'monospace', wordBreak: 'break-all' }}>
+          {saveError}
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center' }}>
+          <Button variant="outlined" onClick={() => setSaveError('')} sx={{ borderColor: '#555', color: '#aaa', borderRadius: 2 }}>
+            Cancelar
+          </Button>
+          <Button variant="contained" color="error" onClick={() => { setSaveError(''); handleSave(); }} sx={{ fontWeight: 700, borderRadius: 2 }}>
+            Reintentar
+          </Button>
+        </Box>
+      </Dialog>
+
+      {/* ── SUCCESS CONFIRMATION ─────────────────────────────────────────── */}
+      <Dialog open={savedOk} onClose={onSave}
+        slotProps={{ paper: { sx: { bgcolor: '#1a1a1a', color: '#fff', borderRadius: 3, textAlign: 'center', px: 4, py: 3, maxWidth: 360 } } }}>
+        <Typography sx={{ fontSize: '3rem', mb: 1 }}>✅</Typography>
+        <Typography variant="h6" fontWeight={700} sx={{ mb: 0.75 }}>
+          {missionary ? '¡Misionero actualizado!' : '¡Misionero guardado!'}
+        </Typography>
+        <Typography variant="body2" color="#aaa" sx={{ mb: 3 }}>
+          Los cambios han sido guardados correctamente.
+        </Typography>
+        <Button variant="contained" fullWidth onClick={onSave} sx={{ fontWeight: 700, py: 1.25, borderRadius: 2 }}>
+          Volver a la lista
+        </Button>
+      </Dialog>
+    </>
   );
 };
 
