@@ -32,10 +32,7 @@ const CONTINENTS = [
   { value: 'oceania', label: 'Oceanía' },
 ];
 
-const inputSx = {
-  '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: '#555' } },
-  '& .MuiInputLabel-root': { color: '#aaa' },
-};
+const inputSx = {};
 
 interface Props {
   storageUsedBytes: number;
@@ -147,7 +144,8 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
         <FormControl sx={{ minWidth: 220, ...inputSx }}>
           <InputLabel>Continente</InputLabel>
           <Select value={continent} label="Continente" onChange={(e) => { setContinent(e.target.value); setSearch(''); }}
-            sx={{ color: '#fff' }}>
+            sx={{ color: '#fff' }}
+            MenuProps={{ PaperProps: { sx: { bgcolor: '#1a1a1a', border: '1px solid #3a3a3a', color: '#fff', '& .MuiMenuItem-root:hover': { bgcolor: '#2a2a2a' }, '& .MuiMenuItem-root.Mui-selected': { bgcolor: '#2563EB33' } } } }}>
             {CONTINENTS.map((c) => <MenuItem key={c.value} value={c.value}>{c.label}</MenuItem>)}
           </Select>
         </FormControl>
@@ -202,7 +200,7 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
         /* ── Mobile: card list ── */
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           {filtered.map((m) => (
-            <Card key={m.id} sx={{ bgcolor: '#141414', border: '1px solid #2a2a2a', borderRadius: 2 }}>
+            <Card key={m.id} elevation={0} sx={{ bgcolor: '#1a1a1a', border: '1px solid #2f2f2f', borderRadius: 2 }}>
               <CardContent sx={{ pb: 0.5 }}>
                 <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>
                   {m.name} {m.lastName}
@@ -241,7 +239,7 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
         </Box>
       ) : (
         /* ── Desktop: table ── */
-        <TableContainer component={Paper} sx={{ bgcolor: '#141414', border: '1px solid #2a2a2a' }}>
+        <TableContainer component={Paper} elevation={0} sx={{ bgcolor: '#1a1a1a', border: '1px solid #2f2f2f' }}>
           <Table>
             <TableHead>
               <TableRow>

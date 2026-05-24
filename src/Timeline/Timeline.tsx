@@ -1,6 +1,6 @@
 import { Box } from '@mui/material';
 import React from 'react';
-// @ts-ignore
+// @ts-expect-error -- react-chrono has no type declarations
 import { Chrono } from 'react-chrono';
 
 const Timeline: React.FC = () => { 

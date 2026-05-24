@@ -1,6 +1,6 @@
 // src/main.tsx
 import ReactDOM from 'react-dom/client';
-//import './index.css'; // If you have any global styles
+import './index.css';
 import App from './App'; // Import the App component
 import { BrowserRouter } from 'react-router-dom'; // Import Router for routing
 

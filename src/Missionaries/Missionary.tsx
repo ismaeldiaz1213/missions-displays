@@ -138,7 +138,7 @@ const Missionary: React.FC = () => {
   );
 
   return (
-    <Box sx={{ minHeight: '100vh', background: 'linear-gradient(180deg, #F0F4F8 0%, #E8F1FC 100%)', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ minHeight: '100vh', width: '100%', background: 'linear-gradient(180deg, #F0F4F8 0%, #E8F1FC 100%)', display: 'flex', flexDirection: 'column' }}>
 
       {/* ── STICKY NAVBAR ─────────────────────────────────────────────────── */}
       <Box component="nav" sx={{

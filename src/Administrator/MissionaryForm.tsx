@@ -12,7 +12,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import CloseIcon from '@mui/icons-material/Close';
 import { uploadData, remove } from 'aws-amplify/storage';
 import type { Missionary, ContactInfo } from '../types';
-import { formatBytes } from './StorageIndicator';
+import { formatBytes } from './formatBytes';
 import { resolveUrl } from '../storageUrl';
 
 const FREE_TIER_BYTES = 5 * 1024 * 1024 * 1024;
@@ -184,7 +184,7 @@ const MissionaryForm: React.FC<Props> = ({
 
       let profileImage = form.profileImage;
       let prayerLetter = form.prayerLetter;
-      let media = [...form.media];
+      const media = [...form.media];
 
       if (profileFile) {
         const ext = profileFile.name.split('.').pop();

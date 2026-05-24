@@ -2,14 +2,9 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Box, LinearProgress, Typography, Tooltip, IconButton } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { list } from 'aws-amplify/storage';
+import { formatBytes } from './formatBytes';
 
 const FREE_TIER_BYTES = 5 * 1024 * 1024 * 1024; // 5 GB
-
-export const formatBytes = (bytes: number): string => {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-};
 
 interface Props {
   compact?: boolean;
@@ -71,7 +66,7 @@ const StorageIndicator: React.FC<Props> = ({ compact = false, onUsageLoaded, ref
   }
 
   return (
-    <Box sx={{ mb: 3, p: 2, bgcolor: '#141414', border: `1px solid ${isDanger ? '#5a2a2a' : '#2a2a2a'}`, borderRadius: 1 }}>
+    <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', border: `1px solid ${isDanger ? '#5a2a2a' : '#2f2f2f'}`, borderRadius: 1 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <Typography variant="body2" color="#888">
           Almacenamiento S3 — límite gratuito: 5 GB
