@@ -15,11 +15,13 @@ export const auth = defineAuth({
       // After deploy, add your production Amplify URL here too
       callbackUrls: [
         'http://localhost:5173/admin',
-        'https://master.d1vy4te7fv937a.amplifyapp.com/admin'
+        'https://master.d1vy4te7fv937a.amplifyapp.com/admin',
+        'https://misiones.iblibertad.org/admin',
       ],
       logoutUrls: [
         'http://localhost:5173',
-        'https://master.d1vy4te7fv937a.amplifyapp.com'
+        'https://master.d1vy4te7fv937a.amplifyapp.com',
+        'https://misiones.iblibertad.org',
       ],
     },
   },
