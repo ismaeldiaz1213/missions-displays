@@ -1,5 +1,6 @@
 import React from 'react'
 import { Route, Routes } from 'react-router-dom'
+import { useInactivityRedirect } from './useInactivityRedirect'
 import NotFound from './NotFound'
 import Home from './Home/Home'
 import RegionSelection from './RegionSelection/RegionSelection'
@@ -17,6 +18,7 @@ import Timeline from './Timeline/Timeline'
 
 
 const App:React.FC = () => {
+  useInactivityRedirect();
   return (
     <>
       <Routes>
