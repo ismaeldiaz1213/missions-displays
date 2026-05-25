@@ -95,7 +95,15 @@ const Admin: React.FC = () => {
               variant="contained" fullWidth size="large"
               startIcon={<LockOutlinedIcon />}
               disabled={!isConfigured}
-              onClick={() => signInWithRedirect({ provider: 'Google' })}
+              onClick={async () => {
+                try {
+                  await signInWithRedirect({ provider: 'Google' });
+                } catch (err) {
+                  if ((err as Error)?.name === 'UserAlreadyAuthenticatedException') {
+                    checkAuth();
+                  }
+                }
+              }}
               sx={{ py: 1.5, textTransform: 'none', fontSize: '1rem' }}
             >
               Iniciar sesión con Google
