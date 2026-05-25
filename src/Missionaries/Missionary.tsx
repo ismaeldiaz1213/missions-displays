@@ -32,6 +32,18 @@ const DEFAULTS: MissionaryType = {
 
 type Section = 'about' | 'carta';
 
+const formatStartDate = (date: string): string => {
+  if (/^\d{4}$/.test(date)) return date;
+  if (/^\d{4}-\d{2}$/.test(date)) {
+    const d = new Date(`${date}-01T12:00:00`);
+    if (isNaN(d.getTime())) return date;
+    return d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  }
+  const d = new Date(`${date}T12:00:00`);
+  if (isNaN(d.getTime())) return date;
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+};
+
 const Missionary: React.FC = () => {
   const { missionary: missionaryId } = useParams<{ missionary: string }>();
   const navigate = useNavigate();
@@ -258,7 +270,7 @@ const Missionary: React.FC = () => {
               )}
               {m.startDate && (
                 <Chip
-                  label={`📅 Desde ${m.startDate}`}
+                  label={`📅 Sirviendo desde ${formatStartDate(m.startDate)}`}
                   sx={{ bgcolor: '#fff', border: '1.5px solid rgba(37,99,235,0.18)', color: '#1E3A8A', fontWeight: 600, fontSize: '0.88rem', boxShadow: '0 2px 8px rgba(30,58,138,0.1)' }}
                 />
               )}

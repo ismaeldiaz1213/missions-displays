@@ -4,6 +4,7 @@ import {
   Button, TextField, Select, MenuItem, FormControl, InputLabel,
   Box, Typography, IconButton, CircularProgress, Divider,
   Stack, useTheme, useMediaQuery, LinearProgress,
+  ToggleButton, ToggleButtonGroup,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
@@ -88,6 +89,12 @@ const MissionaryForm: React.FC<Props> = ({
   const [fileError, setFileError] = useState('');   // inline — file type/size issues
   const [saveError, setSaveError] = useState('');   // dialog — shown when save fails
   const [showFieldErrors, setShowFieldErrors] = useState(false);
+  const [datePrecision, setDatePrecision] = useState<'year' | 'month' | 'full'>(() => {
+    const d = form.startDate ?? '';
+    if (/^\d{4}$/.test(d)) return 'year';
+    if (/^\d{4}-\d{2}$/.test(d)) return 'month';
+    return 'full';
+  });
 
   // Track paths to delete from S3 on save
   const [profileToRemove, setProfileToRemove] = useState<string | null>(null);
@@ -338,7 +345,84 @@ const MissionaryForm: React.FC<Props> = ({
               error={reqErr(form.organization)} helperText={reqErr(form.organization) ? 'Obligatorio' : ''}
               InputLabelProps={{ sx: { '& .MuiFormLabel-asterisk': { color: '#ef5350' } } }} />
             <TextField label="Tipo de Misión" value={form.missionType} onChange={(e) => set('missionType', e.target.value)} sx={inputSx} />
-            <TextField label="Fecha de Inicio" type="date" value={form.startDate ?? ''} onChange={(e) => set('startDate', e.target.value)} InputLabelProps={{ shrink: true }} sx={inputSx} />
+            <Box>
+              <Typography variant="caption" sx={{ color: '#aaa', fontSize: isMobile ? '0.9rem' : '0.75rem', display: 'block', mb: 0.75 }}>
+                Fecha de inicio en misión
+              </Typography>
+              <ToggleButtonGroup
+                value={datePrecision}
+                exclusive
+                onChange={(_, val: 'year' | 'month' | 'full') => {
+                  if (!val) return;
+                  const cur = form.startDate ?? '';
+                  let next = cur;
+                  if (val === 'year') {
+                    next = cur.slice(0, 4);
+                  } else if (val === 'month') {
+                    if (cur.length >= 7) next = cur.slice(0, 7);
+                    else if (cur.length >= 4) next = `${cur.slice(0, 4)}-01`;
+                  } else {
+                    if (cur.length >= 10) next = cur.slice(0, 10);
+                    else if (cur.length >= 7) next = `${cur.slice(0, 7)}-01`;
+                    else if (cur.length >= 4) next = `${cur.slice(0, 4)}-01-01`;
+                  }
+                  setDatePrecision(val);
+                  set('startDate', next);
+                }}
+                size="small"
+                fullWidth
+                sx={{
+                  mb: 1,
+                  '& .MuiToggleButton-root': {
+                    color: '#aaa', borderColor: '#555',
+                    fontSize: isMobile ? '0.85rem' : '0.72rem',
+                    py: isMobile ? 1.25 : 0.5,
+                    flex: 1,
+                    '&.Mui-selected': { color: '#90caf9', borderColor: '#90caf9', bgcolor: 'rgba(144,202,249,0.1)' },
+                  },
+                }}
+              >
+                <ToggleButton value="year">Solo año</ToggleButton>
+                <ToggleButton value="month">Mes y año</ToggleButton>
+                <ToggleButton value="full">Fecha completa</ToggleButton>
+              </ToggleButtonGroup>
+              {datePrecision === 'year' && (
+                <TextField
+                  label="Año"
+                  type="number"
+                  value={form.startDate ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || (val.length <= 4 && /^\d+$/.test(val))) set('startDate', val);
+                  }}
+                  inputProps={{ min: 1900, max: 2099 }}
+                  sx={{ ...inputSx, '& input::-webkit-inner-spin-button, & input::-webkit-outer-spin-button': { display: 'none' }, '& input[type=number]': { MozAppearance: 'textfield' } }}
+                  fullWidth
+                />
+              )}
+              {datePrecision === 'month' && (
+                <TextField
+                  label="Mes y año"
+                  type="month"
+                  value={form.startDate ?? ''}
+                  onChange={(e) => set('startDate', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={inputSx}
+                  fullWidth
+                />
+              )}
+              {datePrecision === 'full' && (
+                <TextField
+                  label="Fecha completa"
+                  type="date"
+                  value={form.startDate ?? ''}
+                  onChange={(e) => set('startDate', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={inputSx}
+                  fullWidth
+                />
+              )}
+            </Box>
             <FormControl sx={inputSx}>
               <InputLabel>Continente</InputLabel>
               <Select value={form.continent} label="Continente" onChange={(e) => set('continent', e.target.value)}
