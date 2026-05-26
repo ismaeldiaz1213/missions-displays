@@ -10,6 +10,7 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import type { Missionary as MissionaryType } from '../types';
 import ContactDialog from './components/ContactDialog';
+import MissionaryLocalInfo from './components/MissionaryLocalInfo';
 import returnToMap from '../assets/backToMapButton.png';
 import iblLogo from '../assets/ibl_logo.png';
 import outputs from '../../amplify_outputs.json';
@@ -344,6 +345,14 @@ const Missionary: React.FC = () => {
                 </MapContainer>
               </Box>
             </Box>
+          )}
+
+          {/* Local time & weather */}
+          {m.location?.latitude !== 0 && m.location?.longitude !== 0 && (
+            <MissionaryLocalInfo
+              latitude={m.location.latitude}
+              longitude={m.location.longitude}
+            />
           )}
 
           {/* Photo gallery */}
