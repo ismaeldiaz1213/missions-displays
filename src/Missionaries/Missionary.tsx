@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Amplify } from 'aws-amplify';
-import { Box, Button, CircularProgress, Typography, Chip } from '@mui/material';
+import { Box, Button, CircularProgress, Typography, Chip, IconButton } from '@mui/material';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import PhotoLibraryOutlinedIcon from '@mui/icons-material/PhotoLibraryOutlined';
+import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ContactMailOutlinedIcon from '@mui/icons-material/ContactMailOutlined';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -25,6 +30,16 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 const API_ENDPOINT = (outputs as { custom?: { API?: { endpoint?: string } } })?.custom?.API?.endpoint ?? '';
+
+const CONTINENT_ROUTES: Record<string, string> = {
+  'north-america': '/norte-america',
+  'central-america': '/centro-america',
+  'south-america': '/sur-america',
+  'europe': '/europa',
+  'africa': '/africa',
+  'asia': '/asia',
+  'oceania': '/oceania',
+};
 
 const DEFAULTS: MissionaryType = {
   id: '', name: '', lastName: '', organization: '', continent: '',
@@ -108,7 +123,8 @@ const Missionary: React.FC = () => {
   const hasMedia = resolvedMediaUrls.length > 0;
   const hasPrayerLetter = !!pdfUrl;
   const hasContactInfo = m.contactInfo.length > 0;
-  const locationText = [m.location?.city, m.location?.country].filter(Boolean).join(', ');
+  const locationText = [m.location?.city, m.location?.state, m.location?.country].filter(Boolean).join(', ');
+  const continentRoute = m.continent ? (CONTINENT_ROUTES[m.continent] ?? null) : null;
 
   if (loading) {
     return (
@@ -130,28 +146,6 @@ const Missionary: React.FC = () => {
     );
   }
 
-  // ── NAV LINK STYLE ──────────────────────────────────────────────────────────
-  const navLink = (label: string, active: boolean, onClick: () => void) => (
-    <Box
-      component="button"
-      onClick={onClick}
-      sx={{
-        background: 'none', border: 'none', cursor: 'pointer',
-        color: active ? '#fff' : 'rgba(255,255,255,0.65)',
-        fontWeight: active ? 700 : 500,
-        fontSize: '0.95rem',
-        px: 1.5, py: 0.75,
-        borderRadius: '6px',
-        borderBottom: active ? '2px solid #fff' : '2px solid transparent',
-        transition: 'all 0.2s ease',
-        whiteSpace: 'nowrap',
-        '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.1)' },
-      }}
-    >
-      {label}
-    </Box>
-  );
-
   return (
     <Box sx={{ minHeight: '100vh', width: '100%', background: 'linear-gradient(180deg, #F0F4F8 0%, #E8F1FC 100%)', display: 'flex', flexDirection: 'column' }}>
 
@@ -167,7 +161,7 @@ const Missionary: React.FC = () => {
         alignItems: { xs: 'stretch', md: 'center' },
         gap: { xs: 0.75, md: 3 },
       }}>
-        {/* Row 1 on mobile: photo + name + contact */}
+        {/* Identity row — always */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, md: 3 }, flex: { md: 1 }, minWidth: 0 }}>
           <Box
             component="img"
@@ -191,90 +185,90 @@ const Missionary: React.FC = () => {
               </Typography>
             )}
           </Box>
-          {/* Contact button — desktop only here, mobile goes in row 2 */}
-          {hasContactInfo && (
-            <Button
-              onClick={() => setContactDialogOpen(true)}
-              variant="outlined"
-              size="small"
+
+          {/* Back to continent — mobile top-right */}
+          {continentRoute && (
+            <IconButton
+              onClick={() => navigate(continentRoute)}
               sx={{
-                display: { xs: 'none', md: 'inline-flex' },
-                color: '#fff', borderColor: 'rgba(255,255,255,0.45)', fontWeight: 600,
-                fontSize: '0.85rem', px: 2, borderRadius: '20px', whiteSpace: 'nowrap',
-                '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,0.12)' },
+                display: { xs: 'inline-flex', md: 'none' },
+                color: '#fff', bgcolor: 'rgba(255,255,255,0.12)', flexShrink: 0,
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.22)' },
+                '&:active': { bgcolor: 'rgba(255,255,255,0.32)' },
               }}
             >
-              Contactar
-            </Button>
+              <ArrowBackIcon />
+            </IconButton>
           )}
         </Box>
 
-        {/* Row 2 on mobile / inline on desktop: nav links + contact */}
-        <Box sx={{ position: 'relative' }}>
-          {/* Right-fade gradient to hint horizontal scrollability on mobile */}
+        {/* Mobile tab row — hidden on desktop */}
+        <Box sx={{ position: 'relative', display: { xs: 'block', md: 'none' } }}>
           <Box sx={{
-            display: { xs: 'block', md: 'none' },
             position: 'absolute', right: 0, top: 0, bottom: 0, width: 32, zIndex: 1,
             pointerEvents: 'none',
             background: 'linear-gradient(to right, transparent, rgba(30,58,138,0.72))',
             borderRadius: '0 8px 8px 0',
           }} />
-        <Box sx={{
-          display: 'flex', alignItems: 'center',
-          gap: 0.5,
-          overflowX: 'auto',
-          bgcolor: { xs: 'rgba(0,0,0,0.18)', md: 'transparent' },
-          borderRadius: { xs: '8px', md: 0 },
-          px: { xs: 0.5, md: 0 },
-          py: { xs: 0.25, md: 0 },
-          '&::-webkit-scrollbar': { display: 'none' },
-          msOverflowStyle: 'none', scrollbarWidth: 'none',
-        }}>
-          {navLink('Sobre Nosotros', activeSection === 'about', () => setActiveSection('about'))}
-          {hasMedia && navLink('Fotos', false, scrollToPhotos)}
-          {hasPrayerLetter && navLink('Carta de Oración', activeSection === 'carta', () => { setActiveSection('carta'); setPageNumber(1); })}
-          {hasContactInfo && (
-            <Button
-              onClick={() => setContactDialogOpen(true)}
-              variant="outlined"
-              size="small"
-              sx={{
-                display: { xs: 'inline-flex', md: 'none' },
-                ml: 'auto', flexShrink: 0,
-                color: '#fff', borderColor: 'rgba(255,255,255,0.45)', fontWeight: 600,
-                fontSize: '0.78rem', px: 1.5, borderRadius: '20px', whiteSpace: 'nowrap',
-              }}
-            >
-              Contactar
-            </Button>
-          )}
-        </Box>
+          <Box sx={{
+            display: 'flex', alignItems: 'center', gap: 0.25,
+            overflowX: 'auto', bgcolor: 'rgba(0,0,0,0.18)', borderRadius: '8px',
+            px: 0.5, py: 0.25,
+            '&::-webkit-scrollbar': { display: 'none' },
+            msOverflowStyle: 'none', scrollbarWidth: 'none',
+          }}>
+            {([
+              { label: 'Sobre el Misionero', icon: <InfoOutlinedIcon sx={{ fontSize: '1rem' }} />, active: activeSection === 'about', onClick: () => setActiveSection('about') },
+              ...(hasMedia ? [{ label: 'Fotos', icon: <PhotoLibraryOutlinedIcon sx={{ fontSize: '1rem' }} />, active: false, onClick: scrollToPhotos }] : []),
+              ...(hasPrayerLetter ? [{ label: 'Carta de Oración', icon: <ArticleOutlinedIcon sx={{ fontSize: '1rem' }} />, active: activeSection === 'carta', onClick: () => { setActiveSection('carta'); setPageNumber(1); } }] : []),
+              ...(hasContactInfo ? [{ label: 'Contactar', icon: <ContactMailOutlinedIcon sx={{ fontSize: '1rem' }} />, active: false, onClick: () => setContactDialogOpen(true) }] : []),
+            ] as { label: string; icon: React.ReactNode; active: boolean; onClick: () => void }[]).map((tab, i) => (
+              <Box
+                key={i}
+                component="button"
+                onClick={tab.onClick}
+                sx={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 0.6, flexShrink: 0,
+                  color: tab.active ? '#fff' : 'rgba(255,255,255,0.65)',
+                  fontWeight: tab.active ? 700 : 500, fontSize: '0.88rem',
+                  px: 1.25, py: 0.75, borderRadius: '6px',
+                  borderBottom: tab.active ? '2px solid #fff' : '2px solid transparent',
+                  transition: 'all 0.2s ease', whiteSpace: 'nowrap',
+                  '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.1)' },
+                }}
+              >
+                {tab.icon}
+                {tab.label}
+              </Box>
+            ))}
+          </Box>
         </Box>
       </Box>
 
       {/* ── ABOUT SECTION ─────────────────────────────────────────────────── */}
       {activeSection === 'about' && (
-        <Box sx={{ flex: 1, maxWidth: 920, mx: 'auto', width: '100%', px: { xs: 2, md: 3 }, py: { xs: 2.5, md: 4 } }}>
+        <Box sx={{ flex: 1, maxWidth: 920, mx: 'auto', width: '100%', pl: { xs: 2, md: 3 }, pr: { xs: 2, md: '134px' }, py: { xs: 2.5, md: 4 } }}>
 
           {/* Info chips row */}
           {(locationText || m.organization || m.startDate) && (
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25, mb: 4, justifyContent: { xs: 'center', md: 'flex-start' } }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 4, justifyContent: 'center' }}>
               {locationText && (
                 <Chip
                   label={`📍 ${locationText}`}
-                  sx={{ bgcolor: '#fff', border: '1.5px solid rgba(37,99,235,0.18)', color: '#1E3A8A', fontWeight: 600, fontSize: '0.88rem', boxShadow: '0 2px 8px rgba(30,58,138,0.1)' }}
+                  sx={{ bgcolor: '#fff', border: '1.5px solid rgba(37,99,235,0.2)', color: '#1E3A8A', fontWeight: 600, fontSize: { xs: '0.9rem', md: '0.95rem' }, height: 40, px: 0.5, boxShadow: '0 2px 10px rgba(30,58,138,0.12)' }}
                 />
               )}
               {m.organization && (
                 <Chip
                   label={`🏛 ${m.organization}`}
-                  sx={{ bgcolor: '#fff', border: '1.5px solid rgba(37,99,235,0.18)', color: '#1E3A8A', fontWeight: 600, fontSize: '0.88rem', boxShadow: '0 2px 8px rgba(30,58,138,0.1)' }}
+                  sx={{ bgcolor: '#fff', border: '1.5px solid rgba(37,99,235,0.2)', color: '#1E3A8A', fontWeight: 600, fontSize: { xs: '0.9rem', md: '0.95rem' }, height: 40, px: 0.5, boxShadow: '0 2px 10px rgba(30,58,138,0.12)' }}
                 />
               )}
               {m.startDate && (
                 <Chip
                   label={`📅 Sirviendo desde ${formatStartDate(m.startDate)}`}
-                  sx={{ bgcolor: '#fff', border: '1.5px solid rgba(37,99,235,0.18)', color: '#1E3A8A', fontWeight: 600, fontSize: '0.88rem', boxShadow: '0 2px 8px rgba(30,58,138,0.1)' }}
+                  sx={{ bgcolor: '#fff', border: '1.5px solid rgba(37,99,235,0.2)', color: '#1E3A8A', fontWeight: 600, fontSize: { xs: '0.9rem', md: '0.95rem' }, height: 40, px: 0.5, boxShadow: '0 2px 10px rgba(30,58,138,0.12)' }}
                 />
               )}
             </Box>
@@ -283,7 +277,7 @@ const Missionary: React.FC = () => {
           {/* Description */}
           {m.description && (
             <Box sx={{ mb: 3 }}>
-              <Typography sx={{ color: '#1E3A8A', fontWeight: 800, fontSize: '1.15rem', mb: 1.25, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography sx={{ color: '#1E3A8A', fontWeight: 800, fontSize: '1.2rem', mb: 1.25 }}>
                 Descripción
               </Typography>
               <Box sx={{
@@ -316,7 +310,7 @@ const Missionary: React.FC = () => {
           {/* Location map */}
           {m.location?.latitude !== 0 && m.location?.longitude !== 0 && (
             <Box sx={{ mb: 4 }}>
-              <Typography sx={{ color: '#1E3A8A', fontWeight: 800, fontSize: '1.15rem', mb: 1.25 }}>
+              <Typography sx={{ color: '#1E3A8A', fontWeight: 800, fontSize: '1.2rem', mb: 1.25 }}>
                 Ubicación
               </Typography>
               <Box sx={{
@@ -360,7 +354,7 @@ const Missionary: React.FC = () => {
           {/* Photo gallery */}
           {hasMedia && (
             <Box ref={photosRef} sx={{ mt: 2 }}>
-              <Typography sx={{ color: '#1E3A8A', fontWeight: 800, fontSize: '1.3rem', mb: 2.5, pb: 1, borderBottom: '2px solid rgba(37,99,235,0.15)' }}>
+              <Typography sx={{ color: '#1E3A8A', fontWeight: 800, fontSize: '1.2rem', mb: 2.5, pb: 1, borderBottom: '2px solid rgba(37,99,235,0.15)' }}>
                 Fotos
               </Typography>
               <Box sx={{
@@ -395,7 +389,7 @@ const Missionary: React.FC = () => {
 
       {/* ── CARTA DE ORACIÓN SECTION ──────────────────────────────────────── */}
       {activeSection === 'carta' && (
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', px: 3, py: 4 }}>
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', pl: 3, pr: { xs: 3, md: '134px' }, py: 4 }}>
           <Typography sx={{ color: '#1E3A8A', fontWeight: 800, fontSize: '1.3rem', mb: 3 }}>
             Carta de Oración
           </Typography>
@@ -457,20 +451,101 @@ const Missionary: React.FC = () => {
         </Box>
       )}
 
-      {/* ── BACK BUTTON ───────────────────────────────────────────────────── */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4, gap: 2.5 }}>
-        <Box
-          component="img"
-          src={returnToMap}
-          alt="Volver al mapa"
-          onClick={() => navigate('/region-selection')}
-          sx={{
-            height: 60, width: 'auto', cursor: 'pointer',
-            transition: 'transform 0.25s ease',
-            '&:hover': { transform: 'scale(1.06)' },
-          }}
-        />
+      {/* ── BACK BUTTONS ──────────────────────────────────────────────────── */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4, gap: 2.5, pr: { xs: 0, md: '110px' } }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', justifyContent: 'center' }}>
+          {continentRoute && (
+            <Button
+              onClick={() => navigate(continentRoute)}
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              sx={{
+                display: { xs: 'none', md: 'inline-flex' },
+                color: '#1E3A8A', borderColor: 'rgba(30,58,138,0.35)',
+                px: 3.5, py: 1.25, borderRadius: '28px',
+                fontSize: '0.95rem', fontWeight: 600,
+                '&:hover': { borderColor: '#1E3A8A', bgcolor: 'rgba(30,58,138,0.06)' },
+              }}
+            >
+              Volver al continente
+            </Button>
+          )}
+          <Box
+            component="img"
+            src={returnToMap}
+            alt="Volver al mapa"
+            onClick={() => navigate('/region-selection')}
+            sx={{
+              height: 60, width: 'auto', cursor: 'pointer',
+              transition: 'transform 0.25s ease',
+              '&:hover': { transform: 'scale(1.06)' },
+            }}
+          />
+        </Box>
         <Box component="img" src={iblLogo} alt="IBL" sx={{ height: 44, width: 'auto', opacity: 0.55 }} />
+      </Box>
+
+      {/* ── FLOATING SIDE NAV — desktop only ──────────────────────────────── */}
+      <Box sx={{
+        position: 'fixed', right: 0, top: '50%', transform: 'translateY(-50%)',
+        zIndex: 998, display: { xs: 'none', md: 'flex' }, flexDirection: 'column',
+        bgcolor: 'rgba(20,46,120,0.95)', backdropFilter: 'blur(10px)',
+        borderRadius: '18px 0 0 18px',
+        boxShadow: '-4px 0 32px rgba(0,0,0,0.28)',
+        overflow: 'hidden',
+      }}>
+        {(
+          [
+            {
+              label: 'Sobre el\nMisionero',
+              icon: <InfoOutlinedIcon sx={{ fontSize: '2.2rem' }} />,
+              active: activeSection === 'about',
+              onClick: () => setActiveSection('about'),
+            },
+            ...(hasMedia ? [{
+              label: 'Fotos',
+              icon: <PhotoLibraryOutlinedIcon sx={{ fontSize: '2.2rem' }} />,
+              active: false,
+              onClick: scrollToPhotos,
+            }] : []),
+            ...(hasPrayerLetter ? [{
+              label: 'Carta\nde Oración',
+              icon: <ArticleOutlinedIcon sx={{ fontSize: '2.2rem' }} />,
+              active: activeSection === 'carta',
+              onClick: () => { setActiveSection('carta'); setPageNumber(1); },
+            }] : []),
+            ...(hasContactInfo ? [{
+              label: 'Contactar',
+              icon: <ContactMailOutlinedIcon sx={{ fontSize: '2.2rem' }} />,
+              active: false,
+              onClick: () => setContactDialogOpen(true),
+            }] : []),
+          ] as { label: string; icon: React.ReactNode; active: boolean; onClick: () => void }[]
+        ).map((item, i, arr) => (
+          <Box
+            key={i}
+            onClick={item.onClick}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              px: 2.5, py: 2.5, gap: 1, cursor: 'pointer', minWidth: 110,
+              bgcolor: item.active ? 'rgba(255,255,255,0.2)' : 'transparent',
+              borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.12)' : 'none',
+              transition: 'background-color 0.15s ease',
+              '&:hover': { bgcolor: item.active ? 'rgba(255,255,255,0.26)' : 'rgba(255,255,255,0.12)' },
+              '&:active': { bgcolor: 'rgba(255,255,255,0.35)' },
+            }}
+          >
+            <Box sx={{ color: item.active ? '#fff' : 'rgba(255,255,255,0.82)' }}>{item.icon}</Box>
+            <Typography sx={{
+              color: item.active ? '#fff' : 'rgba(255,255,255,0.75)',
+              fontSize: '0.72rem', fontWeight: item.active ? 700 : 600,
+              textAlign: 'center', lineHeight: 1.3, whiteSpace: 'pre-line',
+            }}>
+              {item.label}
+            </Typography>
+          </Box>
+        ))}
       </Box>
 
       <ContactDialog
