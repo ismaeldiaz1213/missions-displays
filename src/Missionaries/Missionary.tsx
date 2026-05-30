@@ -11,6 +11,7 @@ import 'react-pdf/dist/Page/TextLayer.css';
 import type { Missionary as MissionaryType } from '../types';
 import ContactDialog from './components/ContactDialog';
 import MissionaryLocalInfo from './components/MissionaryLocalInfo';
+import ImageLightbox from './components/ImageLightbox';
 import returnToMap from '../assets/backToMapButton.png';
 import iblLogo from '../assets/ibl_logo.png';
 import outputs from '../../amplify_outputs.json';
@@ -60,6 +61,7 @@ const Missionary: React.FC = () => {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [resolvedProfileImage, setResolvedProfileImage] = useState('/default-missionary.svg');
   const [resolvedMediaUrls, setResolvedMediaUrls] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!missionaryId) { setLoading(false); return; }
@@ -372,6 +374,7 @@ const Missionary: React.FC = () => {
                     component="img"
                     src={url}
                     alt={m.media[i]?.title || `Foto ${i + 1}`}
+                    onClick={() => setLightboxIndex(i)}
                     onError={(e: React.SyntheticEvent<HTMLImageElement>) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                     sx={{
                       width: '100%', aspectRatio: '4/3', objectFit: 'cover',
@@ -475,6 +478,14 @@ const Missionary: React.FC = () => {
         missionary={m}
         onClose={() => setContactDialogOpen(false)}
       />
+
+      {lightboxIndex !== null && (
+        <ImageLightbox
+          images={resolvedMediaUrls}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
+      )}
     </Box>
   );
 };
