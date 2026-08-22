@@ -151,8 +151,7 @@ const RegionSelection: React.FC = () => {
           <img
             src={misionerosPasadosButton}
             alt="Misioneros Pasados"
-            style={{ height: '58px', width: 'auto', cursor: 'pointer', flexShrink: 0 }}
-            onClick={() => navigate('/misioneros-pasados')}
+            style={{ height: '58px', width: 'auto', flexShrink: 0, opacity: 0.35, pointerEvents: 'none', userSelect: 'none' }}
           />
           <Box sx={{ flex: 1, textAlign: 'center' }}>
             <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600, fontSize: '0.85rem' }}>
