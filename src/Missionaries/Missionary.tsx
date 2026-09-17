@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Amplify } from 'aws-amplify';
 import { Box, Button, CircularProgress, Typography, Chip, IconButton } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import PhotoLibraryOutlinedIcon from '@mui/icons-material/PhotoLibraryOutlined';
@@ -19,17 +18,13 @@ import MissionaryLocalInfo from './components/MissionaryLocalInfo';
 import ImageLightbox from './components/ImageLightbox';
 import returnToMap from '../assets/backToMapButton.png';
 import iblLogo from '../assets/ibl_logo.png';
-import outputs from '../../amplify_outputs.json';
 import { resolveUrl } from '../storageUrl';
-
-Amplify.configure(outputs as Parameters<typeof Amplify.configure>[0]);
+import { getMissionary } from '../data/missionaries';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
   import.meta.url,
 ).toString();
-
-const API_ENDPOINT = (outputs as { custom?: { API?: { endpoint?: string } } })?.custom?.API?.endpoint ?? '';
 
 const CONTINENT_ROUTES: Record<string, string> = {
   'north-america': '/norte-america',
@@ -82,9 +77,8 @@ const Missionary: React.FC = () => {
     if (!missionaryId) { setLoading(false); return; }
     const fetchMissionary = async () => {
       try {
-        const res = await fetch(`${API_ENDPOINT}missionaries/${missionaryId}`);
-        if (!res.ok) throw new Error(`Error ${res.status}`);
-        const data: Partial<MissionaryType> = await res.json();
+        const data = await getMissionary(missionaryId);
+        if (!data) throw new Error('Misionero no encontrado');
         setMissionaryData({ ...DEFAULTS, ...data });
       } catch (err) {
         setError(String(err));

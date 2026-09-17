@@ -1,0 +1,47 @@
+/* Scoped MUI overrides so form controls follow the --ibl-* palette (see src/index.css) */
+.ibl-reg {
+  text-align: left;
+  color: var(--ibl-text);
+  color-scheme: light;
+}
+
+.ibl-reg .MuiOutlinedInput-root {
+  background: var(--ibl-surface);
+  border-radius: 10px;
+}
+.ibl-reg .MuiOutlinedInput-root:hover:not(.Mui-error) .MuiOutlinedInput-notchedOutline {
+  border-color: color-mix(in srgb, var(--ibl-primary) 55%, transparent);
+}
+.ibl-reg .MuiOutlinedInput-root.Mui-focused:not(.Mui-error) .MuiOutlinedInput-notchedOutline {
+  border-color: var(--ibl-primary);
+}
+.ibl-reg .MuiInputLabel-root.Mui-focused:not(.Mui-error) {
+  color: var(--ibl-primary);
+}
+.ibl-reg .MuiCheckbox-root.Mui-checked,
+.ibl-reg .MuiSwitch-switchBase.Mui-checked {
+  color: var(--ibl-primary);
+}
+.ibl-reg .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track {
+  background-color: var(--ibl-primary);
+}
+
+/* Visually hidden honeypot field for bots */
+.ibl-reg .reg-hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+@keyframes ibl-reg-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.ibl-reg .reg-reveal {
+  animation: ibl-reg-rise 0.25s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ibl-reg .reg-reveal { animation: none; }
+}

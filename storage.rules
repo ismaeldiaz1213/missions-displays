@@ -1,0 +1,44 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Admins: any verified Google account on the church domains.
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower().matches('^[^@]+@iblibertad[.](org|com)$');
+    }
+
+    // ── Missionary photos & prayer letters: public read, admin write ─────────
+    match /images/{file} {
+      allow read: if true;
+      allow delete: if isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.size < 50 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /pdfs/{file} {
+      allow read: if true;
+      allow delete: if isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.size < 100 * 1024 * 1024
+        && request.resource.contentType == 'application/pdf';
+    }
+
+    // ── Conference media uploaded by registered missionaries ─────────────────
+    // Keep in sync with MEDIA_UPLOADS_CLOSE_AT in src/Registration/conference.ts.
+    // 1793599200000 = 2026-11-02 00:00 CST (conference start)
+    match /conference-media/{registrationId}/{file} {
+      allow read, delete: if isAdmin();
+      allow update: if false;
+      allow create: if resource == null  // new files only — never overwrite an existing upload
+        && request.time < timestamp.value(1793599200000)
+        && request.resource.size < 2 * 1024 * 1024 * 1024
+        && request.resource.contentType.matches('(video|image)/.*')
+        && firestore.exists(/databases/(default)/documents/registrations/$(registrationId))
+        && firestore.get(/databases/(default)/documents/registrations/$(registrationId)).data.category == 'missionary';
+    }
+  }
+}

@@ -9,9 +9,7 @@ import nextButton from '../assets/rightNextButton.png';
 import returnToMap from '../assets/backToMapButton.png';
 import iblLogo from '../assets/ibl_logo.png';
 import type { Missionary } from '../types';
-import outputs from '../../amplify_outputs.json';
-
-const API_ENDPOINT = (outputs as { custom?: { API?: { endpoint?: string } } })?.custom?.API?.endpoint ?? '';
+import { listMissionariesByContinent } from '../data/missionaries';
 
 interface Props {
   title: string;
@@ -34,10 +32,7 @@ const ContinentPageLayout: React.FC<Props> = ({ title, slug, centerLat, centerLo
   useEffect(() => {
     const fetchMissionaries = async () => {
       try {
-        const res = await fetch(`${API_ENDPOINT}missionaries/continent/${slug}`);
-        if (!res.ok) throw new Error(`Error ${res.status}`);
-        const data: Missionary[] = await res.json();
-        setMissionaries(data ?? []);
+        setMissionaries(await listMissionariesByContinent(slug));
       } catch (err) {
         setError(String(err));
       } finally {

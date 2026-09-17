@@ -26,3 +26,8 @@ dist-ssr
 # Amplify Gen 2 — generated per environment, never commit real values
 amplify_outputs.json
 .amplify
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log

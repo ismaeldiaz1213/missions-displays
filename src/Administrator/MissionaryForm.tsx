@@ -11,7 +11,8 @@ import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import CloseIcon from '@mui/icons-material/Close';
-import { uploadData, remove } from 'aws-amplify/storage';
+import { removeFile, uploadFile } from '../data/storageFiles';
+import { saveMissionary } from '../data/missionaries';
 import type { Missionary, ContactInfo } from '../types';
 import { formatBytes } from './formatBytes';
 import { resolveUrl } from '../storageUrl';
@@ -39,7 +40,6 @@ interface Props {
   storageUsedBytes: number;
   onSave: () => void;
   onClose: () => void;
-  apiFetch: (path: string, method?: string, body?: unknown) => Promise<unknown>;
 }
 
 type FormData = Omit<Missionary, 'id' | 'media'> & { media: string[] };
@@ -60,16 +60,11 @@ const emptyForm = (continent: string): FormData => ({
   missionType: '',
 });
 
-const uploadFile = async (file: File, path: string): Promise<string> => {
-  await uploadData({ path, data: file, options: { contentType: file.type } }).result;
-  return path;
-};
-
 // Only attempt S3 deletion for paths that look like S3 storage keys (not local/http paths)
 const isS3Key = (p?: string) => !!p && !p.startsWith('/') && !p.startsWith('http');
 
 const MissionaryForm: React.FC<Props> = ({
-  open, missionary, defaultContinent, storageUsedBytes, onSave, onClose, apiFetch,
+  open, missionary, defaultContinent, storageUsedBytes, onSave, onClose,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -207,14 +202,14 @@ const MissionaryForm: React.FC<Props> = ({
       if (hasDeletes) {
         setSaveStep('Eliminando archivos anteriores...');
         if (profileToRemove && isS3Key(profileToRemove)) {
-          try { await remove({ path: profileToRemove }); } catch (e) { console.warn('S3 delete skipped:', e); }
+          try { await removeFile(profileToRemove); } catch (e) { console.warn('S3 delete skipped:', e); }
         }
         if (prayerToRemove && isS3Key(prayerToRemove)) {
-          try { await remove({ path: prayerToRemove }); } catch (e) { console.warn('S3 delete skipped:', e); }
+          try { await removeFile(prayerToRemove); } catch (e) { console.warn('S3 delete skipped:', e); }
         }
         for (const path of mediaToRemove) {
           if (isS3Key(path)) {
-            try { await remove({ path }); } catch (e) { console.warn('S3 delete skipped:', e); }
+            try { await removeFile(path); } catch (e) { console.warn('S3 delete skipped:', e); }
           }
         }
         advance(deleteWeight, 'Archivos eliminados.');
@@ -252,11 +247,7 @@ const MissionaryForm: React.FC<Props> = ({
         media: media.map((url) => ({ url })),
       };
 
-      if (missionary) {
-        await apiFetch(`missionaries/${id}`, 'PUT', payload);
-      } else {
-        await apiFetch('missionaries', 'POST', payload);
-      }
+      await saveMissionary(payload);
       advance(apiWeight, '¡Guardado!');
       setSaveProgress(100);
       setSavedOk(true);

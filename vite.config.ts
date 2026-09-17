@@ -11,10 +11,15 @@ export default defineConfig({
       workbox: {
         // Precache every built asset — JS, CSS, HTML, fonts, images bundled by Vite
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2,ttf}'],
+        // Admin-only export libraries (Excel/PDF) load on demand — don't precache them for every visitor
+        globIgnores: [
+          '**/exportRegistrations-*.js', '**/exceljs*.js', '**/jspdf*.js',
+          '**/html2canvas*.js', '**/purify.es-*.js', '**/index.es-*.js',
+        ],
         runtimeCaching: [
           {
-            // S3 images — matches any Amplify bucket (sandbox or production)
-            urlPattern: /^https:\/\/.*\.s3\..*\.amazonaws\.com\/images\//,
+            // Missionary photos in Firebase Storage
+            urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/[^/]+\/o\/images%2F/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'missionary-images',
@@ -23,23 +28,12 @@ export default defineConfig({
             },
           },
           {
-            // S3 PDFs — matches any Amplify bucket
-            urlPattern: /^https:\/\/.*\.s3\..*\.amazonaws\.com\/pdfs\//,
+            // Prayer letter PDFs in Firebase Storage
+            urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/[^/]+\/o\/pdfs%2F/,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'prayer-letters',
               expiration: { maxEntries: 50, maxAgeSeconds: 7 * 24 * 60 * 60 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            // API Gateway — try network first (5s timeout), fall back to cached data
-            urlPattern: /^https:\/\/.*\.execute-api\.us-east-1\.amazonaws\.com\/.*/,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-missionaries',
-              networkTimeoutSeconds: 5,
-              expiration: { maxEntries: 100, maxAgeSeconds: 24 * 60 * 60 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },

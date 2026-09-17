@@ -3,6 +3,22 @@
 }
 
 :root {
+  /* ── Brand palette — change these to re-theme the registration page & admin tab ── */
+  --ibl-primary-dark: #1E3A8A;
+  --ibl-primary: #2563EB;
+  --ibl-primary-deep: #1D4ED8;
+  --ibl-accent: #F59E0B;
+  --ibl-success: #16A34A;
+  --ibl-danger: #DC2626;
+  --ibl-surface: #FFFFFF;
+  --ibl-page-top: #F0F4F8;
+  --ibl-page-bottom: #E8F1FC;
+  --ibl-text: #1F2937;
+  --ibl-text-body: #374151;
+  --ibl-text-muted: #6B7280;
+  --ibl-border: #E5E7EB;
+  --ibl-on-primary: #FFFFFF;
+
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;

@@ -13,14 +13,11 @@ import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { fetchAuthSession } from 'aws-amplify/auth';
-import { remove } from 'aws-amplify/storage';
+import { deleteMissionary, getMissionary, listMissionariesByContinent } from '../data/missionaries';
+import { removeFile } from '../data/storageFiles';
 import { isS3Key } from '../storageUrl';
 import type { Missionary } from '../types';
 import MissionaryForm from './MissionaryForm';
-import outputs from '../../amplify_outputs.json';
-
-const API_ENDPOINT = (outputs as { custom?: { API?: { endpoint?: string } } })?.custom?.API?.endpoint ?? '';
 
 const CONTINENTS = [
   { value: 'north-america', label: 'Norte América' },
@@ -53,46 +50,24 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
   const [deleteTarget, setDeleteTarget] = useState<Missionary | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const apiFetch = useCallback(async (path: string, method = 'GET', body?: unknown): Promise<unknown> => {
-    const session = await fetchAuthSession();
-    const token = session.tokens?.idToken?.toString() ?? '';
-    const res = await fetch(`${API_ENDPOINT}${path}`, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: token } : {}),
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
-    if (res.status === 204) return null;
-    return res.json();
-  }, []);
-
   const load = useCallback(async () => {
-    if (!API_ENDPOINT || API_ENDPOINT === 'PLACEHOLDER') {
-      setApiError('El backend aún no está configurado. Ejecuta npm run sandbox primero.');
-      return;
-    }
     setLoading(true);
     setApiError('');
     try {
-      const data = await apiFetch(`missionaries/continent/${continent}`) as Missionary[];
-      setMissionaries(data ?? []);
+      setMissionaries(await listMissionariesByContinent(continent));
     } catch (err) {
       setApiError(String(err));
     } finally {
       setLoading(false);
     }
-  }, [continent, apiFetch]);
+  }, [continent]);
 
   useEffect(() => { load(); }, [load]);
 
   const openEdit = async (m: Missionary) => {
     setLoadingEditId(m.id);
     try {
-      const full = await apiFetch(`missionaries/${m.id}`) as Missionary;
-      setEditing(full);
+      setEditing(await getMissionary(m.id) ?? m);
     } catch {
       setEditing(m);
     } finally {
@@ -112,10 +87,10 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
         ...(deleteTarget.media ?? []).map((item) => item.url),
       ].filter((p): p is string => isS3Key(p));
 
-      // Remove S3 files first (best-effort — don't block delete if one fails)
-      await Promise.allSettled(s3Keys.map((path) => remove({ path })));
+      // Remove stored files first (best-effort — don't block delete if one fails)
+      await Promise.allSettled(s3Keys.map((path) => removeFile(path)));
 
-      await apiFetch(`missionaries/${deleteTarget.id}`, 'DELETE');
+      await deleteMissionary(deleteTarget.id);
       setDeleteTarget(null);
       load();
     } catch (err) {
@@ -292,7 +267,6 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
           storageUsedBytes={storageUsedBytes}
           onSave={() => { setFormOpen(false); setEditing(null); load(); onSaveComplete(); }}
           onClose={() => { setFormOpen(false); setEditing(null); }}
-          apiFetch={apiFetch}
         />
       )}
 

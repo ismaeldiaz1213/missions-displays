@@ -28,7 +28,7 @@
 
 ### Goal 1: New Proof of Concept
 - Currently the Proof of Concept is still a work in progress and pretty limited. 
-- Attached is the link of this website. Any time there is a push to master, this link should be updated: https://master.d1vy4te7fv937a.amplifyapp.com/ Please note there may still be a bug that I have not fixed yet where the starting video does not appear. For now just click on the white space and it should take you to the rest of the website. Again, still a WIP, but details like these should be ironed out soon!
+- Live site: https://misiones.iblibertad.org — every push to `master` deploys automatically (see **Development** below).
 - Estimated Time of Completion: December 31st, 2025
 
 ### Goal 2: Automation
@@ -57,3 +57,44 @@
 
 ## Phase 4: Updates and Expansion
 - Assuming all goes well, other church's can benefit from a website like this. We shall see how that goes though!
+
+## Development
+
+Everything runs on **Google Cloud via Firebase** (project `ibl-missions-display`, owned by diazismael@iblibertad.com).
+
+| Piece | Service | Where to manage it |
+|---|---|---|
+| Website hosting | Firebase Hosting | [Firebase console](https://console.firebase.google.com/project/ibl-missions-display) → Hosting |
+| Missionaries & conference registrations | Cloud Firestore | Firebase console → Firestore Database |
+| Photos, prayer letters, conference videos | Cloud Storage | Firebase console → Storage |
+| Admin login (Google) | Firebase Authentication | Firebase console → Authentication |
+| Billing & budget alert | Google Cloud | [Google Cloud console](https://console.cloud.google.com) → Billing |
+
+### Run locally
+```bash
+npm install
+npm run dev          # http://localhost:5173
+```
+The local site uses the real Firebase project — changes made in `/admin` locally are real.
+
+### Deploy
+- **Website:** push to `master`. GitHub Actions builds and deploys to Firebase Hosting (see the repo's **Actions** tab). Pull requests get a temporary preview link.
+- **Security rules** (`firestore.rules`, `storage.rules`): not deployed by GitHub. After changing them, run `npx firebase-tools login` once, then `npm run deploy:rules`.
+
+### Who can do what
+- **Admins** (`/admin`): any Google account ending in `@iblibertad.org` or `@iblibertad.com`. Enforced in `firestore.rules` and `storage.rules`, not just in the UI.
+- **Developers / console access:** Firebase console → Project settings → Users and permissions.
+
+### Key routes
+| Route | What it is |
+|---|---|
+| `/` | Kiosk home video |
+| `/region-selection`, `/norte-america`, … | Missionary map & continent pages |
+| `/misionero/:id` | Missionary mini-site |
+| `/admin` | Admin portal (missionaries + conference registrations, Excel/PDF export, uploaded videos) |
+| `/conferencia/registro` | Conference registration — unlisted, linked from the church website. `?lang=en` for English |
+| `/conferencia/subir/:registrationId` | Private media-upload link shown to missionaries after registering |
+
+### Conference settings
+Dates, deadline, and hotel fee live in `src/Registration/conference.ts`. The deadline and fee are **also enforced** in `firestore.rules` / `storage.rules` — update both, then run `npm run deploy:rules`.
+
