@@ -6,12 +6,13 @@ import {
   adultCount,
   calculateHotelFee,
   formatConferenceDay,
+  isFreeCategory,
   type Category,
 } from '../conference';
 
 export interface SummaryInput {
   category: Category | '';
-  bringingSpouse: boolean;
+  bringingWife: boolean;
   bringingChildren: boolean;
   children: { count: number } | null;
   attendanceDays: string[];
@@ -28,7 +29,7 @@ const RegistrationSummary: React.FC<{ form: SummaryInput; t: Strings; locale: st
   const adults = adultCount(form);
   const days = form.attendanceDays.length;
   const children = form.bringingChildren ? form.children?.count ?? 0 : 0;
-  const isMissionary = form.category === 'missionary';
+  const isFree = isFreeCategory(form.category);
   const fee = calculateHotelFee(form);
 
   return (
@@ -54,10 +55,10 @@ const RegistrationSummary: React.FC<{ form: SummaryInput; t: Strings; locale: st
         <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           {t.hotelEstimate}
         </Typography>
-        {isMissionary ? (
+        {isFree ? (
           <>
             <Typography sx={{ color: 'var(--ibl-success)', fontWeight: 800, fontSize: '1.6rem', lineHeight: 1.3 }}>{t.noCost}</Typography>
-            <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.82rem' }}>{t.missionariesFree}</Typography>
+            <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.82rem' }}>{t.freeCategoryNote}</Typography>
           </>
         ) : (
           <>

@@ -12,14 +12,15 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import CloseIcon from '@mui/icons-material/Close';
 import { removeFile, uploadFile } from '../data/storageFiles';
-import { saveMissionary } from '../data/missionaries';
+import { deleteDraft, saveDraft, saveMissionary } from '../data/missionaries';
 import type { Missionary, ContactInfo } from '../types';
 import { formatBytes } from './formatBytes';
-import { resolveUrl } from '../storageUrl';
+import { isVideoPath, resolveUrl } from '../storageUrl';
 
 const FREE_TIER_BYTES = 5 * 1024 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
 const MAX_PDF_BYTES = 100 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 1024 * 1024 * 1024;
 
 const CONTINENTS = [
   { value: 'north-america', label: 'Norte América' },
@@ -38,6 +39,8 @@ interface Props {
   missionary: Missionary | null;
   defaultContinent: string;
   storageUsedBytes: number;
+  /** Editing an unpublished draft: "Guardar" keeps it hidden, "Publicar" makes it public. */
+  isDraft?: boolean;
   onSave: () => void;
   onClose: () => void;
 }
@@ -64,7 +67,7 @@ const emptyForm = (continent: string): FormData => ({
 const isS3Key = (p?: string) => !!p && !p.startsWith('/') && !p.startsWith('http');
 
 const MissionaryForm: React.FC<Props> = ({
-  open, missionary, defaultContinent, storageUsedBytes, onSave, onClose,
+  open, missionary, defaultContinent, storageUsedBytes, isDraft = false, onSave, onClose,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -81,6 +84,8 @@ const MissionaryForm: React.FC<Props> = ({
   const [saveProgress, setSaveProgress] = useState(0);
   const [saveStep, setSaveStep] = useState('');
   const [savedOk, setSavedOk] = useState(false);
+  const [published, setPublished] = useState(false);
+  const lastPublishAttempt = useRef(false); // so "Reintentar" repeats a failed publish, not a plain save
   const [fileError, setFileError] = useState('');   // inline — file type/size issues
   const [saveError, setSaveError] = useState('');   // dialog — shown when save fails
   const [showFieldErrors, setShowFieldErrors] = useState(false);
@@ -116,9 +121,10 @@ const MissionaryForm: React.FC<Props> = ({
   }, [form.profileImage]);
 
   useEffect(() => {
-    if (form.media.length === 0) { setMediaPreviews({}); return; }
+    const photos = form.media.filter((url) => !isVideoPath(url));
+    if (photos.length === 0) { setMediaPreviews({}); return; }
     Promise.all(
-      form.media.map(async (url) => [url, await resolveUrl(url, '')] as [string, string])
+      photos.map(async (url) => [url, await resolveUrl(url, '')] as [string, string])
     ).then((pairs) => setMediaPreviews(Object.fromEntries(pairs.filter(([, v]) => v))));
   }, [form.media]);
 
@@ -158,7 +164,8 @@ const MissionaryForm: React.FC<Props> = ({
     setForm((f) => ({ ...f, media: f.media.filter((u) => u !== url) }));
   };
 
-  const handleSave = async () => {
+  const handleSave = async (publish = false) => {
+    lastPublishAttempt.current = publish;
     setShowFieldErrors(true);
     if (!form.name.trim() || !form.lastName.trim() || !form.organization.trim() || !form.location.city.trim()) {
       setFileError('Por favor completa los campos obligatorios marcados en rojo.');
@@ -231,11 +238,12 @@ const MissionaryForm: React.FC<Props> = ({
         advance(uploadWeight, 'Carta de oración subida.');
       }
       for (let i = 0; i < mediaFiles.length; i++) {
-        setSaveStep(`Subiendo foto ${i + 1} de ${mediaFiles.length}...`);
+        setSaveStep(`Subiendo archivo ${i + 1} de ${mediaFiles.length}...`);
         const ext = mediaFiles[i].name.split('.').pop();
-        const path = await uploadFile(mediaFiles[i], `images/${id}-media-${Date.now()}-${i}.${ext}`);
+        const folder = mediaFiles[i].type.startsWith('video/') ? 'videos' : 'images';
+        const path = await uploadFile(mediaFiles[i], `${folder}/${id}-media-${Date.now()}-${i}.${ext}`);
         media.push(path);
-        advance(uploadWeight, `Foto ${i + 1} subida.`);
+        advance(uploadWeight, `Archivo ${i + 1} subido.`);
       }
 
       setSaveStep('Guardando información...');
@@ -247,7 +255,13 @@ const MissionaryForm: React.FC<Props> = ({
         media: media.map((url) => ({ url })),
       };
 
-      await saveMissionary(payload);
+      if (isDraft && !publish) {
+        await saveDraft(payload);
+      } else {
+        await saveMissionary(payload);
+        if (isDraft) await deleteDraft(id);
+      }
+      setPublished(publish);
       advance(apiWeight, '¡Guardado!');
       setSaveProgress(100);
       setSavedOk(true);
@@ -263,6 +277,7 @@ const MissionaryForm: React.FC<Props> = ({
     || profileToRemove !== null || prayerToRemove !== null || mediaToRemove.length > 0;
   const formChanged = stableStringify(form) !== initialForm.current;
   const canSave = requiredFilled && (formChanged || filesChanged);
+  const canPublish = isDraft && requiredFilled;
 
   const captionSx = { fontSize: isMobile ? '0.9rem' : '0.75rem', fontWeight: 600 };
 
@@ -287,7 +302,7 @@ const MissionaryForm: React.FC<Props> = ({
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth fullScreen={isMobile}
       PaperProps={{ sx: { bgcolor: '#1a1a1a', color: '#fff' } }}>
       <DialogTitle sx={{ borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', fontSize: { xs: '1.25rem', sm: '1.5rem' }, fontWeight: 700 }}>
-        <Box sx={{ flex: 1 }}>{missionary ? 'Editar Misionero' : 'Añadir Misionero'}</Box>
+        <Box sx={{ flex: 1 }}>{isDraft ? 'Editar Borrador' : missionary ? 'Editar Misionero' : 'Añadir Misionero'}</Box>
         <IconButton onClick={onClose} size="small" sx={{ color: '#ef5350', '&:hover': { bgcolor: 'rgba(239,83,80,0.12)' } }}>
           <CloseIcon />
         </IconButton>
@@ -526,30 +541,34 @@ const MissionaryForm: React.FC<Props> = ({
 
             {/* Media photos */}
             <Box>
-              <Typography variant="caption" color="#aaa" display="block" mb={1} sx={captionSx}>Álbum de fotos</Typography>
-              <input ref={mediaRef} type="file" accept="image/*" multiple hidden onChange={(e) => {
+              <Typography variant="caption" color="#aaa" display="block" mb={1} sx={captionSx}>Álbum de fotos y videos</Typography>
+              <input ref={mediaRef} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => {
                 const files = Array.from(e.target.files ?? []);
-                const nonImage = files.find(f => !f.type.startsWith('image/'));
-                if (nonImage) { setFileError(`"${nonImage.name}" no es una imagen válida. El álbum solo acepta imágenes (JPG, PNG, etc.).`); e.target.value = ''; return; }
-                const oversized = files.find(f => f.size > MAX_IMAGE_BYTES);
-                if (oversized) { setFileError(`"${oversized.name}" es demasiado grande (${formatBytes(oversized.size)}). Máximo 50 MB por imagen.`); e.target.value = ''; return; }
+                const invalid = files.find(f => !f.type.startsWith('image/') && !f.type.startsWith('video/'));
+                if (invalid) { setFileError(`"${invalid.name}" no es válido. El álbum acepta imágenes (JPG, PNG, etc.) y videos (MP4, MOV, etc.).`); e.target.value = ''; return; }
+                const oversized = files.find(f => f.size > (f.type.startsWith('video/') ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES));
+                if (oversized) { setFileError(`"${oversized.name}" es demasiado grande (${formatBytes(oversized.size)}). Máximo 50 MB por imagen y 1 GB por video.`); e.target.value = ''; return; }
                 setFileError('');
                 setMediaFiles(files);
               }} />
               <Button variant="outlined" size="small" startIcon={<CloudUploadIcon />}
                 onClick={() => mediaRef.current?.click()} sx={{ borderColor: '#555', color: '#ccc' }}>
-                Añadir fotos
+                Añadir fotos o videos
               </Button>
               {mediaFiles.length > 0 && (
                 <Typography variant="caption" color="#90caf9" display="block" mt={0.5}>
-                  {mediaFiles.length} foto(s) nueva(s)
+                  {mediaFiles.length} archivo(s) nuevo(s)
                 </Typography>
               )}
               {form.media.length > 0 && (
                 <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                   {form.media.map((url, i) => (
                     <Box key={url} sx={{ position: 'relative' }}>
-                      {mediaPreviews[url] ? (
+                      {isVideoPath(url) ? (
+                        <Box title="Video" sx={{ width: 64, height: 64, borderRadius: '6px', border: '1.5px solid #444', bgcolor: '#2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem' }}>
+                          🎬
+                        </Box>
+                      ) : mediaPreviews[url] ? (
                         <Box component="img"
                           src={mediaPreviews[url]}
                           alt={`Foto ${i + 1}`}
@@ -561,7 +580,7 @@ const MissionaryForm: React.FC<Props> = ({
                         </Box>
                       )}
                       <IconButton size="small" onClick={() => removeMediaItem(url)}
-                        title="Quitar foto"
+                        title="Quitar"
                         sx={{
                           position: 'absolute', top: -6, right: -6,
                           bgcolor: '#ef5350', color: '#fff', p: 0.2,
@@ -615,12 +634,18 @@ const MissionaryForm: React.FC<Props> = ({
 
       <DialogActions sx={{ p: 2, borderTop: '1px solid #333', gap: 1, flexDirection: { xs: 'column-reverse', sm: 'row' } }}>
         <Button onClick={onClose} fullWidth={isMobile} sx={{ color: '#aaa' }}>Cancelar</Button>
-        <Button variant="contained" onClick={handleSave} disabled={uploading || !canSave}
+        <Button variant={isDraft ? 'outlined' : 'contained'} onClick={() => handleSave()} disabled={uploading || !canSave}
           fullWidth={isMobile} size={isMobile ? 'large' : 'medium'}
           startIcon={uploading ? <CircularProgress size={16} sx={{ color: 'inherit' }} /> : null}
           sx={{ fontWeight: 700, minWidth: 140 }}>
-          {uploading ? saveStep : 'Guardar'}
+          {uploading ? saveStep : isDraft ? 'Guardar borrador' : 'Guardar'}
         </Button>
+        {isDraft && (
+          <Button variant="contained" color="success" onClick={() => handleSave(true)} disabled={uploading || !canPublish}
+            fullWidth={isMobile} size={isMobile ? 'large' : 'medium'} sx={{ fontWeight: 700, minWidth: 140 }}>
+            Publicar
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
 
@@ -639,7 +664,7 @@ const MissionaryForm: React.FC<Props> = ({
           <Button variant="outlined" onClick={() => setSaveError('')} sx={{ borderColor: '#555', color: '#aaa', borderRadius: 2 }}>
             Cancelar
           </Button>
-          <Button variant="contained" color="error" onClick={() => { setSaveError(''); handleSave(); }} sx={{ fontWeight: 700, borderRadius: 2 }}>
+          <Button variant="contained" color="error" onClick={() => { setSaveError(''); handleSave(lastPublishAttempt.current); }} sx={{ fontWeight: 700, borderRadius: 2 }}>
             Reintentar
           </Button>
         </Box>
@@ -650,10 +675,10 @@ const MissionaryForm: React.FC<Props> = ({
         slotProps={{ paper: { sx: { bgcolor: '#1a1a1a', color: '#fff', borderRadius: 3, textAlign: 'center', px: 4, py: 3, maxWidth: 360 } } }}>
         <Typography sx={{ fontSize: '3rem', mb: 1 }}>✅</Typography>
         <Typography variant="h6" fontWeight={700} sx={{ mb: 0.75 }}>
-          {missionary ? '¡Misionero actualizado!' : '¡Misionero guardado!'}
+          {published ? '¡Página publicada!' : isDraft ? '¡Borrador guardado!' : missionary ? '¡Misionero actualizado!' : '¡Misionero guardado!'}
         </Typography>
         <Typography variant="body2" color="#aaa" sx={{ mb: 3 }}>
-          Los cambios han sido guardados correctamente.
+          {published ? 'La página ya es visible en el sitio.' : isDraft ? 'El borrador sigue oculto hasta que lo publiques.' : 'Los cambios han sido guardados correctamente.'}
         </Typography>
         <Button variant="contained" fullWidth onClick={onSave} sx={{ fontWeight: 700, py: 1.25, borderRadius: 2 }}>
           Volver a la lista

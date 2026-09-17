@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Category, Transport } from './conference';
+import type { Category, HeardAbout } from './conference';
 
 export type Lang = 'es' | 'en';
 
@@ -18,40 +18,55 @@ const es = {
   closedTitle: 'El registro está cerrado',
   closedBody: (date: string) => `La fecha límite para registrarse fue el ${date}. Si tiene preguntas, comuníquese con la oficina de la iglesia.`,
 
-  successTitle: (name: string) => `¡Registro recibido${name ? `, ${name}` : ''}!`,
+  // Conference information shown above the form. Days/dates are filled in from CONFERENCE_DAYS.
+  infoTitle: 'Información importante',
+  infoItems: (firstDay: string, lastDay: string) => [
+    `La registración dará inicio a las 3:00 de la tarde del ${firstDay} y posteriormente tendremos una cena a las 5:30 de la tarde. El servicio iniciará a las 7:30 de la noche. Todos aquellos que no se hayan registrado durante ese tiempo lo podrán hacer después del servicio.`,
+    `La conferencia termina el ${lastDay} en el servicio por la noche.`,
+    'No hay costo por registración. Almuerzo y cena serán provistos durante la conferencia.',
+    'No proveemos hospedaje antes o después de la conferencia.',
+  ],
+  infoVideoNote: 'Misioneros y evangelistas: después de llenar este formulario podrá subir su video de presentación en formato MP4.',
+
+  steps: ['Registro', 'Videos', 'Confirmación'],
+
+  successTitle: (name: string) => `¡Su registro fue enviado${name ? `, ${name}` : ''}!`,
   successBody: (conf: string) => `Gracias por registrarse para la ${conf}. Nos comunicaremos con usted para confirmar los detalles de hospedaje y transporte.`,
   successFee: 'Costo estimado de hotel:',
   successFeeNote: '— no se cobra nada ahora.',
   registerAnother: 'Registrar a otra persona',
 
-  mediaTitle: '¿Tiene videos o fotos de su ministerio?',
-  mediaBody: 'Súbalos aquí para presentarlos durante la conferencia. Guarde este enlace para volver a subir más adelante.',
-  mediaButton: 'Subir videos y fotos',
+  mediaTitle: '¿Necesita subir más videos después?',
+  mediaBody: 'Guarde este enlace. Puede usarlo para subir videos hasta antes de la conferencia.',
+  mediaButton: 'Subir videos',
   copyLink: 'Copiar enlace',
   linkCopied: 'Enlace copiado',
 
-  uploadTitle: 'Videos y fotos de su ministerio',
-  uploadIntro: 'Suba videos o fotos para presentarlos durante la conferencia. Puede volver a este enlace y subir más archivos cuando quiera.',
-  uploadClosesOn: (date: string) => `Puede subir archivos hasta el ${date}.`,
-  uploadDrop: 'Arrastre archivos aquí o haga clic para seleccionar',
-  uploadLimits: 'Videos o imágenes · hasta 2 GB por archivo',
-  uploadStart: 'Subir archivos',
+  uploadTitle: 'Video de su ministerio',
+  uploadIntro: 'Si desea presentar su ministerio por medio de video, súbalo aquí en formato MP4. No podemos garantizar que su presentación funcione en nuestro sistema si está en otro formato.',
+  uploadLater: 'Si todavía no tiene su video listo, puede subirlo más tarde con el enlace que le daremos en la siguiente página.',
+  uploadClosesOn: (date: string) => `Puede subir videos hasta el ${date}.`,
+  uploadDrop: 'Arrastre sus videos aquí o haga clic para seleccionar',
+  uploadLimits: 'Solo videos MP4 · hasta 2 GB por archivo',
+  uploadRetry: 'Reintentar',
   uploadDone: 'Subido',
   uploadFailed: 'Error',
-  uploadAllDone: '¡Gracias! Sus archivos fueron recibidos.',
-  uploadInvalidType: (name: string) => `${name}: solo se aceptan videos o imágenes.`,
+  uploadAllDone: '¡Gracias! Sus videos fueron recibidos.',
+  uploadInvalidType: (name: string) => `${name}: solo se aceptan videos MP4.`,
   uploadTooLarge: (name: string) => `${name}: el archivo supera 2 GB.`,
-  uploadDenied: 'No se pudo subir. El enlace no es válido o el periodo para subir archivos terminó.',
-  uploadClosedTitle: 'El periodo para subir archivos terminó',
+  uploadDenied: 'No se pudo subir. El enlace no es válido o el periodo para subir videos terminó.',
+  uploadClosedTitle: 'El periodo para subir videos terminó',
   uploadClosedBody: 'Si aún necesita enviar material, comuníquese con la oficina de la iglesia.',
   keepPageOpen: 'Mantenga esta página abierta hasta que terminen las subidas.',
+  skipUpload: 'No tengo video por ahora — enviar',
+  finish: 'Terminar y enviar',
 
   participationTitle: '¿Cómo participa?',
   participationSub: 'Seleccione la categoría que mejor lo describe.',
   categories: {
     missionary: { label: 'Misionero', description: 'Sin costo de hotel' },
+    evangelist: { label: 'Evangelista', description: 'Sin costo de hotel' },
     pastor: { label: 'Pastor', description: 'Pastor de iglesia local' },
-    evangelist: { label: 'Evangelista', description: 'Ministerio de evangelismo' },
     layman: { label: 'Laico', description: 'Miembro de iglesia' },
   } as Record<Category, { label: string; description: string }>,
   missionaryBoard: 'Junta misionera / Clearing house',
@@ -59,18 +74,19 @@ const es = {
 
   yourInfo: 'Su información',
   person: {
-    firstName: 'Nombre', lastName: 'Apellidos', email: 'Correo electrónico', phone: 'Teléfono', church: 'Iglesia',
+    firstName: 'Nombre', lastName: 'Apellidos', email: 'Correo electrónico', phone: 'Teléfono',
     street: 'Dirección', city: 'Ciudad', state: 'Estado', zip: 'Código postal', country: 'País',
   },
+  homeChurch: 'Iglesia local (donde es miembro)',
+  homeChurchCity: 'Ciudad de su iglesia',
 
   familyTitle: 'Familia',
   familySub: 'Díganos quién le acompañará.',
-  spouseQuestion: '¿Viene su cónyuge a la conferencia?',
-  spouseYes: 'Sí, viene',
+  wifeQuestion: '¿Viene su esposa con usted?',
+  wifeYes: 'Sí, viene',
   yes: 'Sí',
   no: 'No',
-  spouseInfo: 'Información del cónyuge',
-  sameAddress: 'Misma dirección que la mía',
+  wifeInfo: 'Información de su esposa',
   childrenQuestion: '¿Traerá niños?',
   childrenCount: '¿Cuántos niños?',
   infants: 'Bebés (0–2 años)',
@@ -79,33 +95,41 @@ const es = {
   childrenNotes: 'Necesidades de los niños (cuna, alergias, etc.)',
 
   daysTitle: 'Días de asistencia',
-  daysSubMissionary: 'Seleccione los días que estará presente.',
+  daysSubFree: 'Seleccione los días que estará presente.',
   daysSub: (fee: number) => `Seleccione los días que necesitará hotel ($${fee} por persona, por día).`,
 
   travelTitle: 'Viaje y llegada',
-  travelSub: 'Nos ayuda a coordinar transporte y recibimiento.',
-  howArrive: '¿Cómo llegará?',
-  transport: { plane: 'Avión', bus: 'Autobús', car: 'Automóvil', other: 'Otro' } as Record<Transport, string>,
+  travelSub: 'Nos ayuda a coordinar quién necesita que lo recojan.',
+  pickupQuestion: '¿Necesita que lo recojamos en el aeropuerto?',
+  pickupYes: 'Sí, por favor',
+  pickupNo: 'No es necesario',
+  flightInfo: 'Información de su vuelo de llegada',
   airline: 'Aerolínea',
   flightNumber: 'Número de vuelo',
   flightPlaceholder: 'Ej. AA 1234',
   airport: 'Aeropuerto de llegada',
-  busCompany: 'Línea de autobús',
-  busStation: 'Estación de llegada',
+  airportPlaceholder: 'Ej. IAH, HOU',
   arrivalDate: 'Fecha de llegada',
-  arrivalTime: 'Hora estimada',
-  departureDate: 'Fecha de salida',
-  pickupQuestion: (t: Transport | ''): string =>
-    t === 'plane' ? '¿Necesita que lo recojan en el aeropuerto?'
-      : t === 'bus' ? '¿Necesita que lo recojan en la estación?'
-        : '¿Necesita que lo recojan?',
-  pickupYes: 'Sí, por favor',
-  pickupNo: 'No es necesario',
+  arrivalTime: 'Hora estimada de llegada',
+  approxArrivalDate: 'Fecha aproximada de llegada',
+  departureDate: 'Fecha de salida (opcional)',
+  rvQuestion: '¿Llegará en RV (casa rodante)?',
   travelNotes: 'Notas de viaje (opcional)',
 
   moreTitle: 'Algo más',
-  moreSub: 'Alergias, necesidades de accesibilidad, peticiones especiales.',
-  comments: 'Comentarios (opcional)',
+  moreSub: 'Ayúdenos a conocerle mejor.',
+  heardAboutQuestion: '¿Cómo se enteró de la conferencia?',
+  heardAbout: {
+    pastor: 'Mi pastor / iglesia',
+    missionary: 'Un misionero',
+    friend: 'Amigo o familiar',
+    social: 'Redes sociales',
+    website: 'Sitio web de la iglesia',
+    attended: 'Asistí antes',
+    other: 'Otro',
+  } as Record<HeardAbout, string>,
+  heardAboutOther: '¿Cómo?',
+  comments: 'Alergias, necesidades especiales o comentarios (opcional)',
 
   summary: 'Resumen',
   category: 'Categoría',
@@ -114,13 +138,15 @@ const es = {
   days: 'Días',
   hotelEstimate: 'Hotel estimado',
   noCost: 'Sin costo',
-  missionariesFree: 'Los misioneros no pagan hotel.',
+  freeCategoryNote: 'Misioneros y evangelistas no pagan hotel.',
   feeFormula: (fee: number, days: number, adults: number) =>
     `$${fee} × ${plural(days, 'día', 'días')} × ${plural(adults, 'adulto', 'adultos')}`,
   notCharged: 'No se cobra nada ahora. Este registro es solo para planificación.',
 
   fixErrors: 'Revise los campos marcados en rojo.',
   submit: 'Enviar registro',
+  next: 'Siguiente',
+  nextHint: 'En el siguiente paso podrá subir su video.',
   submitError: 'No se pudo enviar el registro. Intente de nuevo.',
 
   errors: {
@@ -130,7 +156,7 @@ const es = {
     min1: 'Mínimo 1',
     infantsTooMany: 'No puede ser mayor al total',
     selectDay: 'Seleccione al menos un día',
-    selectTransport: 'Seleccione cómo llegará',
+    selectHeardAbout: 'Seleccione una opción',
   },
 };
 
@@ -147,40 +173,54 @@ const en: Strings = {
   closedTitle: 'Registration is closed',
   closedBody: (date) => `The registration deadline was ${date}. If you have questions, please contact the church office.`,
 
-  successTitle: (name) => `Registration received${name ? `, ${name}` : ''}!`,
+  infoTitle: 'Important information',
+  infoItems: (firstDay, lastDay) => [
+    `Registration begins at 3:00 PM on ${firstDay}, followed by dinner at 5:30 PM. The service starts at 7:30 PM. Anyone who has not checked in by then may do so after the service.`,
+    `The conference ends ${lastDay} with the evening service.`,
+    'There is no registration cost. Lunch and dinner will be provided during the conference.',
+    'We do not provide lodging before or after the conference.',
+  ],
+  infoVideoNote: 'Missionaries and evangelists: after completing this form you will be able to upload your presentation video in MP4 format.',
+
+  steps: ['Registration', 'Videos', 'Confirmation'],
+
+  successTitle: (name) => `Your registration was submitted${name ? `, ${name}` : ''}!`,
   successBody: (conf) => `Thank you for registering for the ${conf}. We will contact you to confirm lodging and transportation details.`,
   successFee: 'Estimated hotel cost:',
   successFeeNote: '— nothing is charged now.',
   registerAnother: 'Register another person',
 
-  mediaTitle: 'Do you have videos or photos of your ministry?',
-  mediaBody: 'Upload them here so we can present them during the conference. Save this link to upload more later.',
-  mediaButton: 'Upload videos & photos',
+  mediaTitle: 'Need to upload more videos later?',
+  mediaBody: 'Save this link. You can use it to upload videos until the conference begins.',
+  mediaButton: 'Upload videos',
   copyLink: 'Copy link',
   linkCopied: 'Link copied',
 
-  uploadTitle: 'Videos & photos of your ministry',
-  uploadIntro: 'Upload videos or photos to be presented during the conference. You can come back to this link and upload more files anytime.',
-  uploadClosesOn: (date) => `You can upload files until ${date}.`,
-  uploadDrop: 'Drag files here or click to choose',
-  uploadLimits: 'Videos or images · up to 2 GB per file',
-  uploadStart: 'Upload files',
+  uploadTitle: 'Your ministry video',
+  uploadIntro: 'If you would like to present your ministry by video, upload it here in MP4 format. We cannot guarantee your presentation will work on our system if it is in another format.',
+  uploadLater: "If your video isn't ready yet, you can upload it later using the link we'll give you on the next page.",
+  uploadClosesOn: (date) => `You can upload videos until ${date}.`,
+  uploadDrop: 'Drag your videos here or click to choose',
+  uploadLimits: 'MP4 videos only · up to 2 GB per file',
+  uploadRetry: 'Try again',
   uploadDone: 'Uploaded',
   uploadFailed: 'Failed',
-  uploadAllDone: 'Thank you! Your files were received.',
-  uploadInvalidType: (name) => `${name}: only videos or images are accepted.`,
+  uploadAllDone: 'Thank you! Your videos were received.',
+  uploadInvalidType: (name) => `${name}: only MP4 videos are accepted.`,
   uploadTooLarge: (name) => `${name}: the file is larger than 2 GB.`,
   uploadDenied: 'Upload failed. The link is invalid or the upload period has ended.',
   uploadClosedTitle: 'The upload period has ended',
   uploadClosedBody: 'If you still need to send material, please contact the church office.',
   keepPageOpen: 'Keep this page open until the uploads finish.',
+  skipUpload: "I don't have a video right now — submit",
+  finish: 'Finish & submit',
 
   participationTitle: 'How are you participating?',
   participationSub: 'Select the category that best describes you.',
   categories: {
     missionary: { label: 'Missionary', description: 'No hotel cost' },
+    evangelist: { label: 'Evangelist', description: 'No hotel cost' },
     pastor: { label: 'Pastor', description: 'Local church pastor' },
-    evangelist: { label: 'Evangelist', description: 'Evangelism ministry' },
     layman: { label: 'Layman', description: 'Church member' },
   },
   missionaryBoard: 'Mission board / Clearing house',
@@ -188,18 +228,19 @@ const en: Strings = {
 
   yourInfo: 'Your information',
   person: {
-    firstName: 'First name', lastName: 'Last name', email: 'Email', phone: 'Phone', church: 'Church',
+    firstName: 'First name', lastName: 'Last name', email: 'Email', phone: 'Phone',
     street: 'Street address', city: 'City', state: 'State', zip: 'ZIP code', country: 'Country',
   },
+  homeChurch: 'Home church',
+  homeChurchCity: 'Home church city',
 
   familyTitle: 'Family',
   familySub: 'Tell us who is coming with you.',
-  spouseQuestion: 'Is your spouse attending the conference?',
-  spouseYes: 'Yes, attending',
+  wifeQuestion: 'Is your wife coming with you?',
+  wifeYes: 'Yes, she is',
   yes: 'Yes',
   no: 'No',
-  spouseInfo: 'Spouse information',
-  sameAddress: 'Same address as mine',
+  wifeInfo: "Your wife's information",
   childrenQuestion: 'Will you bring children?',
   childrenCount: 'How many children?',
   infants: 'Infants (0–2 years)',
@@ -208,33 +249,41 @@ const en: Strings = {
   childrenNotes: "Children's needs (crib, allergies, etc.)",
 
   daysTitle: 'Attendance days',
-  daysSubMissionary: 'Select the days you will attend.',
+  daysSubFree: 'Select the days you will attend.',
   daysSub: (fee) => `Select the days you will need a hotel ($${fee} per person, per day).`,
 
   travelTitle: 'Travel & arrival',
-  travelSub: 'This helps us coordinate transportation and your welcome.',
-  howArrive: 'How will you arrive?',
-  transport: { plane: 'Plane', bus: 'Bus', car: 'Car', other: 'Other' },
+  travelSub: 'This helps us coordinate who needs to be picked up.',
+  pickupQuestion: 'Do you need us to pick you up at the airport?',
+  pickupYes: 'Yes, please',
+  pickupNo: 'Not needed',
+  flightInfo: 'Your arrival flight',
   airline: 'Airline',
   flightNumber: 'Flight number',
   flightPlaceholder: 'e.g. AA 1234',
   airport: 'Arrival airport',
-  busCompany: 'Bus line',
-  busStation: 'Arrival station',
+  airportPlaceholder: 'e.g. IAH, HOU',
   arrivalDate: 'Arrival date',
-  arrivalTime: 'Estimated time',
-  departureDate: 'Departure date',
-  pickupQuestion: (t) =>
-    t === 'plane' ? 'Do you need a pickup at the airport?'
-      : t === 'bus' ? 'Do you need a pickup at the station?'
-        : 'Do you need a pickup?',
-  pickupYes: 'Yes, please',
-  pickupNo: 'Not needed',
+  arrivalTime: 'Estimated arrival time',
+  approxArrivalDate: 'Approximate arrival date',
+  departureDate: 'Departure date (optional)',
+  rvQuestion: 'Are you arriving in an RV?',
   travelNotes: 'Travel notes (optional)',
 
   moreTitle: 'Anything else',
-  moreSub: 'Allergies, accessibility needs, special requests.',
-  comments: 'Comments (optional)',
+  moreSub: 'Help us get to know you.',
+  heardAboutQuestion: 'How did you hear about the conference?',
+  heardAbout: {
+    pastor: 'My pastor / church',
+    missionary: 'A missionary',
+    friend: 'Friend or family',
+    social: 'Social media',
+    website: 'Church website',
+    attended: 'I attended before',
+    other: 'Other',
+  },
+  heardAboutOther: 'How?',
+  comments: 'Allergies, special needs, or comments (optional)',
 
   summary: 'Summary',
   category: 'Category',
@@ -243,12 +292,14 @@ const en: Strings = {
   days: 'Days',
   hotelEstimate: 'Estimated hotel',
   noCost: 'No cost',
-  missionariesFree: 'Missionaries do not pay for the hotel.',
+  freeCategoryNote: 'Missionaries and evangelists do not pay for the hotel.',
   feeFormula: (fee, days, adults) => `$${fee} × ${plural(days, 'day', 'days')} × ${plural(adults, 'adult', 'adults')}`,
   notCharged: 'Nothing is charged now. This registration is for planning purposes only.',
 
   fixErrors: 'Please review the fields marked in red.',
   submit: 'Submit registration',
+  next: 'Next',
+  nextHint: 'On the next step you can upload your video.',
   submitError: 'We could not submit your registration. Please try again.',
 
   errors: {
@@ -258,7 +309,7 @@ const en: Strings = {
     min1: 'At least 1',
     infantsTooMany: 'Cannot exceed the total',
     selectDay: 'Select at least one day',
-    selectTransport: 'Select how you will arrive',
+    selectHeardAbout: 'Select an option',
   },
 };
 
@@ -282,11 +333,11 @@ export const saveLang = (lang: Lang) => {
 };
 
 /** Current form language, persisted on this device and reflected in <html lang> and the tab title. */
-export const useLang = (): [Lang, (l: Lang) => void] => {
+export const useLang = (pageTitle?: Record<Lang, string>): [Lang, (l: Lang) => void] => {
   const [lang, setLang] = useState<Lang>(detectLang);
   useEffect(() => {
     document.documentElement.lang = lang;
-    document.title = STRINGS[lang].conferenceName;
-  }, [lang]);
+    document.title = pageTitle?.[lang] ?? STRINGS[lang].conferenceName;
+  }, [lang, pageTitle]);
   return [lang, (l) => { setLang(l); saveLang(l); }];
 };

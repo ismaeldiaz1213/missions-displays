@@ -17,6 +17,7 @@ import MisionerosPasados from './MisionerosPasados/MisionerosPasados'
 import Timeline from './Timeline/Timeline'
 import Registration from './Registration/Registration'
 import MediaUpload from './Registration/MediaUpload'
+import MissionaryRequest from './MissionaryRequest/MissionaryRequest'
 
 
 const App:React.FC = () => {
@@ -41,6 +42,7 @@ const App:React.FC = () => {
         {/* Unlisted — reached only via direct link from the church website */}
         <Route path="/conferencia/registro" element={<Registration/>} />
         <Route path="/conferencia/subir/:registrationId" element={<MediaUpload/>} />
+        <Route path="/misioneros/solicitud" element={<MissionaryRequest/>} />
       </Routes>
     </>
   )

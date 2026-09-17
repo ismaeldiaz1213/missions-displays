@@ -6,15 +6,18 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Box, Button, Typography, CircularProgress, Paper,
   AppBar, Toolbar, Chip, useTheme, useMediaQuery,
-  createTheme, ThemeProvider, Tabs, Tab,
+  createTheme, ThemeProvider, Tabs, Tab, Badge,
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PublicIcon from '@mui/icons-material/Public';
 import HowToRegIcon from '@mui/icons-material/HowToReg';
+import InboxIcon from '@mui/icons-material/Inbox';
 import MissionaryTable from './MissionaryTable';
 import StorageIndicator from './StorageIndicator';
 import RegistrationTable from './registrations/RegistrationTable';
+import RequestTable from './requests/RequestTable';
+import { listMissionaryRequests } from '../data/missionaryRequests';
 import { firebaseApp, isAdminEmail } from '../firebase';
 
 const auth = getAuth(firebaseApp);
@@ -43,7 +46,16 @@ const Admin: React.FC = () => {
   const [storageUsedBytes, setStorageUsedBytes] = useState(0);
   const [storageRefresh, setStorageRefresh] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab = searchParams.get('tab') === 'registros' ? 'registros' : 'misioneros';
+  const tabParam = searchParams.get('tab');
+  const tab = tabParam === 'registros' || tabParam === 'solicitudes' ? tabParam : 'misioneros';
+  const [pendingRequests, setPendingRequests] = useState(0);
+
+  useEffect(() => {
+    if (authState !== 'authenticated') return;
+    listMissionaryRequests()
+      .then((rs) => setPendingRequests(rs.filter((r) => r.status === 'pending').length))
+      .catch(console.error);
+  }, [authState]);
 
   // Only church Google accounts are admins; the same check is enforced server-side in firestore.rules / storage.rules.
   useEffect(() => onAuthStateChanged(auth, (user) => {
@@ -136,11 +148,14 @@ const Admin: React.FC = () => {
 
         <Tabs
           value={tab}
-          onChange={(_, v) => setSearchParams(v === 'registros' ? { tab: v } : {}, { replace: true })}
+          onChange={(_, v) => setSearchParams(v === 'misioneros' ? {} : { tab: v }, { replace: true })}
           variant={isMobile ? 'fullWidth' : 'standard'}
           sx={{ px: { xs: 0, sm: 3 }, borderBottom: '1px solid #2a2a2a', bgcolor: '#141414' }}
         >
           <Tab value="misioneros" label="Misioneros" icon={<PublicIcon fontSize="small" />} iconPosition="start" sx={{ textTransform: 'none', fontWeight: 600, minHeight: 52 }} />
+          <Tab value="solicitudes" iconPosition="start" sx={{ textTransform: 'none', fontWeight: 600, minHeight: 52 }}
+            icon={<Badge badgeContent={pendingRequests} color="error"><InboxIcon fontSize="small" /></Badge>}
+            label="Solicitudes" />
           <Tab value="registros" label="Registros" icon={<HowToRegIcon fontSize="small" />} iconPosition="start" sx={{ textTransform: 'none', fontWeight: 600, minHeight: 52 }} />
         </Tabs>
 
@@ -156,6 +171,8 @@ const Admin: React.FC = () => {
                 onSaveComplete={() => setStorageRefresh(r => r + 1)}
               />
             </>
+          ) : tab === 'solicitudes' ? (
+            <RequestTable onPendingCount={setPendingRequests} />
           ) : (
             <RegistrationTable />
           )}

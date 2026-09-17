@@ -19,6 +19,42 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Unpublished missionary pages (created from approved requests)
+    match /missionaryDrafts/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // ── Missionary page requests (public form on the home page) ──────────────
+    function validPublicContact(c) {
+      return c is map
+        && c.keys().hasOnly(['email', 'phone', 'website', 'facebook', 'instagram'])
+        && str(c.email, 200) && str(c.phone, 40) && str(c.website, 300)
+        && str(c.facebook, 300) && str(c.instagram, 300);
+    }
+
+    function validMissionaryRequest(d) {
+      return d.keys().hasOnly(['language', 'name', 'lastName', 'wifeName', 'email', 'phone',
+                               'organization', 'sendingChurch', 'missionType', 'startYear',
+                               'continent', 'city', 'state', 'country', 'description', 'prayerRequests',
+                               'contact', 'status', 'createdAt'])
+        && d.language in ['es', 'en']
+        && reqStr(d.name, 100) && reqStr(d.lastName, 100) && str(d.wifeName, 100)
+        && reqStr(d.email, 200) && reqStr(d.phone, 40)
+        && reqStr(d.organization, 200) && reqStr(d.sendingChurch, 200)
+        && str(d.missionType, 200) && str(d.startYear, 4)
+        && d.continent in ['north-america', 'central-america', 'south-america', 'europe', 'africa', 'asia', 'oceania']
+        && reqStr(d.city, 200) && str(d.state, 200) && reqStr(d.country, 200)
+        && reqStr(d.description, 5000) && str(d.prayerRequests, 3000)
+        && validPublicContact(d.contact)
+        && d.status == 'pending'
+        && d.createdAt == request.time;
+    }
+
+    match /missionaryRequests/{id} {
+      allow create: if validMissionaryRequest(request.resource.data);
+      allow read, update, delete: if isAdmin();
+    }
+
     // ── Conference registrations ─────────────────────────────────────────────
     // Keep the deadline in sync with REGISTRATION_LAST_DAY in src/Registration/conference.ts.
     // 1793422799999 = 2026-10-30 23:59:59.999 CDT
@@ -31,20 +67,19 @@ service cloud.firestore {
         && str(a.get('zip', ''), 20) && str(a.get('country', ''), 200);
     }
 
-    function validPerson(p, extraKeys) {
-      return p is map
-        && p.keys().hasOnly(['firstName', 'lastName', 'email', 'phone', 'church', 'address'].concat(extraKeys))
-        && reqStr(p.firstName, 200) && reqStr(p.lastName, 200)
-        && str(p.email, 200) && str(p.phone, 40) && str(p.church, 200)
-        && validAddress(p.address);
+    function validContact(p) {
+      return reqStr(p.firstName, 200) && reqStr(p.lastName, 200) && str(p.email, 200) && str(p.phone, 40);
     }
 
     function validRegistrant(p) {
-      return validPerson(p, []) && p.email.size() > 0 && p.phone.size() > 0 && p.church.size() > 0;
+      return p is map
+        && p.keys().hasOnly(['firstName', 'lastName', 'email', 'phone', 'address'])
+        && validContact(p) && p.email.size() > 0 && p.phone.size() > 0
+        && validAddress(p.address);
     }
 
-    function validSpouse(s) {
-      return validPerson(s, ['sameAddress']) && s.sameAddress is bool;
+    function validWife(w) {
+      return w is map && w.keys().hasOnly(['firstName', 'lastName', 'email', 'phone']) && validContact(w);
     }
 
     function validChildren(c) {
@@ -55,36 +90,44 @@ service cloud.firestore {
         && str(c.ages, 200) && str(c.notes, 1000);
     }
 
+    // Pickups need full flight details; people who don't need a pickup may be arriving by RV.
     function validTravel(t) {
       return t is map
-        && t.keys().hasOnly(['transport', 'arrivalDate', 'arrivalTime', 'departureDate', 'needsPickup',
-                             'airline', 'flightNumber', 'airport', 'busCompany', 'busStation', 'notes'])
-        && t.transport in ['plane', 'bus', 'car', 'other']
-        && reqStr(t.arrivalDate, 10) && str(t.arrivalTime, 5) && str(t.departureDate, 10)
-        && t.needsPickup is bool
+        && t.keys().hasOnly(['needsPickup', 'airline', 'flightNumber', 'airport', 'arrivalDate', 'arrivalTime',
+                             'departureDate', 'arrivingByRV', 'notes'])
+        && t.needsPickup is bool && t.arrivingByRV is bool
         && str(t.airline, 200) && str(t.flightNumber, 20) && str(t.airport, 200)
-        && str(t.busCompany, 200) && str(t.busStation, 200) && str(t.notes, 1000);
+        && reqStr(t.arrivalDate, 10) && str(t.arrivalTime, 5) && str(t.departureDate, 10)
+        && str(t.notes, 1000)
+        && (t.needsPickup
+              ? t.airline.size() > 0 && t.flightNumber.size() > 0 && t.airport.size() > 0 && t.arrivalTime.size() > 0
+                && t.arrivingByRV == false
+              : true);
     }
 
     function validRegistration(d) {
-      return d.keys().hasOnly(['language', 'category', 'registrant', 'missionaryBoard', 'sendingChurch',
-                               'bringingSpouse', 'spouse', 'bringingChildren', 'children',
-                               'attendanceDays', 'travel', 'specialNeeds', 'hotelFee', 'createdAt'])
+      return d.keys().hasOnly(['language', 'category', 'registrant', 'homeChurch', 'homeChurchCity',
+                               'missionaryBoard', 'sendingChurch', 'bringingWife', 'wife',
+                               'bringingChildren', 'children', 'attendanceDays', 'travel',
+                               'heardAbout', 'heardAboutOther', 'specialNeeds', 'hotelFee', 'createdAt'])
         && d.language in ['es', 'en']
-        && d.category in ['missionary', 'pastor', 'evangelist', 'layman']
+        && d.category in ['missionary', 'evangelist', 'pastor', 'layman']
         && validRegistrant(d.registrant)
+        && reqStr(d.homeChurch, 200) && reqStr(d.homeChurchCity, 200)
         && str(d.missionaryBoard, 200) && str(d.sendingChurch, 200)
         && (d.category != 'missionary' || (d.missionaryBoard.size() > 0 && d.sendingChurch.size() > 0))
-        && d.bringingSpouse is bool
-        && (d.bringingSpouse ? validSpouse(d.spouse) : d.spouse == null)
+        && d.bringingWife is bool
+        && (d.bringingWife ? validWife(d.wife) : d.wife == null)
         && d.bringingChildren is bool
         && (d.bringingChildren ? validChildren(d.children) : d.children == null)
         && d.attendanceDays is list && d.attendanceDays.size() >= 1 && d.attendanceDays.size() <= 4
         && d.attendanceDays.hasOnly(['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05'])
         && validTravel(d.travel)
+        && d.heardAbout in ['pastor', 'missionary', 'friend', 'social', 'website', 'attended', 'other']
+        && str(d.heardAboutOther, 200) && (d.heardAbout != 'other' || d.heardAboutOther.size() > 0)
         && str(d.specialNeeds, 2000)
-        // $50 per adult per day; missionaries free (matches calculateHotelFee)
-        && d.hotelFee == (d.category == 'missionary' ? 0 : 50 * d.attendanceDays.size() * (d.bringingSpouse ? 2 : 1))
+        // $50 per adult per day; missionaries and evangelists free (matches calculateHotelFee)
+        && d.hotelFee == (d.category in ['missionary', 'evangelist'] ? 0 : 50 * d.attendanceDays.size() * (d.bringingWife ? 2 : 1))
         && d.createdAt == request.time;
     }
 

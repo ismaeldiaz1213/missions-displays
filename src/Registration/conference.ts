@@ -15,9 +15,10 @@ export const registrationClosesAt = () => new Date(`${REGISTRATION_LAST_DAY}T23:
 
 export const HOTEL_FEE_PER_DAY = 50;
 
-// Missionaries can upload videos/photos until the conference starts (Nov 2, 00:00 Central).
+// Missionaries and evangelists can upload MP4 videos until the conference starts (Nov 2, 00:00 Central).
 export const MEDIA_UPLOADS_CLOSE_AT = '2026-11-02T00:00:00-06:00';
 export const MEDIA_MAX_BYTES = 2 * 1024 * 1024 * 1024;
+export const MEDIA_CONTENT_TYPE = 'video/mp4';
 
 export const isMediaUploadOpen = (now: Date = new Date()) =>
   now.getTime() < new Date(MEDIA_UPLOADS_CLOSE_AT).getTime();
@@ -25,20 +26,32 @@ export const isMediaUploadOpen = (now: Date = new Date()) =>
 export const isRegistrationOpen = (now: Date = new Date()) =>
   now.getTime() <= registrationClosesAt().getTime();
 
-export type Category = 'missionary' | 'pastor' | 'evangelist' | 'layman';
-export type Transport = 'plane' | 'bus' | 'car' | 'other';
+// Display order on the form
+export const CATEGORIES = ['missionary', 'evangelist', 'pastor', 'layman'] as const;
+export type Category = (typeof CATEGORIES)[number];
+
+// No hotel fee, and they get the video-upload step
+const MINISTRY_CATEGORIES: readonly Category[] = ['missionary', 'evangelist'];
+export const isFreeCategory = (c: string) => (MINISTRY_CATEGORIES as readonly string[]).includes(c);
+export const canUploadMedia = isFreeCategory;
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   missionary: 'Misionero',
-  pastor: 'Pastor',
   evangelist: 'Evangelista',
+  pastor: 'Pastor',
   layman: 'Laico',
 };
 
-export const TRANSPORT_LABELS: Record<Transport, string> = {
-  plane: 'Avión',
-  bus: 'Autobús',
-  car: 'Automóvil',
+export const HEARD_ABOUT = ['pastor', 'missionary', 'friend', 'social', 'website', 'attended', 'other'] as const;
+export type HeardAbout = (typeof HEARD_ABOUT)[number];
+
+export const HEARD_ABOUT_LABELS: Record<HeardAbout, string> = {
+  pastor: 'Pastor / iglesia',
+  missionary: 'Un misionero',
+  friend: 'Amigo o familiar',
+  social: 'Redes sociales',
+  website: 'Sitio web de la iglesia',
+  attended: 'Asistió antes',
   other: 'Otro',
 };
 
@@ -55,12 +68,14 @@ export interface PersonInfo {
   lastName: string;
   email: string;
   phone: string;
-  church: string;
   address: Address;
 }
 
-export interface SpouseInfo extends PersonInfo {
-  sameAddress: boolean;
+export interface WifeInfo {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
 }
 
 export interface ChildrenInfo {
@@ -71,16 +86,15 @@ export interface ChildrenInfo {
 }
 
 export interface TravelInfo {
-  transport: Transport;
-  arrivalDate: string;
-  arrivalTime: string;
-  departureDate: string;
   needsPickup: boolean;
+  // Flight details — required when needsPickup (used to plan airport pickups)
   airline: string;
   flightNumber: string;
   airport: string;
-  busCompany: string;
-  busStation: string;
+  arrivalDate: string;
+  arrivalTime: string;
+  departureDate: string;
+  arrivingByRV: boolean; // only asked when no pickup is needed
   notes: string;
 }
 
@@ -88,14 +102,18 @@ export interface RegistrationInput {
   language: 'es' | 'en'; // language the form was filled out in
   category: Category;
   registrant: PersonInfo;
+  homeChurch: string;
+  homeChurchCity: string;
   missionaryBoard: string;
   sendingChurch: string;
-  bringingSpouse: boolean;
-  spouse: SpouseInfo | null;
+  bringingWife: boolean;
+  wife: WifeInfo | null;
   bringingChildren: boolean;
   children: ChildrenInfo | null;
   attendanceDays: string[];
   travel: TravelInfo;
+  heardAbout: HeardAbout;
+  heardAboutOther: string;
   specialNeeds: string;
 }
 
@@ -105,11 +123,11 @@ export interface Registration extends RegistrationInput {
   hotelFee: number;
 }
 
-export const adultCount = (r: Pick<RegistrationInput, 'bringingSpouse'>) => (r.bringingSpouse ? 2 : 1);
+export const adultCount = (r: Pick<RegistrationInput, 'bringingWife'>) => (r.bringingWife ? 2 : 1);
 
-// Missionaries (and their spouses) don't pay. Everyone else: $50 per adult per day.
-export const calculateHotelFee = (r: { category: string; bringingSpouse: boolean; attendanceDays: readonly string[] }) =>
-  r.category === 'missionary' ? 0 : HOTEL_FEE_PER_DAY * r.attendanceDays.length * adultCount(r);
+// Missionaries and evangelists (and their wives) don't pay. Everyone else: $50 per adult per day.
+export const calculateHotelFee = (r: { category: string; bringingWife: boolean; attendanceDays: readonly string[] }) =>
+  isFreeCategory(r.category) ? 0 : HOTEL_FEE_PER_DAY * r.attendanceDays.length * adultCount(r);
 
 export const formatConferenceDay = (
   iso: string,
@@ -138,3 +156,9 @@ export const conferenceRangeLabel = (locale: string) => {
   const end = new Date(`${CONFERENCE_DAYS[CONFERENCE_DAYS.length - 1]}T12:00:00`);
   return fmt.formatRange ? fmt.formatRange(start, end) : `${fmt.format(start)} – ${fmt.format(end)}`;
 };
+
+// Last day uploads are accepted (the day before MEDIA_UPLOADS_CLOSE_AT, in church time)
+export const mediaUploadsCloseLabel = (locale: string) =>
+  new Date(new Date(MEDIA_UPLOADS_CLOSE_AT).getTime() - 1).toLocaleDateString(locale, {
+    day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Chicago',
+  });

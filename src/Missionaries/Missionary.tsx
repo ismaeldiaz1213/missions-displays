@@ -18,7 +18,7 @@ import MissionaryLocalInfo from './components/MissionaryLocalInfo';
 import ImageLightbox from './components/ImageLightbox';
 import returnToMap from '../assets/backToMapButton.png';
 import iblLogo from '../assets/ibl_logo.png';
-import { resolveUrl } from '../storageUrl';
+import { isVideoPath, resolveUrl } from '../storageUrl';
 import { getMissionary } from '../data/missionaries';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -71,6 +71,7 @@ const Missionary: React.FC = () => {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [resolvedProfileImage, setResolvedProfileImage] = useState('/default-missionary.svg');
   const [resolvedMediaUrls, setResolvedMediaUrls] = useState<string[]>([]);
+  const [resolvedVideoUrls, setResolvedVideoUrls] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   useEffect(() => {
@@ -96,10 +97,10 @@ const Missionary: React.FC = () => {
 
   // Resolve all media photos
   useEffect(() => {
-    if (missionaryData.media.length === 0) { setResolvedMediaUrls([]); return; }
-    Promise.all(missionaryData.media.map((item) => resolveUrl(item.url, ''))).then((urls) =>
-      setResolvedMediaUrls(urls.filter(Boolean))
-    );
+    const resolveAll = (items: MissionaryType['media']) =>
+      Promise.all(items.map((item) => resolveUrl(item.url, ''))).then((urls) => urls.filter(Boolean));
+    resolveAll(missionaryData.media.filter((item) => !isVideoPath(item.url))).then(setResolvedMediaUrls);
+    resolveAll(missionaryData.media.filter((item) => isVideoPath(item.url))).then(setResolvedVideoUrls);
   }, [missionaryData.media]);
 
   // Resolve prayer letter URL (S3 key → signed URL, or use directly if already a full URL)
@@ -114,7 +115,10 @@ const Missionary: React.FC = () => {
 
   const m = missionaryData;
   const displayName = [m.name, m.lastName].filter(Boolean).join(' ');
-  const hasMedia = resolvedMediaUrls.length > 0;
+  const hasPhotos = resolvedMediaUrls.length > 0;
+  const hasVideos = resolvedVideoUrls.length > 0;
+  const hasMedia = hasPhotos || hasVideos;
+  const mediaLabel = hasPhotos && hasVideos ? 'Fotos y Videos' : hasVideos ? 'Videos' : 'Fotos';
   const hasPrayerLetter = !!pdfUrl;
   const hasContactInfo = m.contactInfo.length > 0;
   const locationText = [m.location?.city, m.location?.state, m.location?.country].filter(Boolean).join(', ');
@@ -213,7 +217,7 @@ const Missionary: React.FC = () => {
           }}>
             {([
               { label: 'Sobre el Misionero', icon: <InfoOutlinedIcon sx={{ fontSize: '1rem' }} />, active: activeSection === 'about', onClick: () => setActiveSection('about') },
-              ...(hasMedia ? [{ label: 'Fotos', icon: <PhotoLibraryOutlinedIcon sx={{ fontSize: '1rem' }} />, active: false, onClick: scrollToPhotos }] : []),
+              ...(hasMedia ? [{ label: mediaLabel, icon: <PhotoLibraryOutlinedIcon sx={{ fontSize: '1rem' }} />, active: false, onClick: scrollToPhotos }] : []),
               ...(hasPrayerLetter ? [{ label: 'Carta de Oración', icon: <ArticleOutlinedIcon sx={{ fontSize: '1rem' }} />, active: activeSection === 'carta', onClick: () => { setActiveSection('carta'); setPageNumber(1); } }] : []),
               ...(hasContactInfo ? [{ label: 'Contactar', icon: <ContactMailOutlinedIcon sx={{ fontSize: '1rem' }} />, active: false, onClick: () => setContactDialogOpen(true) }] : []),
             ] as { label: string; icon: React.ReactNode; active: boolean; onClick: () => void }[]).map((tab, i) => (
@@ -345,12 +349,22 @@ const Missionary: React.FC = () => {
             />
           )}
 
-          {/* Photo gallery */}
+          {/* Photo & video gallery */}
           {hasMedia && (
             <Box ref={photosRef} sx={{ mt: 2 }}>
               <Typography sx={{ color: '#1E3A8A', fontWeight: 800, fontSize: '1.2rem', mb: 2.5, pb: 1, borderBottom: '2px solid rgba(37,99,235,0.15)' }}>
-                Fotos
+                {mediaLabel}
               </Typography>
+              {hasVideos && (
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 2, mb: hasPhotos ? 2 : 0 }}>
+                  {resolvedVideoUrls.map((url) => (
+                    <Box key={url} component="video" src={url} controls preload="metadata" playsInline sx={{
+                      width: '100%', aspectRatio: '16/9', bgcolor: '#000', borderRadius: '12px',
+                      boxShadow: '0 4px 16px rgba(30,58,138,0.15)',
+                    }} />
+                  ))}
+                </Box>
+              )}
               <Box sx={{
                 display: 'grid',
                 gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(auto-fill, minmax(220px, 1fr))' },
@@ -361,7 +375,7 @@ const Missionary: React.FC = () => {
                     key={i}
                     component="img"
                     src={url}
-                    alt={m.media[i]?.title || `Foto ${i + 1}`}
+                    alt={`Foto ${i + 1}`}
                     onClick={() => setLightboxIndex(i)}
                     onError={(e: React.SyntheticEvent<HTMLImageElement>) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                     sx={{
@@ -497,7 +511,7 @@ const Missionary: React.FC = () => {
               onClick: () => setActiveSection('about'),
             },
             ...(hasMedia ? [{
-              label: 'Fotos',
+              label: mediaLabel,
               icon: <PhotoLibraryOutlinedIcon sx={{ fontSize: '2.2rem' }} />,
               active: false,
               onClick: scrollToPhotos,

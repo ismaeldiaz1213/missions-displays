@@ -27,7 +27,43 @@ service firebase.storage {
         && request.resource.contentType == 'application/pdf';
     }
 
-    // ── Conference media uploaded by registered missionaries ─────────────────
+    // Missionary page videos: public read, admin write
+    match /videos/{file} {
+      allow read: if true;
+      allow delete: if isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.size < 1024 * 1024 * 1024
+        && request.resource.contentType.matches('video/.*');
+    }
+
+    // ── Files attached to a missionary page request ──────────────────────────
+    // Anyone may attach files to a *pending* request for 6 hours after submitting it.
+    // Limits match REQUEST_LIMITS in src/data/missionaryRequests.ts.
+    function requestDoc(requestId) {
+      return firestore.get(/databases/(default)/documents/missionaryRequests/$(requestId));
+    }
+
+    function isImage(maxMb) {
+      return request.resource.contentType.matches('image/.*') && request.resource.size < maxMb * 1024 * 1024;
+    }
+
+    match /missionary-requests/{requestId}/{kind}/{file} {
+      allow read, delete: if isAdmin();
+      allow update: if false;
+      allow create: if resource == null
+        && firestore.exists(/databases/(default)/documents/missionaryRequests/$(requestId))
+        && requestDoc(requestId).data.status == 'pending'
+        && request.time < requestDoc(requestId).data.createdAt + duration.value(6, 'h')
+        && (
+          (kind == 'profile' && isImage(20))
+          || (kind == 'prayer-letter' && request.resource.contentType == 'application/pdf'
+              && request.resource.size < 50 * 1024 * 1024)
+          || (kind == 'gallery' && (isImage(20)
+              || (request.resource.contentType.matches('video/.*') && request.resource.size < 1024 * 1024 * 1024)))
+        );
+    }
+
+    // ── Conference videos uploaded by registered missionaries & evangelists ──
     // Keep in sync with MEDIA_UPLOADS_CLOSE_AT in src/Registration/conference.ts.
     // 1793599200000 = 2026-11-02 00:00 CST (conference start)
     match /conference-media/{registrationId}/{file} {
@@ -36,9 +72,9 @@ service firebase.storage {
       allow create: if resource == null  // new files only — never overwrite an existing upload
         && request.time < timestamp.value(1793599200000)
         && request.resource.size < 2 * 1024 * 1024 * 1024
-        && request.resource.contentType.matches('(video|image)/.*')
+        && request.resource.contentType == 'video/mp4'
         && firestore.exists(/databases/(default)/documents/registrations/$(registrationId))
-        && firestore.get(/databases/(default)/documents/registrations/$(registrationId)).data.category == 'missionary';
+        && firestore.get(/databases/(default)/documents/registrations/$(registrationId)).data.category in ['missionary', 'evangelist'];
     }
   }
 }

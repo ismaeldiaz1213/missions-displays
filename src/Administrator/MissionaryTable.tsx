@@ -13,7 +13,10 @@ import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { deleteMissionary, getMissionary, listMissionariesByContinent } from '../data/missionaries';
+import { useSearchParams } from 'react-router-dom';
+import {
+  deleteDraft, deleteMissionary, getMissionary, listDraftsByContinent, listMissionariesByContinent,
+} from '../data/missionaries';
 import { removeFile } from '../data/storageFiles';
 import { isS3Key } from '../storageUrl';
 import type { Missionary } from '../types';
@@ -31,6 +34,21 @@ const CONTINENTS = [
 
 const inputSx = {};
 
+// Drafts (unpublished pages) are listed alongside published missionaries
+type Row = Missionary & { draft?: boolean };
+
+// The `draft` flag is UI-only — never pass it into the form, or it would be saved into the document
+const withoutDraftFlag = (row: Row | null): Missionary | null => {
+  if (!row) return null;
+  const m = { ...row };
+  delete m.draft;
+  return m;
+};
+
+const DraftChip = () => (
+  <Chip label="Borrador" size="small" sx={{ ml: 1, bgcolor: 'rgba(250,204,21,0.12)', color: '#facc15', border: '1px solid rgba(250,204,21,0.35)', fontSize: '0.72rem', height: 22 }} />
+);
+
 interface Props {
   storageUsedBytes: number;
   onSaveComplete: () => void;
@@ -39,22 +57,24 @@ interface Props {
 const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [missionaries, setMissionaries] = useState<Missionary[]>([]);
-  const [continent, setContinent] = useState('north-america');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [missionaries, setMissionaries] = useState<Row[]>([]);
+  const [continent, setContinent] = useState(() => searchParams.get('continent') ?? 'north-america');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<Missionary | null>(null);
+  const [editing, setEditing] = useState<Row | null>(null);
   const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Missionary | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setApiError('');
     try {
-      setMissionaries(await listMissionariesByContinent(continent));
+      const [published, drafts] = await Promise.all([listMissionariesByContinent(continent), listDraftsByContinent(continent)]);
+      setMissionaries([...drafts.map((d) => ({ ...d, draft: true })), ...published]);
     } catch (err) {
       setApiError(String(err));
     } finally {
@@ -64,7 +84,19 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
 
   useEffect(() => { load(); }, [load]);
 
-  const openEdit = async (m: Missionary) => {
+  // Coming from "Aprobar" in Solicitudes: ?tab=misioneros&continent=…&draft=<id> opens that draft
+  const draftParam = searchParams.get('draft');
+  useEffect(() => {
+    if (!draftParam || loading) return;
+    const draft = missionaries.find((m) => m.draft && m.id === draftParam);
+    if (!draft) return;
+    setEditing(draft);
+    setFormOpen(true);
+    setSearchParams((p) => { p.delete('draft'); p.delete('continent'); return p; }, { replace: true });
+  }, [draftParam, loading, missionaries, setSearchParams]);
+
+  const openEdit = async (m: Row) => {
+    if (m.draft) { setEditing(m); setFormOpen(true); return; }
     setLoadingEditId(m.id);
     try {
       setEditing(await getMissionary(m.id) ?? m);
@@ -90,7 +122,7 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
       // Remove stored files first (best-effort — don't block delete if one fails)
       await Promise.allSettled(s3Keys.map((path) => removeFile(path)));
 
-      await deleteMissionary(deleteTarget.id);
+      await (deleteTarget.draft ? deleteDraft(deleteTarget.id) : deleteMissionary(deleteTarget.id));
       setDeleteTarget(null);
       load();
     } catch (err) {
@@ -178,7 +210,7 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
             <Card key={m.id} elevation={0} sx={{ bgcolor: '#1a1a1a', border: '1px solid #2f2f2f', borderRadius: 2 }}>
               <CardContent sx={{ pb: 0.5 }}>
                 <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>
-                  {m.name} {m.lastName}
+                  {m.name} {m.lastName}{m.draft && <DraftChip />}
                 </Typography>
                 <Typography sx={{ color: '#aaa', fontSize: '0.85rem' }}>{m.organization}</Typography>
                 {(m.location.city || m.location.country) && (
@@ -230,7 +262,7 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
             <TableBody>
               {filtered.map((m) => (
                 <TableRow key={m.id} hover sx={{ '&:hover': { bgcolor: '#1f1f1f' } }}>
-                  <TableCell sx={cellSx}>{m.name} {m.lastName}</TableCell>
+                  <TableCell sx={cellSx}>{m.name} {m.lastName}{m.draft && <DraftChip />}</TableCell>
                   <TableCell sx={subCellSx}>{m.organization}</TableCell>
                   <TableCell sx={subCellSx}>{m.location.city}</TableCell>
                   <TableCell sx={subCellSx}>{m.location.country}</TableCell>
@@ -262,9 +294,10 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
       {formOpen && (
         <MissionaryForm
           open={formOpen}
-          missionary={editing}
+          missionary={withoutDraftFlag(editing)}
           defaultContinent={continent}
           storageUsedBytes={storageUsedBytes}
+          isDraft={!!editing?.draft}
           onSave={() => { setFormOpen(false); setEditing(null); load(); onSaveComplete(); }}
           onClose={() => { setFormOpen(false); setEditing(null); }}
         />
@@ -275,7 +308,7 @@ const MissionaryTable: React.FC<Props> = ({ storageUsedBytes, onSaveComplete }) 
         <DialogTitle>Confirmar eliminación</DialogTitle>
         <DialogContent>
           <Typography>
-            ¿Eliminar a <strong>{deleteTarget?.name} {deleteTarget?.lastName}</strong>?
+            ¿Eliminar {deleteTarget?.draft ? 'el borrador de' : 'a'} <strong>{deleteTarget?.name} {deleteTarget?.lastName}</strong>?
             Esta acción no se puede deshacer.
           </Typography>
         </DialogContent>

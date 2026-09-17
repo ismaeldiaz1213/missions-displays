@@ -14,21 +14,19 @@ import TableViewIcon from '@mui/icons-material/TableView';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import MovieOutlinedIcon from '@mui/icons-material/MovieOutlined';
-import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
-import DownloadIcon from '@mui/icons-material/Download';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import {
   CONFERENCE_MEDIA_PREFIX, deleteRegistration, listRegistrations, mediaUploadPath,
 } from '../../data/registrations';
 import { listFiles, listFolders, type StoredFile } from '../../data/storageFiles';
-import { formatBytes } from '../formatBytes';
+import { DetailGroup, StoredFileList } from '../shared';
 import {
-  CATEGORY_LABELS, REGISTRATION_LAST_DAY, TRANSPORT_LABELS, formatAddress, formatConferenceDay,
-  isRegistrationOpen, type Category, type Registration,
+  CATEGORY_LABELS, REGISTRATION_LAST_DAY, canUploadMedia, formatAddress, formatConferenceDay,
+  isFreeCategory, isRegistrationOpen, type Category, type Registration,
 } from '../../Registration/conference';
 import {
   childCount, formatArrival, formatDateShort, formatDays, formatSubmitted, fullName,
-  infantCount, money, peopleCount, summarize, travelDetails,
+  heardAboutLabel, homeChurchLabel, infantCount, money, peopleCount, summarize, travelDetails, travelMode,
 } from './registrationData';
 
 const REGISTRATION_PATH = '/conferencia/registro';
@@ -73,29 +71,10 @@ const Stat: React.FC<{ label: string; value: React.ReactNode; hint?: string }> =
 
 // ── Detail dialog ────────────────────────────────────────────────────────────
 
-const DetailGroup: React.FC<{ title: string; rows: [string, React.ReactNode][] }> = ({ title, rows }) => {
-  const visible = rows.filter(([, v]) => v !== '' && v !== null && v !== undefined);
-  if (visible.length === 0) return null;
-  return (
-    <Box sx={{ mb: 2.5 }}>
-      <Typography sx={{ color: 'var(--ibl-primary)', fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em', mb: 1 }}>{title}</Typography>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '160px 1fr' }, columnGap: 2, rowGap: { xs: 0, sm: 0.75 } }}>
-        {visible.map(([k, v]) => (
-          <React.Fragment key={k}>
-            <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem', mt: { xs: 1, sm: 0 } }}>{k}</Typography>
-            <Typography component="div" sx={{ color: 'text.primary', fontSize: '0.9rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{v}</Typography>
-          </React.Fragment>
-        ))}
-      </Box>
-    </Box>
-  );
-};
-
 const MediaSection: React.FC<{ registrationId: string }> = ({ registrationId }) => {
   const [files, setFiles] = useState<StoredFile[] | null>(null);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
-  const [playing, setPlaying] = useState<string | null>(null);
   const uploadLink = `${window.location.origin}${mediaUploadPath(registrationId)}`;
 
   useEffect(() => {
@@ -107,7 +86,7 @@ const MediaSection: React.FC<{ registrationId: string }> = ({ registrationId }) 
   return (
     <Box sx={{ mb: 2.5 }}>
       <Typography sx={{ color: 'var(--ibl-primary)', fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em', mb: 1 }}>
-        Videos y fotos
+        Videos
       </Typography>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
         <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem', wordBreak: 'break-all' }}>{uploadLink}</Typography>
@@ -121,35 +100,7 @@ const MediaSection: React.FC<{ registrationId: string }> = ({ registrationId }) 
       ) : files.length === 0 ? (
         <Typography sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>Todavía no ha subido archivos.</Typography>
       ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {files.map((f) => {
-            const isVideo = f.contentType.startsWith('video/');
-            return (
-              <Paper key={f.path} elevation={0} sx={{ p: 1.25, border: 1, borderColor: 'divider', borderRadius: 1.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  {isVideo ? <MovieOutlinedIcon sx={{ color: 'var(--ibl-primary)' }} /> : <ImageOutlinedIcon sx={{ color: 'var(--ibl-primary)' }} />}
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.originalName}</Typography>
-                    <Typography sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>{formatBytes(f.size)} · {formatSubmitted(f.uploadedAt)}</Typography>
-                  </Box>
-                  <Button size="small" sx={{ textTransform: 'none' }} onClick={() => setPlaying(playing === f.path ? null : f.path)}>
-                    {playing === f.path ? 'Ocultar' : 'Ver'}
-                  </Button>
-                  <Button size="small" variant="outlined" startIcon={<DownloadIcon />} href={f.url} sx={{ textTransform: 'none' }}>
-                    Descargar
-                  </Button>
-                </Box>
-                {playing === f.path && (
-                  <Box sx={{ mt: 1.25 }}>
-                    {isVideo
-                      ? <video src={f.url} controls style={{ width: '100%', maxHeight: 420, borderRadius: 8, background: '#000' }} />
-                      : <img src={f.url} alt={f.originalName} style={{ width: '100%', maxHeight: 420, objectFit: 'contain', borderRadius: 8 }} />}
-                  </Box>
-                )}
-              </Paper>
-            );
-          })}
-        </Box>
+        <StoredFileList files={files} />
       )}
     </Box>
   );
@@ -166,19 +117,17 @@ const RegistrationDetail: React.FC<{ r: Registration; onClose: () => void; fullS
       <DetailGroup title="Registrante" rows={[
         ['Correo', r.registrant.email],
         ['Teléfono', r.registrant.phone],
-        ['Iglesia', r.registrant.church],
         ['Dirección', formatAddress(r.registrant.address)],
+        ['Iglesia local', homeChurchLabel(r)],
         ['Junta misionera', r.missionaryBoard],
         ['Iglesia enviadora', r.sendingChurch],
         ['Registrado', formatSubmitted(r.createdAt)],
       ]} />
-      {r.bringingSpouse && r.spouse && (
-        <DetailGroup title="Cónyuge" rows={[
-          ['Nombre', fullName(r.spouse)],
-          ['Correo', r.spouse.email],
-          ['Teléfono', r.spouse.phone],
-          ['Iglesia', r.spouse.church],
-          ['Dirección', r.spouse.sameAddress ? 'Misma que el registrante' : formatAddress(r.spouse.address)],
+      {r.bringingWife && r.wife && (
+        <DetailGroup title="Esposa" rows={[
+          ['Nombre', fullName(r.wife)],
+          ['Correo', r.wife.email],
+          ['Teléfono', r.wife.phone],
         ]} />
       )}
       {r.bringingChildren && r.children && (
@@ -191,19 +140,21 @@ const RegistrationDetail: React.FC<{ r: Registration; onClose: () => void; fullS
       )}
       <DetailGroup title="Asistencia y hotel" rows={[
         ['Días', r.attendanceDays.map((d) => formatConferenceDay(d, { weekday: 'long', day: 'numeric', month: 'long' })).join('\n')],
-        ['Personas', `${peopleCount(r)} (${r.bringingSpouse ? 2 : 1} adulto${r.bringingSpouse ? 's' : ''}, ${childCount(r)} niño${childCount(r) === 1 ? '' : 's'})`],
-        ['Hotel estimado', r.category === 'missionary' ? 'Sin costo (misionero)' : money(r.hotelFee ?? 0)],
+        ['Personas', `${peopleCount(r)} (${r.bringingWife ? 2 : 1} adulto${r.bringingWife ? 's' : ''}, ${childCount(r)} niño${childCount(r) === 1 ? '' : 's'})`],
+        ['Hotel estimado', isFreeCategory(r.category) ? `Sin costo (${CATEGORY_LABELS[r.category].toLowerCase()})` : money(r.hotelFee ?? 0)],
       ]} />
       <DetailGroup title="Viaje" rows={[
-        ['Transporte', TRANSPORT_LABELS[r.travel.transport]],
-        ['Llegada', formatArrival(r)],
+        ['Llegada', travelMode(r)],
+        ['Vuelo', travelDetails(r)],
+        ['Fecha/hora', formatArrival(r)],
         ['Salida', formatDateShort(r.travel.departureDate)],
-        ['Detalles', travelDetails(r)],
-        ['Recoger', r.travel.transport === 'car' ? '' : r.travel.needsPickup ? 'Sí' : 'No'],
         ['Notas', r.travel.notes],
       ]} />
-      <DetailGroup title="Comentarios" rows={[['Comentarios', r.specialNeeds]]} />
-      {r.category === 'missionary' && <MediaSection registrationId={r.id} />}
+      <DetailGroup title="Otros" rows={[
+        ['Cómo se enteró', heardAboutLabel(r)],
+        ['Comentarios', r.specialNeeds],
+      ]} />
+      {canUploadMedia(r.category) && <MediaSection registrationId={r.id} />}
     </DialogContent>
     <DialogActions>
       <Button onClick={onClose} sx={{ textTransform: 'none' }}>Cerrar</Button>
@@ -248,7 +199,7 @@ const RegistrationTable: React.FC = () => {
     const q = search.trim().toLowerCase();
     return registrations.filter((r) =>
       (category === 'all' || r.category === category) &&
-      (!q || [fullName(r.registrant), fullName(r.spouse), r.registrant.email, r.registrant.phone, r.registrant.church, r.missionaryBoard, r.sendingChurch]
+      (!q || [fullName(r.registrant), fullName(r.wife), r.registrant.email, r.registrant.phone, r.homeChurch, r.homeChurchCity, r.missionaryBoard, r.sendingChurch, r.travel.flightNumber]
         .some((f) => f?.toLowerCase().includes(q))),
     );
   }, [registrations, search, category]);
@@ -330,7 +281,7 @@ const RegistrationTable: React.FC = () => {
         <Stat label="Registros" value={stats.registrations}
           hint={(Object.keys(CATEGORY_LABELS) as Category[]).filter((k) => stats.byCategory[k]).map((k) => `${stats.byCategory[k]} ${CATEGORY_LABELS[k].toLowerCase()}`).join(' · ') || undefined} />
         <Stat label="Personas" value={stats.people} hint={`${stats.adults} adultos · ${stats.children} niños${stats.infants ? ` (${stats.infants} bebés)` : ''}`} />
-        <Stat label="Necesitan recogida" value={stats.pickups} />
+        <Stat label="Necesitan recogida" value={stats.pickups} hint={stats.rvs ? `${stats.rvs} llegan en RV` : undefined} />
         <Stat label="Hotel estimado" value={money(stats.hotelTotal)} hint="No se ha cobrado" />
       </Box>
 
@@ -381,12 +332,12 @@ const RegistrationTable: React.FC = () => {
                   {withMedia.has(r.id) && <MediaChip />}
                   <CategoryChip category={r.category} />
                 </Box>
-                <Typography variant="body2" color="text.secondary">{r.registrant.church}</Typography>
+                <Typography variant="body2" color="text.secondary">{homeChurchLabel(r)}</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  👥 {peopleCount(r)} · 🗓 {formatDays(r.attendanceDays)} · {TRANSPORT_LABELS[r.travel.transport]} {formatArrival(r)}
+                  👥 {peopleCount(r)} · 🗓 {formatDays(r.attendanceDays)} · {travelMode(r)} · {formatArrival(r)}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
-                  <Typography sx={{ fontWeight: 700 }}>{r.category === 'missionary' ? 'Sin costo' : money(r.hotelFee ?? 0)}</Typography>
+                  <Typography sx={{ fontWeight: 700 }}>{isFreeCategory(r.category) ? 'Sin costo' : money(r.hotelFee ?? 0)}</Typography>
                   {r.travel.needsPickup && <PickupChip />}
                 </Box>
               </CardActionArea>
@@ -419,11 +370,11 @@ const RegistrationTable: React.FC = () => {
                 <TableRow key={r.id} hover onClick={() => setViewing(r)} sx={{ cursor: 'pointer' }}>
                   <TableCell>
                     <Typography sx={{ fontWeight: 600, fontSize: '0.9rem' }}>{fullName(r.registrant)}</Typography>
-                    {r.bringingSpouse && <Typography sx={{ color: 'text.secondary', fontSize: '0.78rem' }}>+ {fullName(r.spouse)}</Typography>}
+                    {r.bringingWife && <Typography sx={{ color: 'text.secondary', fontSize: '0.78rem' }}>+ {fullName(r.wife)}</Typography>}
                     {withMedia.has(r.id) && <MediaChip />}
                   </TableCell>
                   <TableCell><CategoryChip category={r.category} /></TableCell>
-                  <TableCell sx={{ color: 'text.secondary' }}>{r.registrant.church}</TableCell>
+                  <TableCell sx={{ color: 'text.secondary' }}>{homeChurchLabel(r)}</TableCell>
                   <TableCell sx={{ color: 'text.secondary', fontSize: '0.8rem' }}>
                     <div>{r.registrant.phone}</div>
                     <div>{r.registrant.email}</div>
@@ -440,14 +391,14 @@ const RegistrationTable: React.FC = () => {
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Box>
-                        <Typography sx={{ fontSize: '0.85rem' }}>{TRANSPORT_LABELS[r.travel.transport]} · {formatArrival(r)}</Typography>
+                        <Typography sx={{ fontSize: '0.85rem' }}>{travelMode(r)} · {formatArrival(r)}</Typography>
                         {travelDetails(r) && <Typography sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>{travelDetails(r)}</Typography>}
                       </Box>
                       {r.travel.needsPickup && <PickupChip />}
                     </Box>
                   </TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                    {r.category === 'missionary' ? <Typography sx={{ color: 'var(--ibl-success)', fontSize: '0.85rem' }}>Sin costo</Typography> : money(r.hotelFee ?? 0)}
+                    {isFreeCategory(r.category) ? <Typography sx={{ color: 'var(--ibl-success)', fontSize: '0.85rem' }}>Sin costo</Typography> : money(r.hotelFee ?? 0)}
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()} sx={{ whiteSpace: 'nowrap' }}>
                     <IconButton size="small" onClick={() => setViewing(r)} sx={{ color: 'var(--ibl-primary)' }}><VisibilityIcon fontSize="small" /></IconButton>

@@ -1,7 +1,7 @@
 // Firebase Storage helpers that need the full Storage SDK (uploads, deletes, listing).
 // Public pages build download URLs with storageUrl() instead, so they don't load this SDK.
 import {
-  deleteObject, getDownloadURL, getMetadata, getStorage, listAll, ref, uploadBytesResumable,
+  deleteObject, getBlob, getDownloadURL, getMetadata, getStorage, listAll, ref, uploadBytes, uploadBytesResumable,
 } from 'firebase/storage';
 import { firebaseApp } from '../firebase';
 
@@ -11,7 +11,7 @@ export const uploadFile = (
   file: File,
   path: string,
   onProgress?: (fraction: number) => void,
-  extraMetadata: { contentDisposition?: string; customMetadata?: Record<string, string> } = {},
+  extraMetadata: { contentType?: string; contentDisposition?: string; customMetadata?: Record<string, string> } = {},
 ): Promise<string> =>
   new Promise((resolve, reject) => {
     const task = uploadBytesResumable(ref(storage, path), file, { contentType: file.type, ...extraMetadata });
@@ -24,6 +24,13 @@ export const uploadFile = (
   });
 
 export const removeFile = (path: string) => deleteObject(ref(storage, path));
+
+/** Copies a file within the bucket (downloads it in the browser, then re-uploads). */
+export const copyFile = async (from: string, to: string, contentType: string) => {
+  const blob = await getBlob(ref(storage, from));
+  await uploadBytes(ref(storage, to), blob, { contentType });
+  return to;
+};
 
 export interface StoredFile {
   path: string;

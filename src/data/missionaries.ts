@@ -3,6 +3,8 @@ import { db } from '../firebase';
 import type { Missionary } from '../types';
 
 const missionariesCol = collection(db, 'missionaries');
+// Unpublished pages (e.g. created from an approved request). Admin-only in firestore.rules.
+const draftsCol = collection(db, 'missionaryDrafts');
 
 const NETWORK_TIMEOUT_MS = 5000;
 
@@ -45,3 +47,21 @@ export const saveMissionary = (m: Missionary) =>
   setDoc(doc(missionariesCol, m.id), JSON.parse(JSON.stringify(m)));
 
 export const deleteMissionary = (id: string) => deleteDoc(doc(missionariesCol, id));
+
+// ── Drafts ───────────────────────────────────────────────────────────────────
+
+export const listDraftsByContinent = async (continent: string) => {
+  const snap = await getDocs(query(draftsCol, where('continent', '==', continent)));
+  return snap.docs.map((d) => toMissionary(d.id, d.data()));
+};
+
+export const saveDraft = (m: Missionary) =>
+  setDoc(doc(draftsCol, m.id), JSON.parse(JSON.stringify(m)));
+
+export const deleteDraft = (id: string) => deleteDoc(doc(draftsCol, id));
+
+/** Makes a draft public: writes it to missionaries/, then removes the draft. */
+export const publishDraft = async (m: Missionary) => {
+  await saveMissionary(m);
+  await deleteDraft(m.id);
+};

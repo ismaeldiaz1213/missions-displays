@@ -12,3 +12,6 @@ export const resolveUrl = async (path: string | undefined, fallback: string): Pr
   if (!path) return fallback;
   return isS3Key(path) ? storageUrl(path) : path;
 };
+
+/** Missionary gallery items can be photos (images/) or videos (videos/). */
+export const isVideoPath = (path: string) => path.startsWith('videos/') || /\.(mp4|m4v|mov|webm)(\?|$)/i.test(path);

@@ -1,26 +1,27 @@
-import React from 'react';
 import { Box, TextField } from '@mui/material';
-import type { Address, PersonInfo } from '../conference';
+import type { Address, WifeInfo } from '../conference';
 import type { Strings } from '../i18n';
 
-interface Props {
+type Person = WifeInfo & { address?: Address };
+
+interface Props<T extends Person> {
   prefix: string;
-  value: PersonInfo;
-  onChange: (patch: Partial<PersonInfo>) => void;
+  value: T;
+  onChange: (patch: Partial<T>) => void;
   errors: Record<string, string>;
   labels: Strings['person'];
   requireContact?: boolean;
-  hideAddress?: boolean;
 }
 
 const grid = { display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 };
 
-const PersonFields: React.FC<Props> = ({ prefix, value, onChange, errors, labels, requireContact = false, hideAddress = false }) => {
-  const field = (key: keyof Omit<PersonInfo, 'address'>, extra: Record<string, unknown> = {}) => (
+/** Name + contact fields, plus the address when the value has one. */
+const PersonFields = <T extends Person>({ prefix, value, onChange, errors, labels, requireContact = false }: Props<T>) => {
+  const field = (key: keyof WifeInfo, extra: Record<string, unknown> = {}) => (
     <TextField
       label={labels[key]}
       value={value[key]}
-      onChange={(e) => onChange({ [key]: e.target.value })}
+      onChange={(e) => onChange({ [key]: e.target.value } as Partial<T>)}
       error={!!errors[`${prefix}.${key}`]}
       helperText={errors[`${prefix}.${key}`]}
       name={`${prefix}.${key}`}
@@ -29,12 +30,12 @@ const PersonFields: React.FC<Props> = ({ prefix, value, onChange, errors, labels
     />
   );
 
-  const setAddress = (patch: Partial<Address>) => onChange({ address: { ...value.address, ...patch } });
+  const address = value.address;
   const addr = (key: keyof Address, autoComplete: string) => (
     <TextField
       label={labels[key]}
-      value={value.address[key]}
-      onChange={(e) => setAddress({ [key]: e.target.value })}
+      value={address?.[key] ?? ''}
+      onChange={(e) => onChange({ address: { ...address, [key]: e.target.value } } as Partial<T>)}
       autoComplete={autoComplete}
       fullWidth
     />
@@ -48,8 +49,7 @@ const PersonFields: React.FC<Props> = ({ prefix, value, onChange, errors, labels
         {field('email', { required: requireContact, type: 'email', autoComplete: 'email' })}
         {field('phone', { required: requireContact, type: 'tel', autoComplete: 'tel' })}
       </Box>
-      {field('church', { required: requireContact })}
-      {!hideAddress && (
+      {address && (
         <>
           {addr('street', 'street-address')}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: '2fr 1fr 1.2fr 1.5fr' }, gap: 2 }}>

@@ -11,6 +11,7 @@ import aMobile from '../assets/a_mobile.png';
 import asiaMobile from '../assets/asia_mobile.png';
 import oMobile from '../assets/o_mobile.png';
 import LeafletMapContainer from './LeafletMapContainer';
+import { MISSIONARY_REQUEST_PATH } from '../Home/Home';
 
 const continents = [
   { name: 'Norte América',  route: '/norte-america',  colorA: '#1D6FA4', colorB: '#0D3F6B', mobileImg: naMobile },
@@ -128,13 +129,19 @@ const RegionSelection: React.FC = () => {
             alt="Misioneros Pasados"
             sx={{ height: '44px', width: 'auto', opacity: 0.35, pointerEvents: 'none', userSelect: 'none' }}
           />
-          <Button
-            size="small"
-            onClick={() => setModalOpen(true)}
-            sx={{ color: '#94a3b8', textTransform: 'none', fontSize: '0.85rem', mt: -0.5 }}
-          >
-            Agradecimientos
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1, mt: -0.5 }}>
+            <Button size="small" onClick={() => navigate(MISSIONARY_REQUEST_PATH)}
+              sx={{ color: '#2563EB', textTransform: 'none', fontSize: '0.85rem', fontWeight: 700 }}>
+              ¿Es misionero? Envíe su información
+            </Button>
+            <Button
+              size="small"
+              onClick={() => setModalOpen(true)}
+              sx={{ color: '#94a3b8', textTransform: 'none', fontSize: '0.85rem' }}
+            >
+              Agradecimientos
+            </Button>
+          </Box>
         </Box>
       ) : (
         <Box sx={{
@@ -158,6 +165,10 @@ const RegionSelection: React.FC = () => {
               👆 Toca un continente para ver los misioneros
             </Typography>
           </Box>
+          <Button size="small" onClick={() => navigate(MISSIONARY_REQUEST_PATH)}
+            sx={{ color: '#2563EB', textTransform: 'none', fontSize: '0.8rem', fontWeight: 700, flexShrink: 0 }}>
+            ¿Es misionero? Envíe su información
+          </Button>
           <Button
             size="small"
             onClick={() => setModalOpen(true)}

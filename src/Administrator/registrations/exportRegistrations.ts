@@ -1,8 +1,8 @@
 // Excel & PDF exports. Libraries are imported lazily so they only load when an admin exports.
-import { CATEGORY_LABELS, CONFERENCE_NAME, TRANSPORT_LABELS, formatConferenceDay, type Category, type Registration } from '../../Registration/conference';
+import { CATEGORY_LABELS, CONFERENCE_NAME, formatConferenceDay, isFreeCategory, type Category, type Registration } from '../../Registration/conference';
 import {
   REGISTRATION_COLUMNS, byArrival, childCount, formatArrival, formatDays, fullName,
-  infantCount, money, peopleCount, summarize, travelDetails,
+  homeChurchLabel, infantCount, money, peopleCount, summarize, travelDetails, travelMode,
 } from './registrationData';
 
 // Reads a brand color from the --ibl-* CSS variables so exports follow the site palette.
@@ -111,13 +111,13 @@ export const exportRegistrationsExcel = async (regs: Registration[]) => {
   // Sheet 2 — arrivals / pickup logistics
   const arrivalCols = [
     { header: 'Nombre', width: 26 }, { header: 'Teléfono', width: 16 }, { header: 'Personas', width: 10 },
-    { header: 'Transporte', width: 12 }, { header: 'Llegada', width: 22 }, { header: 'Recoger', width: 9 },
-    { header: 'Detalles (vuelo / autobús)', width: 34 }, { header: 'Salida', width: 16 }, { header: 'Notas', width: 36 },
+    { header: 'Cómo llega', width: 20 }, { header: 'Llegada', width: 22 }, { header: 'Recoger', width: 9 },
+    { header: 'Vuelo', width: 34 }, { header: 'Salida', width: 16 }, { header: 'Notas', width: 36 },
   ];
   const ws2 = addSheet('Llegadas', `${CONFERENCE_NAME} — Llegadas y transporte`, arrivalCols);
   addRows(ws2, [...regs].sort(byArrival).map((r) => [
     fullName(r.registrant), r.registrant.phone, peopleCount(r),
-    TRANSPORT_LABELS[r.travel.transport] ?? r.travel.transport, formatArrival(r),
+    travelMode(r), formatArrival(r),
     r.travel.needsPickup ? 'Sí' : 'No', travelDetails(r),
     r.travel.departureDate ? formatConferenceDay(r.travel.departureDate, { weekday: 'short', day: 'numeric', month: 'short' }) : '',
     r.travel.notes,
@@ -138,6 +138,7 @@ export const exportRegistrationsExcel = async (regs: Registration[]) => {
     ...(Object.keys(CATEGORY_LABELS) as Category[]).map((k) => [`Categoría: ${CATEGORY_LABELS[k]}`, s.byCategory[k]]),
     ...Object.entries(s.byDay).map(([d, n]) => [`Personas el ${formatConferenceDay(d, { weekday: 'long', day: 'numeric', month: 'long' })}`, n]),
     ['Necesitan que los recojan', s.pickups],
+    ['Llegan en RV', s.rvs],
     ['Hotel estimado (total)', s.hotelTotal],
   ], []);
   ws3.getCell(ws3.rowCount, 2).numFmt = '"$"#,##0';
@@ -216,19 +217,19 @@ export const exportRegistrationsPdf = async (regs: Registration[]) => {
     head: [['#', 'Nombre', 'Categoría', 'Iglesia', 'Contacto', 'Familia', 'Días', 'Llegada', 'Hotel']],
     body: sorted.map((r, i) => {
       const family = [
-        r.bringingSpouse ? `Cónyuge: ${fullName(r.spouse)}` : 'Sin cónyuge',
+        r.bringingWife ? `Esposa: ${fullName(r.wife)}` : 'Sin esposa',
         childCount(r) ? `Niños: ${childCount(r)}${infantCount(r) ? ` (${infantCount(r)} bebé${infantCount(r) > 1 ? 's' : ''})` : ''}` : '',
       ].filter(Boolean).join('\n');
       const arrival = [
-        `${TRANSPORT_LABELS[r.travel.transport] ?? ''} · ${formatArrival(r)}`,
+        `${travelMode(r)} · ${formatArrival(r)}`,
         travelDetails(r),
         r.travel.needsPickup ? 'NECESITA RECOGIDA' : '',
       ].filter(Boolean).join('\n');
-      const org = r.category === 'missionary' ? [r.registrant.church, r.missionaryBoard && `Junta: ${r.missionaryBoard}`, r.sendingChurch && `Enviado por: ${r.sendingChurch}`].filter(Boolean).join('\n') : r.registrant.church;
+      const org = [homeChurchLabel(r), r.missionaryBoard && `Junta: ${r.missionaryBoard}`, r.sendingChurch && `Enviado por: ${r.sendingChurch}`].filter(Boolean).join('\n');
       return [
         String(i + 1), fullName(r.registrant), CATEGORY_LABELS[r.category] ?? r.category, org,
         [r.registrant.phone, r.registrant.email].filter(Boolean).join('\n'),
-        family, formatDays(r.attendanceDays), arrival, r.category === 'missionary' ? 'Sin costo' : money(r.hotelFee ?? 0),
+        family, formatDays(r.attendanceDays), arrival, isFreeCategory(r.category) ? 'Sin costo' : money(r.hotelFee ?? 0),
       ];
     }),
     columnStyles: {
@@ -256,10 +257,10 @@ export const exportRegistrationsPdf = async (regs: Registration[]) => {
   autoTable(doc, {
     ...common,
     startY: 72,
-    head: [['Llegada', 'Nombre', 'Teléfono', 'Personas', 'Transporte', 'Detalles', 'Recoger', 'Notas']],
+    head: [['Llegada', 'Nombre', 'Teléfono', 'Personas', 'Cómo llega', 'Vuelo', 'Recoger', 'Notas']],
     body: [...regs].sort(byArrival).map((r) => [
       formatArrival(r), fullName(r.registrant), r.registrant.phone, String(peopleCount(r)),
-      TRANSPORT_LABELS[r.travel.transport] ?? '', travelDetails(r), r.travel.needsPickup ? 'Sí' : 'No', r.travel.notes,
+      travelMode(r), travelDetails(r), r.travel.needsPickup ? 'Sí' : 'No', r.travel.notes,
     ]),
     columnStyles: {
       0: { cellWidth: 90, fontStyle: 'bold' }, 1: { cellWidth: 110 }, 2: { cellWidth: 80 }, 3: { cellWidth: 48, halign: 'center' },

@@ -25,9 +25,16 @@ const LanguageToggle: React.FC<{ lang: Lang; onChange: (l: Lang) => void; label:
   </Box>
 );
 
-interface HeroProps { showDeadline: boolean; t: Strings; lang: Lang; onLangChange: (l: Lang) => void }
+interface HeroProps {
+  showDeadline: boolean;
+  t: Strings;
+  lang: Lang;
+  onLangChange: (l: Lang) => void;
+  /** Replaces the conference name and hides the conference dates (used by non-conference pages). */
+  title?: string;
+}
 
-const Hero: React.FC<HeroProps> = ({ showDeadline, t, lang, onLangChange }) => {
+const Hero: React.FC<HeroProps> = ({ showDeadline, t, lang, onLangChange, title }) => {
   const days = daysUntilClose();
   const locale = LOCALES[lang];
   const pillSx = {
@@ -64,10 +71,10 @@ const Hero: React.FC<HeroProps> = ({ showDeadline, t, lang, onLangChange }) => {
               {t.churchName}
             </Typography>
             <Typography component="h1" sx={{ color: 'var(--ibl-on-primary)', fontWeight: 800, fontSize: { xs: '1.65rem', md: '2.6rem' }, lineHeight: 1.1, my: 0.5, textShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>
-              {t.conferenceName}
+              {title ?? t.conferenceName}
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
-              <Box sx={pillSx}><EventIcon sx={{ fontSize: '1.05rem' }} />{conferenceRangeLabel(locale)}</Box>
+              {!title && <Box sx={pillSx}><EventIcon sx={{ fontSize: '1.05rem' }} />{conferenceRangeLabel(locale)}</Box>}
               {showDeadline && (
                 <Box sx={pillSx}>
                   <HourglassBottomIcon sx={{ fontSize: '1.05rem' }} />
