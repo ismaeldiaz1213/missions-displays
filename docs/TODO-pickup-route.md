@@ -6,20 +6,23 @@
 
 An admin page, "Recogidas" (Pickups), that tells the driver:
 
-1. **Who to pick up and in what order.** Group arrivals by airport and time window. A driver shouldn't make three trips to IAH when three flights land within an hour of each other.
+1. **Who to pick up and in what order.** Group arrivals by pickup place (airport, bus station, or other address) and time window. A driver shouldn't make three trips to IAH when three flights land within an hour of each other.
 2. **Where to go.** Show a map with a pin for each airport and one for Iglesia Bautista Libertad (IBL).
 3. **How far.** Show the driving distance and time from IBL to each airport, and from the airport back to IBL.
 4. **Whether the flight is late.** This is optional (see Phase 3).
 
 ## The data we already collect
 
-Every registration with `travel.needsPickup == true` has these fields. The form and `firestore.rules` require all of them:
+Every registration with `travel.needsPickup == true` has a transport mode plus that mode's details. The form and `firestore.rules` require all of them:
 
 | Field | Example | Notes |
 | --- | --- | --- |
+| `travel.transport` | `plane` / `bus` / `other` | Decides which detail fields below are filled in |
 | `travel.airline` | `American Airlines` | Free text |
 | `travel.flightNumber` | `AA 1234` | Upper-cased by the form; spacing varies |
 | `travel.airport` | `IAH` | Free text. Could become a dropdown later (see open questions) |
+| `travel.busCompany`, `travel.busStation` | `Greyhound`, `Houston downtown` | Bus pickups: the station is the pickup address |
+| `travel.transportDetails`, `travel.pickupLocation` | `Train`, `Amtrak station` | Other pickups: free-text pickup address, to geocode |
 | `travel.arrivalDate` | `2026-11-01` | YYYY-MM-DD |
 | `travel.arrivalTime` | `14:30` | 24 h, local time at the airport |
 | `registrant.phone`, `peopleCount(r)` | | Who to call and how many seats are needed |

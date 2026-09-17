@@ -26,6 +26,26 @@
   background-color: var(--ibl-primary);
 }
 
+/* iOS Safari: empty date/time inputs collapse and center their text; keep them the same height as other fields */
+.ibl-reg input[type='date'],
+.ibl-reg input[type='time'] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 1.4375em;
+  text-align: left;
+}
+.ibl-reg input::-webkit-date-and-time-value {
+  text-align: left;
+  min-height: 1.4375em;
+}
+
+/* Keep inputs at 16px on phones so iOS doesn't zoom in when a field is focused */
+@media (max-width: 599px) {
+  .ibl-reg .MuiInputBase-input {
+    font-size: 16px;
+  }
+}
+
 /* Visually hidden honeypot field for bots */
 .ibl-reg .reg-hp {
   position: absolute;

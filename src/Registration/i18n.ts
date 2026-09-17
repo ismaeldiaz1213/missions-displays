@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Category, HeardAbout } from './conference';
+import type { Category, HeardAbout, PickupTransport } from './conference';
 
 export type Lang = 'es' | 'en';
 
@@ -30,6 +30,7 @@ const es = {
 
   steps: ['Registro', 'Videos', 'Confirmación'],
 
+  selectTransport: 'Seleccione cómo llegará',
   successTitle: (name: string) => `¡Su registro fue enviado${name ? `, ${name}` : ''}!`,
   successBody: (conf: string) => `Gracias por registrarse para la ${conf}. Nos comunicaremos con usted para confirmar los detalles de hospedaje y transporte.`,
   successFee: 'Costo estimado de hotel:',
@@ -38,6 +39,7 @@ const es = {
 
   mediaTitle: '¿Necesita subir más videos después?',
   mediaBody: 'Guarde este enlace. Puede usarlo para subir videos hasta antes de la conferencia.',
+  mediaLostLink: 'Si pierde este enlace, comuníquese con el hermano Jerry y con gusto se lo enviaremos de nuevo.',
   mediaButton: 'Subir videos',
   copyLink: 'Copiar enlace',
   linkCopied: 'Enlace copiado',
@@ -69,7 +71,7 @@ const es = {
     pastor: { label: 'Pastor', description: 'Pastor de iglesia local' },
     layman: { label: 'Laico', description: 'Miembro de iglesia' },
   } as Record<Category, { label: string; description: string }>,
-  missionaryBoard: 'Junta misionera / Clearing house',
+  missionaryBoard: 'Junta misionera',
   sendingChurch: 'Iglesia enviadora',
 
   yourInfo: 'Su información',
@@ -92,7 +94,8 @@ const es = {
   infants: 'Bebés (0–2 años)',
   ages: 'Edades',
   agesPlaceholder: 'Ej. 1, 5, 9',
-  childrenNotes: 'Necesidades de los niños (cuna, alergias, etc.)',
+  childrenNotes: 'Necesidades de los niños',
+  childrenNotesPlaceholder: 'Cuna, alergias, etc.',
 
   daysTitle: 'Días de asistencia',
   daysSubFree: 'Seleccione los días que estará presente.',
@@ -100,10 +103,20 @@ const es = {
 
   travelTitle: 'Viaje y llegada',
   travelSub: 'Nos ayuda a coordinar quién necesita que lo recojan.',
-  pickupQuestion: '¿Necesita que lo recojamos en el aeropuerto?',
+  pickupQuestion: '¿Necesita que lo recojamos cuando llegue?',
   pickupYes: 'Sí, por favor',
   pickupNo: 'No es necesario',
+  transportQuestion: '¿Cómo llegará?',
+  transport: { plane: 'Avión', bus: 'Autobús', other: 'Otro' } as Record<PickupTransport, string>,
   flightInfo: 'Información de su vuelo de llegada',
+  busInfo: 'Información de su autobús',
+  busCompany: 'Línea de autobús',
+  busCompanyPlaceholder: 'Ej. Greyhound, FlixBus',
+  busStation: 'Estación de llegada',
+  otherInfo: 'Información de su llegada',
+  transportDetails: '¿Cómo llegará?',
+  transportDetailsPlaceholder: 'Ej. Tren, me trae un familiar, etc.',
+  pickupLocation: '¿Dónde lo recogemos?',
   airline: 'Aerolínea',
   flightNumber: 'Número de vuelo',
   flightPlaceholder: 'Ej. AA 1234',
@@ -129,7 +142,8 @@ const es = {
     other: 'Otro',
   } as Record<HeardAbout, string>,
   heardAboutOther: '¿Cómo?',
-  comments: 'Alergias, necesidades especiales o comentarios (opcional)',
+  comments: 'Comentarios (opcional)',
+  commentsPlaceholder: 'Alergias, necesidades especiales, etc.',
 
   summary: 'Resumen',
   category: 'Categoría',
@@ -184,6 +198,7 @@ const en: Strings = {
 
   steps: ['Registration', 'Videos', 'Confirmation'],
 
+  selectTransport: 'Select how you will arrive',
   successTitle: (name) => `Your registration was submitted${name ? `, ${name}` : ''}!`,
   successBody: (conf) => `Thank you for registering for the ${conf}. We will contact you to confirm lodging and transportation details.`,
   successFee: 'Estimated hotel cost:',
@@ -192,6 +207,7 @@ const en: Strings = {
 
   mediaTitle: 'Need to upload more videos later?',
   mediaBody: 'Save this link. You can use it to upload videos until the conference begins.',
+  mediaLostLink: "If you lose this link, contact Brother Jerry and we'll gladly send it to you again.",
   mediaButton: 'Upload videos',
   copyLink: 'Copy link',
   linkCopied: 'Link copied',
@@ -223,7 +239,7 @@ const en: Strings = {
     pastor: { label: 'Pastor', description: 'Local church pastor' },
     layman: { label: 'Layman', description: 'Church member' },
   },
-  missionaryBoard: 'Mission board / Clearing house',
+  missionaryBoard: 'Mission board',
   sendingChurch: 'Sending church',
 
   yourInfo: 'Your information',
@@ -246,7 +262,8 @@ const en: Strings = {
   infants: 'Infants (0–2 years)',
   ages: 'Ages',
   agesPlaceholder: 'e.g. 1, 5, 9',
-  childrenNotes: "Children's needs (crib, allergies, etc.)",
+  childrenNotes: "Children's needs",
+  childrenNotesPlaceholder: 'Crib, allergies, etc.',
 
   daysTitle: 'Attendance days',
   daysSubFree: 'Select the days you will attend.',
@@ -254,10 +271,20 @@ const en: Strings = {
 
   travelTitle: 'Travel & arrival',
   travelSub: 'This helps us coordinate who needs to be picked up.',
-  pickupQuestion: 'Do you need us to pick you up at the airport?',
+  pickupQuestion: 'Do you need us to pick you up when you arrive?',
   pickupYes: 'Yes, please',
   pickupNo: 'Not needed',
+  transportQuestion: 'How will you arrive?',
+  transport: { plane: 'Plane', bus: 'Bus', other: 'Other' },
   flightInfo: 'Your arrival flight',
+  busInfo: 'Your bus',
+  busCompany: 'Bus line',
+  busCompanyPlaceholder: 'e.g. Greyhound, FlixBus',
+  busStation: 'Arrival station',
+  otherInfo: 'Your arrival',
+  transportDetails: 'How are you arriving?',
+  transportDetailsPlaceholder: 'e.g. Train, a relative is dropping me off, etc.',
+  pickupLocation: 'Where should we pick you up?',
   airline: 'Airline',
   flightNumber: 'Flight number',
   flightPlaceholder: 'e.g. AA 1234',
@@ -283,7 +310,8 @@ const en: Strings = {
     other: 'Other',
   },
   heardAboutOther: 'How?',
-  comments: 'Allergies, special needs, or comments (optional)',
+  comments: 'Comments (optional)',
+  commentsPlaceholder: 'Allergies, special needs, etc.',
 
   summary: 'Summary',
   category: 'Category',

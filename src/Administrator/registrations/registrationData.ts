@@ -2,6 +2,7 @@ import {
   CATEGORY_LABELS,
   CONFERENCE_DAYS,
   HEARD_ABOUT_LABELS,
+  TRANSPORT_LABELS,
   adultCount,
   formatAddress,
   formatConferenceDay,
@@ -30,12 +31,21 @@ export const formatTime = (hhmm: string) => {
 export const formatArrival = (r: Registration) =>
   [formatDateShort(r.travel.arrivalDate), formatTime(r.travel.arrivalTime)].filter(Boolean).join(' · ');
 
-/** Flight details for pickups (airline · flight · airport). */
-export const travelDetails = (r: Registration) =>
-  r.travel.needsPickup ? [r.travel.airline, r.travel.flightNumber, r.travel.airport].filter(Boolean).join(' · ') : '';
+/** Pickup details for the chosen mode: flight (airline · flight · airport), bus (line · station), or other (how · where). */
+export const travelDetails = (r: Registration) => {
+  const t = r.travel;
+  if (!t.needsPickup) return '';
+  const parts = t.transport === 'bus' ? [t.busCompany, t.busStation]
+    : t.transport === 'other' ? [t.transportDetails, t.pickupLocation && `Recoger en: ${t.pickupLocation}`]
+      : [t.airline, t.flightNumber, t.airport];
+  return parts.filter(Boolean).join(' · ');
+};
+
+export const transportLabel = (r: Registration) =>
+  r.travel.needsPickup ? TRANSPORT_LABELS[r.travel.transport || 'plane'] ?? '' : '';
 
 export const travelMode = (r: Registration) =>
-  r.travel.needsPickup ? 'Recoger en aeropuerto' : r.travel.arrivingByRV ? 'En RV' : 'Por su cuenta';
+  r.travel.needsPickup ? `Recoger · ${transportLabel(r)}` : r.travel.arrivingByRV ? 'En RV' : 'Por su cuenta';
 
 export const homeChurchLabel = (r: Registration) => [r.homeChurch, r.homeChurchCity].filter(Boolean).join(', ');
 
@@ -87,9 +97,14 @@ export const REGISTRATION_COLUMNS: Column[] = [
   { header: 'Total personas', width: 10, value: peopleCount },
   { header: 'Días', width: 20, value: (r) => formatDays(r.attendanceDays) },
   { header: 'Recoger', width: 9, value: (r) => yesNo(r.travel.needsPickup) },
+  { header: 'Transporte', width: 11, value: transportLabel },
   { header: 'Aerolínea', width: 16, value: (r) => r.travel.airline },
   { header: 'Vuelo', width: 11, value: (r) => r.travel.flightNumber },
   { header: 'Aeropuerto', width: 14, value: (r) => r.travel.airport },
+  { header: 'Línea de autobús', width: 16, value: (r) => r.travel.busCompany ?? '' },
+  { header: 'Estación', width: 18, value: (r) => r.travel.busStation ?? '' },
+  { header: 'Otro transporte', width: 22, value: (r) => r.travel.transportDetails ?? '' },
+  { header: 'Lugar de recogida', width: 22, value: (r) => r.travel.pickupLocation ?? '' },
   { header: 'Fecha llegada', width: 14, value: (r) => formatDateShort(r.travel.arrivalDate) },
   { header: 'Hora llegada', width: 11, value: (r) => formatTime(r.travel.arrivalTime) },
   { header: 'Fecha salida', width: 14, value: (r) => formatDateShort(r.travel.departureDate) },

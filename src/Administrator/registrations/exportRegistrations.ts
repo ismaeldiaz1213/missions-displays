@@ -112,7 +112,7 @@ export const exportRegistrationsExcel = async (regs: Registration[]) => {
   const arrivalCols = [
     { header: 'Nombre', width: 26 }, { header: 'Teléfono', width: 16 }, { header: 'Personas', width: 10 },
     { header: 'Cómo llega', width: 20 }, { header: 'Llegada', width: 22 }, { header: 'Recoger', width: 9 },
-    { header: 'Vuelo', width: 34 }, { header: 'Salida', width: 16 }, { header: 'Notas', width: 36 },
+    { header: 'Detalles (vuelo / autobús / otro)', width: 40 }, { header: 'Salida', width: 16 }, { header: 'Notas', width: 36 },
   ];
   const ws2 = addSheet('Llegadas', `${CONFERENCE_NAME} — Llegadas y transporte`, arrivalCols);
   addRows(ws2, [...regs].sort(byArrival).map((r) => [
@@ -257,7 +257,7 @@ export const exportRegistrationsPdf = async (regs: Registration[]) => {
   autoTable(doc, {
     ...common,
     startY: 72,
-    head: [['Llegada', 'Nombre', 'Teléfono', 'Personas', 'Cómo llega', 'Vuelo', 'Recoger', 'Notas']],
+    head: [['Llegada', 'Nombre', 'Teléfono', 'Personas', 'Cómo llega', 'Detalles', 'Recoger', 'Notas']],
     body: [...regs].sort(byArrival).map((r) => [
       formatArrival(r), fullName(r.registrant), r.registrant.phone, String(peopleCount(r)),
       travelMode(r), travelDetails(r), r.travel.needsPickup ? 'Sí' : 'No', r.travel.notes,

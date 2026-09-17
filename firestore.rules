@@ -90,19 +90,28 @@ service cloud.firestore {
         && str(c.ages, 200) && str(c.notes, 1000);
     }
 
-    // Pickups need full flight details; people who don't need a pickup may be arriving by RV.
+    // Pickups need the transport mode, its details, and the arrival time; people who don't need a pickup
+    // may be arriving by RV and have no transport details.
+    function validPickup(t) {
+      return t.arrivalTime.size() > 0 && t.arrivingByRV == false
+        && (t.transport == 'plane' ? t.airline.size() > 0 && t.flightNumber.size() > 0 && t.airport.size() > 0
+          : t.transport == 'bus' ? t.busCompany.size() > 0 && t.busStation.size() > 0
+          : t.transport == 'other' && t.transportDetails.size() > 0 && t.pickupLocation.size() > 0);
+    }
+
     function validTravel(t) {
       return t is map
-        && t.keys().hasOnly(['needsPickup', 'airline', 'flightNumber', 'airport', 'arrivalDate', 'arrivalTime',
+        && t.keys().hasOnly(['needsPickup', 'transport', 'airline', 'flightNumber', 'airport', 'busCompany', 'busStation',
+                             'transportDetails', 'pickupLocation', 'arrivalDate', 'arrivalTime',
                              'departureDate', 'arrivingByRV', 'notes'])
         && t.needsPickup is bool && t.arrivingByRV is bool
+        && t.transport in ['', 'plane', 'bus', 'other']
         && str(t.airline, 200) && str(t.flightNumber, 20) && str(t.airport, 200)
+        && str(t.busCompany, 200) && str(t.busStation, 200)
+        && str(t.transportDetails, 500) && str(t.pickupLocation, 300)
         && reqStr(t.arrivalDate, 10) && str(t.arrivalTime, 5) && str(t.departureDate, 10)
         && str(t.notes, 1000)
-        && (t.needsPickup
-              ? t.airline.size() > 0 && t.flightNumber.size() > 0 && t.airport.size() > 0 && t.arrivalTime.size() > 0
-                && t.arrivingByRV == false
-              : true);
+        && (t.needsPickup ? validPickup(t) : t.transport == '');
     }
 
     function validRegistration(d) {

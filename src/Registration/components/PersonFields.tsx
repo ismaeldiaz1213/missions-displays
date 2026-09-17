@@ -31,12 +31,13 @@ const PersonFields = <T extends Person>({ prefix, value, onChange, errors, label
   );
 
   const address = value.address;
-  const addr = (key: keyof Address, autoComplete: string) => (
+  const addr = (key: keyof Address, autoComplete: string, htmlInput?: Record<string, string>) => (
     <TextField
       label={labels[key]}
       value={address?.[key] ?? ''}
       onChange={(e) => onChange({ address: { ...address, [key]: e.target.value } } as Partial<T>)}
       autoComplete={autoComplete}
+      slotProps={htmlInput && { htmlInput }}
       fullWidth
     />
   );
@@ -55,7 +56,7 @@ const PersonFields = <T extends Person>({ prefix, value, onChange, errors, label
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: '2fr 1fr 1.2fr 1.5fr' }, gap: 2 }}>
             {addr('city', 'address-level2')}
             {addr('state', 'address-level1')}
-            {addr('zip', 'postal-code')}
+            {addr('zip', 'postal-code', { inputMode: 'numeric' })}
             {addr('country', 'country-name')}
           </Box>
         </>

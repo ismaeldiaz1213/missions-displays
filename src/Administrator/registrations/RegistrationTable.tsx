@@ -145,7 +145,7 @@ const RegistrationDetail: React.FC<{ r: Registration; onClose: () => void; fullS
       ]} />
       <DetailGroup title="Viaje" rows={[
         ['Llegada', travelMode(r)],
-        ['Vuelo', travelDetails(r)],
+        ['Detalles', travelDetails(r)],
         ['Fecha/hora', formatArrival(r)],
         ['Salida', formatDateShort(r.travel.departureDate)],
         ['Notas', r.travel.notes],

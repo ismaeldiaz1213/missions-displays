@@ -18,6 +18,7 @@ import {
   CONTINENT_IDS, REQUEST_LIMITS, createMissionaryRequest, newRequestId, requestFilesPrefix,
   type ContinentId, type MissionaryRequestInput, type RequestFileKind,
 } from '../data/missionaryRequests';
+import MissionaryPageInfo from './MissionaryPageInfo';
 import { REQUEST_PAGE_TITLES, REQUEST_STRINGS, type RequestStrings } from './requestI18n';
 
 type FormState = Omit<MissionaryRequestInput, 'language' | 'continent'> & { continent: ContinentId | '' };
@@ -238,8 +239,8 @@ const MissionaryRequest: React.FC = () => {
         <label>Website<input tabIndex={-1} autoComplete="off" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} /></label>
       </div>
 
-      <Box sx={{ ...subPanelSx, mt: 0, mb: 3, bgcolor: 'var(--ibl-surface)' }}>
-        <Typography sx={{ color: 'var(--ibl-text-body)', lineHeight: 1.6 }}>{t.intro}</Typography>
+      <Box sx={{ mb: 3 }}>
+        <MissionaryPageInfo lang={lang} showFormButton={false} />
       </Box>
 
       <FormSection step={++step} title={t.youTitle} subtitle={t.youSub}>
@@ -257,7 +258,8 @@ const MissionaryRequest: React.FC = () => {
           {text('organization', t.organization, { required: true })}
           {text('sendingChurch', t.sendingChurch, { required: true })}
           {text('missionType', t.missionType, { placeholder: t.missionTypePlaceholder })}
-          <TextField label={t.startYear} value={form.startYear} fullWidth inputMode="numeric"
+          <TextField label={t.startYear} value={form.startYear} fullWidth
+            slotProps={{ htmlInput: { inputMode: 'numeric', pattern: '[0-9]*', maxLength: 4 } }}
             onChange={(e) => set({ startYear: e.target.value.replace(/\D/g, '').slice(0, 4) })} />
         </Box>
       </FormSection>

@@ -3,7 +3,28 @@ import type { ContinentId } from '../data/missionaryRequests';
 
 const es = {
   pageTitle: 'Solicitud de página misionera',
-  intro: 'Si es un misionero apoyado por la Iglesia Bautista Libertad, llene este formulario para que agreguemos (o actualicemos) su página en nuestro sitio de misiones. Revisaremos su información antes de publicarla.',
+
+  project: {
+    title: '¡Nos encantaría crear una página para usted!',
+    intro: 'La Iglesia Bautista Libertad en Houston, Texas, está actualizando su sitio de misiones (misiones.iblibertad.org), parte de nuestro sitio principal (iblibertad.org), para que nuestra congregación pueda conocer mejor, orar por y apoyar a los misioneros que sostenemos.',
+    wip: 'Todavía es un trabajo en progreso (por ahora solo en español), pero aquí puede ver un ejemplo de una página completa:',
+    showExample: 'Ver página de ejemplo',
+    hideExample: 'Ocultar ejemplo',
+    openExample: 'Abrir en otra pestaña',
+    needTitle: 'Para crear la suya, necesitamos:',
+    needs: [
+      'Una foto actual de alta resolución (de su familia o ministerio)',
+      'Una breve descripción de su ministerio: a quién sirve, dónde y cómo es una semana típica (1–2 párrafos es perfecto)',
+      'Su carta o tarjeta de oración más reciente (PDF, si la tiene)',
+      'Peticiones de oración específicas y necesidades prácticas',
+      'Información de contacto para mostrar públicamente (teléfono/correo) y enlaces a su sitio web o redes sociales',
+      'Cualquier otra foto o video que desee compartir con la iglesia',
+    ],
+    formButton: 'Enviar mi información',
+    emailPrefix: '¿Prefiere enviarlo por correo? Escriba a',
+    emailSuffix: '. Incluso una nota de voz o un enlace a una biografía existente nos sirve; queremos que sea lo más fácil posible para usted.',
+    thanks: 'Gracias por su fiel servicio en el campo. Oramos por usted y estamos agradecidos de colaborar con usted.',
+  },
 
   youTitle: 'Su información',
   youSub: 'Solo la usaremos para comunicarnos con usted. No se publica.',
@@ -14,11 +35,11 @@ const es = {
   phone: 'Teléfono / WhatsApp',
 
   ministryTitle: 'Su ministerio',
-  organization: 'Junta misionera / Organización',
+  organization: 'Junta misionera',
   sendingChurch: 'Iglesia enviadora',
   missionType: 'Tipo de ministerio (opcional)',
   missionTypePlaceholder: 'Ej. Plantación de iglesias, aviación, medicina',
-  startYear: 'Año en que inició en el campo (opcional)',
+  startYear: 'Año de inicio en el campo',
 
   fieldTitle: 'Campo misionero',
   fieldSub: '¿Dónde sirve?',
@@ -38,7 +59,7 @@ const es = {
 
   aboutTitle: 'Acerca de su ministerio',
   aboutSub: 'Esto aparecerá en su página.',
-  description: 'Descripción de su familia y ministerio',
+  description: 'Su familia y ministerio',
   descriptionHelp: 'Cuéntenos sobre su familia, su llamado y lo que Dios está haciendo en su campo.',
   prayerRequests: 'Peticiones de oración (opcional)',
 
@@ -84,7 +105,28 @@ export type RequestStrings = typeof es;
 
 const en: RequestStrings = {
   pageTitle: 'Missionary page request',
-  intro: 'If you are a missionary supported by Iglesia Bautista Libertad, fill out this form so we can add (or update) your page on our missions site. We will review your information before publishing it.',
+
+  project: {
+    title: "We'd love to build a page for you!",
+    intro: "Iglesia Bautista Libertad in Houston, Texas, is updating its missions site (misiones.iblibertad.org), part of our main church site (iblibertad.org), so our congregation can better know, pray for, and support the missionaries we support.",
+    wip: "It's still a work in progress (and Spanish only right now), but here's an example of a completed page:",
+    showExample: 'See an example page',
+    hideExample: 'Hide example',
+    openExample: 'Open in a new tab',
+    needTitle: 'To build yours, we need:',
+    needs: [
+      'A current high-resolution photo (family or ministry photo, whichever you prefer)',
+      'A short description of your ministry: who you serve, where, and what a typical week looks like (1–2 paragraphs is perfect)',
+      'Your most recent prayer card or newsletter (PDF, if available)',
+      'Current specific prayer requests and any practical needs',
+      'Best contact info to list publicly (phone/email) and any ministry website or social media links',
+      "Any other photos or videos you're comfortable sharing with the church",
+    ],
+    formButton: 'Send my information',
+    emailPrefix: 'Prefer email? Send it to',
+    emailSuffix: '. Even a quick voice memo or a link to an existing bio works; we want this to be as low-effort as possible for you.',
+    thanks: "Thank you for your faithful service on the field. We're praying for you and grateful to partner with you.",
+  },
 
   youTitle: 'Your information',
   youSub: 'We only use this to contact you. It is not published.',
@@ -95,11 +137,11 @@ const en: RequestStrings = {
   phone: 'Phone / WhatsApp',
 
   ministryTitle: 'Your ministry',
-  organization: 'Mission board / Organization',
+  organization: 'Mission board',
   sendingChurch: 'Sending church',
   missionType: 'Type of ministry (optional)',
   missionTypePlaceholder: 'e.g. Church planting, aviation, medical',
-  startYear: 'Year you started on the field (optional)',
+  startYear: 'Year started on the field',
 
   fieldTitle: 'Mission field',
   fieldSub: 'Where do you serve?',
@@ -119,7 +161,7 @@ const en: RequestStrings = {
 
   aboutTitle: 'About your ministry',
   aboutSub: 'This will appear on your page.',
-  description: 'Description of your family and ministry',
+  description: 'Your family & ministry',
   descriptionHelp: 'Tell us about your family, your calling, and what God is doing on your field.',
   prayerRequests: 'Prayer requests (optional)',
 
@@ -160,6 +202,10 @@ const en: RequestStrings = {
   doneBody: 'Thank you. We will review your information and contact you if we need anything else. Your page will appear on the site once approved.',
   backHome: 'Back to home',
 };
+
+export const PROJECT_EMAIL = 'diazismael@iblibertad.com';
+// A finished page to show missionaries what we're building
+export const EXAMPLE_MISSIONARY_PATH = '/misionero/d512dce6-3c85-4cce-b18b-fef61bc2093c';
 
 export const REQUEST_STRINGS: Record<Lang, RequestStrings> = { es, en };
 export const REQUEST_PAGE_TITLES: Record<Lang, string> = { es: es.pageTitle, en: en.pageTitle };

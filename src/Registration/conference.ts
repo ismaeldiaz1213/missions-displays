@@ -85,12 +85,26 @@ export interface ChildrenInfo {
   notes: string;
 }
 
+export const PICKUP_TRANSPORTS = ['plane', 'bus', 'other'] as const;
+export type PickupTransport = (typeof PICKUP_TRANSPORTS)[number];
+
+export const TRANSPORT_LABELS: Record<PickupTransport, string> = {
+  plane: 'Avión',
+  bus: 'Autobús',
+  other: 'Otro',
+};
+
 export interface TravelInfo {
   needsPickup: boolean;
-  // Flight details — required when needsPickup (used to plan airport pickups)
-  airline: string;
-  flightNumber: string;
-  airport: string;
+  // Pickup details — required when needsPickup (used to plan pickups). Empty otherwise.
+  transport: PickupTransport | '';
+  airline: string; // plane
+  flightNumber: string; // plane
+  airport: string; // plane
+  busCompany: string; // bus
+  busStation: string; // bus
+  transportDetails: string; // other: how they're arriving
+  pickupLocation: string; // other: where to pick them up
   arrivalDate: string;
   arrivalTime: string;
   departureDate: string;

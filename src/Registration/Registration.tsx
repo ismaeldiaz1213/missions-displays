@@ -10,6 +10,9 @@ import LockClockIcon from '@mui/icons-material/LockClock';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import FlightIcon from '@mui/icons-material/Flight';
+import DirectionsBusIcon from '@mui/icons-material/DirectionsBus';
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import { Link as RouterLink } from 'react-router-dom';
 import { createRegistration, mediaUploadPath, newRegistrationId } from '../data/registrations';
 import FormSection from './components/FormSection';
@@ -18,12 +21,14 @@ import PersonFields from './components/PersonFields';
 import RegistrationSummary from './components/RegistrationSummary';
 import MediaUploader from './components/MediaUploader';
 import PageShell, { CenterCard } from './components/PageShell';
+import MissionaryPageInfo from '../MissionaryRequest/MissionaryPageInfo';
 import { subPanelSx } from './styles';
 import {
   CATEGORIES,
   CONFERENCE_DAYS,
   HEARD_ABOUT,
   HOTEL_FEE_PER_DAY,
+  PICKUP_TRANSPORTS,
   calculateHotelFee,
   canUploadMedia,
   closeDateLabel,
@@ -36,6 +41,7 @@ import {
   type ChildrenInfo,
   type HeardAbout,
   type PersonInfo,
+  type PickupTransport,
   type RegistrationInput,
   type TravelInfo,
   type WifeInfo,
@@ -45,6 +51,13 @@ import { LOCALES, STRINGS, useLang, type Lang, type Strings } from './i18n';
 const CATEGORY_ICONS: Record<Category, React.ReactNode> = {
   missionary: <PublicIcon />, evangelist: <CampaignIcon />, pastor: <ChurchIcon />, layman: <PersonIcon />,
 };
+
+const TRANSPORT_ICONS: Record<PickupTransport, React.ReactNode> = {
+  plane: <FlightIcon />, bus: <DirectionsBusIcon />, other: <MoreHorizIcon />,
+};
+
+// Opens the numeric keypad on phones (type="number" often shows the full keyboard on iOS)
+const numericInput = { inputMode: 'numeric' as const, pattern: '[0-9]*' };
 
 const emptyContact = (): WifeInfo => ({ firstName: '', lastName: '', email: '', phone: '' });
 
@@ -70,7 +83,8 @@ const initialForm = (): FormState => ({
   children: { count: 1, infants: 0, ages: '', notes: '' },
   attendanceDays: [...CONFERENCE_DAYS],
   travel: {
-    needsPickup: null, airline: '', flightNumber: '', airport: '', arrivalDate: '', arrivalTime: '',
+    needsPickup: null, transport: '', airline: '', flightNumber: '', airport: '', busCompany: '', busStation: '',
+    transportDetails: '', pickupLocation: '', arrivalDate: '', arrivalTime: '',
     departureDate: '', arrivingByRV: false, notes: '',
   },
   heardAbout: '',
@@ -109,10 +123,19 @@ const validate = (f: FormState, msg: Strings['errors']): Record<string, string> 
   if (f.travel.needsPickup === null) e['travel.needsPickup'] = msg.required;
   req('travel.arrivalDate', f.travel.arrivalDate);
   if (f.travel.needsPickup) {
-    req('travel.airline', f.travel.airline);
-    req('travel.flightNumber', f.travel.flightNumber);
-    req('travel.airport', f.travel.airport);
-    req('travel.arrivalTime', f.travel.arrivalTime);
+    if (!f.travel.transport) e['travel.transport'] = msg.required;
+    if (f.travel.transport === 'plane') {
+      req('travel.airline', f.travel.airline);
+      req('travel.flightNumber', f.travel.flightNumber);
+      req('travel.airport', f.travel.airport);
+    } else if (f.travel.transport === 'bus') {
+      req('travel.busCompany', f.travel.busCompany);
+      req('travel.busStation', f.travel.busStation);
+    } else if (f.travel.transport === 'other') {
+      req('travel.transportDetails', f.travel.transportDetails);
+      req('travel.pickupLocation', f.travel.pickupLocation);
+    }
+    if (f.travel.transport) req('travel.arrivalTime', f.travel.arrivalTime);
   }
 
   if (!f.heardAbout) e.heardAbout = msg.selectHeardAbout;
@@ -122,6 +145,7 @@ const validate = (f: FormState, msg: Strings['errors']): Record<string, string> 
 
 const toInput = (f: FormState, language: Lang): RegistrationInput => {
   const pickup = !!f.travel.needsPickup;
+  const mode = pickup ? f.travel.transport : '';
   return {
     ...f,
     language,
@@ -134,10 +158,15 @@ const toInput = (f: FormState, language: Lang): RegistrationInput => {
     travel: {
       ...f.travel,
       needsPickup: pickup,
-      // Flight details only matter for pickups; RV only for people who drive in
-      airline: pickup ? f.travel.airline : '',
-      flightNumber: pickup ? f.travel.flightNumber : '',
-      airport: pickup ? f.travel.airport : '',
+      // Only keep the details for the chosen pickup mode; RV only for people who drive in
+      transport: mode,
+      airline: mode === 'plane' ? f.travel.airline : '',
+      flightNumber: mode === 'plane' ? f.travel.flightNumber : '',
+      airport: mode === 'plane' ? f.travel.airport : '',
+      busCompany: mode === 'bus' ? f.travel.busCompany : '',
+      busStation: mode === 'bus' ? f.travel.busStation : '',
+      transportDetails: mode === 'other' ? f.travel.transportDetails : '',
+      pickupLocation: mode === 'other' ? f.travel.pickupLocation : '',
       arrivalTime: pickup ? f.travel.arrivalTime : '',
       arrivingByRV: !pickup && f.travel.arrivingByRV,
     },
@@ -220,6 +249,7 @@ const MediaUploadCard: React.FC<{ t: Strings; lang: Lang; registrationId: string
         <Typography sx={{ color: 'var(--ibl-text)', fontWeight: 700 }}>{t.mediaTitle}</Typography>
       </Box>
       <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.88rem', mb: 1 }}>{t.mediaBody}</Typography>
+      <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.88rem', mb: 1 }}>{t.mediaLostLink}</Typography>
       <Typography sx={{ color: 'var(--ibl-text)', fontSize: '0.82rem', fontFamily: 'monospace', wordBreak: 'break-all', mb: 1.5 }}>{link}</Typography>
       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
         <Button component={RouterLink} to={`${mediaUploadPath(registrationId)}?lang=${lang}`} variant="contained"
@@ -371,6 +401,12 @@ const Registration: React.FC = () => {
             {t.registerAnother}
           </Button>
         </CenterCard>
+        {/* Missionaries: explain the missionary page project and invite them to send their info */}
+        {form.category === 'missionary' && (
+          <Box sx={{ maxWidth: 720, mx: 'auto', mt: 3, px: 2 }}>
+            <MissionaryPageInfo lang={lang} />
+          </Box>
+        )}
       </>,
     );
   }
@@ -444,15 +480,15 @@ const Registration: React.FC = () => {
             <Box sx={{ ...subPanelSx, display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: '1fr 1fr 2fr' }, gap: 2 }}>
               <TextField label={t.childrenCount} name="children.count" type="number" required
                 value={form.children.count} onChange={(e) => setChildren({ count: Math.max(0, parseInt(e.target.value) || 0) })}
-                slotProps={{ htmlInput: { min: 1, max: 20 } }}
+                slotProps={{ htmlInput: { min: 1, max: 20, ...numericInput } }}
                 error={!!errors['children.count']} helperText={errors['children.count']} />
               <TextField label={t.infants} name="children.infants" type="number"
                 value={form.children.infants} onChange={(e) => setChildren({ infants: Math.max(0, parseInt(e.target.value) || 0) })}
-                slotProps={{ htmlInput: { min: 0, max: 20 } }}
+                slotProps={{ htmlInput: { min: 0, max: 20, ...numericInput } }}
                 error={!!errors['children.infants']} helperText={errors['children.infants']} />
               <TextField label={t.ages} placeholder={t.agesPlaceholder} sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }}
                 value={form.children.ages} onChange={(e) => setChildren({ ages: e.target.value })} />
-              <TextField label={t.childrenNotes} multiline minRows={2} sx={{ gridColumn: '1 / -1' }}
+              <TextField label={t.childrenNotes} placeholder={t.childrenNotesPlaceholder} multiline minRows={2} sx={{ gridColumn: '1 / -1' }}
                 value={form.children.notes} onChange={(e) => setChildren({ notes: e.target.value })} />
             </Box>
           </Collapse>
@@ -478,29 +514,67 @@ const Registration: React.FC = () => {
 
           <Collapse in={pickup === true} unmountOnExit>
             <Box sx={subPanelSx}>
-              <Typography sx={{ ...labelSx, color: 'var(--ibl-primary-dark)' }}>{t.flightInfo}</Typography>
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-                <TextField label={t.airline} name="travel.airline" required
-                  value={form.travel.airline} onChange={(e) => setTravel({ airline: e.target.value })}
-                  error={!!errors['travel.airline']} helperText={errors['travel.airline']} />
-                <TextField label={t.flightNumber} name="travel.flightNumber" required placeholder={t.flightPlaceholder}
-                  value={form.travel.flightNumber} onChange={(e) => setTravel({ flightNumber: e.target.value.toUpperCase() })}
-                  error={!!errors['travel.flightNumber']} helperText={errors['travel.flightNumber']} />
-                <TextField label={t.arrivalDate} name="travel.arrivalDate" type="date" required
-                  value={form.travel.arrivalDate} onChange={(e) => setTravel({ arrivalDate: e.target.value })}
-                  slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: CONFERENCE_DAYS[CONFERENCE_DAYS.length - 1] } }}
-                  error={!!errors['travel.arrivalDate']} helperText={errors['travel.arrivalDate']} />
-                <TextField label={t.arrivalTime} name="travel.arrivalTime" type="time" required
-                  value={form.travel.arrivalTime} onChange={(e) => setTravel({ arrivalTime: e.target.value })}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  error={!!errors['travel.arrivalTime']} helperText={errors['travel.arrivalTime']} />
-                <TextField label={t.airport} name="travel.airport" required placeholder={t.airportPlaceholder}
-                  value={form.travel.airport} onChange={(e) => setTravel({ airport: e.target.value })}
-                  error={!!errors['travel.airport']} helperText={errors['travel.airport']} />
-                <TextField label={t.departureDate} type="date"
-                  value={form.travel.departureDate} onChange={(e) => setTravel({ departureDate: e.target.value })}
-                  slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: form.travel.arrivalDate || undefined } }} />
+              <Typography sx={labelSx}>{t.transportQuestion}</Typography>
+              <Box id="reg-transport" role="radiogroup" sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 1.25 }}>
+                {PICKUP_TRANSPORTS.map((mode) => (
+                  <ChoiceCard key={mode} selected={form.travel.transport === mode} onClick={() => setTravel({ transport: mode })}
+                    title={t.transport[mode]} icon={TRANSPORT_ICONS[mode]} error={!!errors['travel.transport']} />
+                ))}
               </Box>
+              {errors['travel.transport'] && <Typography sx={errorTextSx}>{t.selectTransport}</Typography>}
+
+              <Collapse in={form.travel.transport !== ''} unmountOnExit>
+                <Typography sx={{ ...labelSx, color: 'var(--ibl-primary-dark)', mt: 2.5 }}>
+                  {form.travel.transport === 'plane' ? t.flightInfo : form.travel.transport === 'bus' ? t.busInfo : t.otherInfo}
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                  {form.travel.transport === 'plane' && (
+                    <>
+                      <TextField label={t.airline} name="travel.airline" required
+                        value={form.travel.airline} onChange={(e) => setTravel({ airline: e.target.value })}
+                        error={!!errors['travel.airline']} helperText={errors['travel.airline']} />
+                      <TextField label={t.flightNumber} name="travel.flightNumber" required placeholder={t.flightPlaceholder}
+                        value={form.travel.flightNumber} onChange={(e) => setTravel({ flightNumber: e.target.value.toUpperCase() })}
+                        slotProps={{ htmlInput: { autoCapitalize: 'characters' } }}
+                        error={!!errors['travel.flightNumber']} helperText={errors['travel.flightNumber']} />
+                      <TextField label={t.airport} name="travel.airport" required placeholder={t.airportPlaceholder}
+                        value={form.travel.airport} onChange={(e) => setTravel({ airport: e.target.value })}
+                        error={!!errors['travel.airport']} helperText={errors['travel.airport']} sx={{ gridColumn: '1 / -1' }} />
+                    </>
+                  )}
+                  {form.travel.transport === 'bus' && (
+                    <>
+                      <TextField label={t.busCompany} name="travel.busCompany" required placeholder={t.busCompanyPlaceholder}
+                        value={form.travel.busCompany} onChange={(e) => setTravel({ busCompany: e.target.value })}
+                        error={!!errors['travel.busCompany']} helperText={errors['travel.busCompany']} />
+                      <TextField label={t.busStation} name="travel.busStation" required
+                        value={form.travel.busStation} onChange={(e) => setTravel({ busStation: e.target.value })}
+                        error={!!errors['travel.busStation']} helperText={errors['travel.busStation']} />
+                    </>
+                  )}
+                  {form.travel.transport === 'other' && (
+                    <>
+                      <TextField label={t.transportDetails} name="travel.transportDetails" required placeholder={t.transportDetailsPlaceholder}
+                        value={form.travel.transportDetails} onChange={(e) => setTravel({ transportDetails: e.target.value })}
+                        error={!!errors['travel.transportDetails']} helperText={errors['travel.transportDetails']} />
+                      <TextField label={t.pickupLocation} name="travel.pickupLocation" required
+                        value={form.travel.pickupLocation} onChange={(e) => setTravel({ pickupLocation: e.target.value })}
+                        error={!!errors['travel.pickupLocation']} helperText={errors['travel.pickupLocation']} />
+                    </>
+                  )}
+                  <TextField label={t.arrivalDate} name="travel.arrivalDate" type="date" required
+                    value={form.travel.arrivalDate} onChange={(e) => setTravel({ arrivalDate: e.target.value })}
+                    slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: CONFERENCE_DAYS[CONFERENCE_DAYS.length - 1] } }}
+                    error={!!errors['travel.arrivalDate']} helperText={errors['travel.arrivalDate']} />
+                  <TextField label={t.arrivalTime} name="travel.arrivalTime" type="time" required
+                    value={form.travel.arrivalTime} onChange={(e) => setTravel({ arrivalTime: e.target.value })}
+                    slotProps={{ inputLabel: { shrink: true } }}
+                    error={!!errors['travel.arrivalTime']} helperText={errors['travel.arrivalTime']} />
+                  <TextField label={t.departureDate} type="date"
+                    value={form.travel.departureDate} onChange={(e) => setTravel({ departureDate: e.target.value })}
+                    slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: form.travel.arrivalDate || undefined } }} />
+                </Box>
+              </Collapse>
             </Box>
           </Collapse>
 
@@ -539,7 +613,7 @@ const Registration: React.FC = () => {
               error={!!errors.heardAboutOther} helperText={errors.heardAboutOther} />
           </Collapse>
 
-          <TextField label={t.comments} multiline minRows={3} fullWidth sx={{ mt: 3 }}
+          <TextField label={t.comments} placeholder={t.commentsPlaceholder} multiline minRows={3} fullWidth sx={{ mt: 3 }}
             value={form.specialNeeds} onChange={(e) => set({ specialNeeds: e.target.value })} />
         </FormSection>
       </Box>
