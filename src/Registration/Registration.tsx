@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Box, Button, CircularProgress, Collapse, TextField, Typography,
 } from '@mui/material';
@@ -13,6 +13,7 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import FlightIcon from '@mui/icons-material/Flight';
 import DirectionsBusIcon from '@mui/icons-material/DirectionsBus';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Link as RouterLink } from 'react-router-dom';
 import { createRegistration, mediaUploadPath, newRegistrationId } from '../data/registrations';
 import FormSection from './components/FormSection';
@@ -265,6 +266,54 @@ const MediaUploadCard: React.FC<{ t: Strings; lang: Lang; registrationId: string
   );
 };
 
+interface NextStep {
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+  onGo: () => void;
+}
+
+/**
+ * On a phone the confirmation fills the screen and people leave before seeing what's below,
+ * so the card ends with a short checklist that scrolls them to each section.
+ */
+const NextSteps: React.FC<{ t: Strings; steps: NextStep[] }> = ({ t, steps }) => (
+  <Box sx={{ mt: 3, textAlign: 'left' }}>
+    <Typography sx={{ color: 'var(--ibl-text)', fontWeight: 800, fontSize: '0.95rem', mb: 1.25, textAlign: 'center' }}>
+      {t.nextStepsTitle}
+    </Typography>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+      {steps.map((step, i) => (
+        <Box key={step.title} component="button" type="button" onClick={step.onGo} sx={{
+          display: 'flex', alignItems: 'center', gap: 1.5, width: '100%', textAlign: 'left', cursor: 'pointer',
+          p: 1.5, borderRadius: '14px', font: 'inherit',
+          bgcolor: 'color-mix(in srgb, var(--ibl-primary) 7%, var(--ibl-surface))',
+          border: '1px solid color-mix(in srgb, var(--ibl-primary) 28%, transparent)',
+          '&:hover': { bgcolor: 'color-mix(in srgb, var(--ibl-primary) 12%, var(--ibl-surface))' },
+        }}>
+          <Box sx={{
+            flex: '0 0 auto', width: 34, height: 34, borderRadius: '50%', bgcolor: 'var(--ibl-primary)',
+            color: 'var(--ibl-on-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800,
+          }}>
+            {step.icon ?? i + 1}
+          </Box>
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography sx={{ color: 'var(--ibl-text)', fontWeight: 700, fontSize: '0.92rem', lineHeight: 1.3 }}>{step.title}</Typography>
+            <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.82rem', lineHeight: 1.4 }}>{step.body}</Typography>
+          </Box>
+          <Box sx={{ flex: '0 0 auto', color: 'var(--ibl-primary)', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 0.25 }}>
+            {t.stepGo}<ExpandMoreIcon fontSize="small" />
+          </Box>
+        </Box>
+      ))}
+    </Box>
+    <Box className="reg-bounce" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mt: 1.5, color: 'var(--ibl-primary)' }}>
+      <Typography sx={{ fontSize: '0.8rem', fontWeight: 700 }}>{t.scrollCue}</Typography>
+      <ExpandMoreIcon fontSize="small" />
+    </Box>
+  </Box>
+);
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 type Phase = 'form' | 'media' | 'done';
@@ -280,6 +329,8 @@ const Registration: React.FC = () => {
   const [phase, setPhase] = useState<Phase>('form');
   const [registrationId, setRegistrationId] = useState('');
   const [mediaUploading, setMediaUploading] = useState(false);
+  const mediaRef = useRef<HTMLDivElement>(null);
+  const pageInfoRef = useRef<HTMLDivElement>(null);
 
   const t = STRINGS[lang];
   const locale = LOCALES[lang];
@@ -374,7 +425,27 @@ const Registration: React.FC = () => {
     );
   }
 
+  const scrollTo = (ref: React.RefObject<HTMLDivElement | null>) => {
+    const el = ref.current;
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + window.scrollY - 16;
+    const before = window.scrollY;
+    window.scrollTo({ top, behavior: 'smooth' });
+    // Some older iOS versions ignore smooth scrolling and do nothing at all; jump instead.
+    setTimeout(() => { if (Math.abs(window.scrollY - before) < 2) window.scrollTo(0, top); }, 350);
+  };
+
   if (phase === 'done') {
+    const nextSteps: NextStep[] = [
+      ...(hasMediaStep ? [{
+        icon: <CloudUploadOutlinedIcon fontSize="small" />,
+        title: t.stepVideosTitle, body: t.stepVideosBody, onGo: () => scrollTo(mediaRef),
+      }] : []),
+      ...(form.category === 'missionary' ? [{
+        icon: <PublicIcon fontSize="small" />,
+        title: t.stepPageTitle, body: t.stepPageBody, onGo: () => scrollTo(pageInfoRef),
+      }] : []),
+    ];
     return shell(
       <>
         {hasMediaStep && (
@@ -383,11 +454,12 @@ const Registration: React.FC = () => {
           </Box>
         )}
         <CenterCard>
-          <CheckCircleIcon sx={{ fontSize: 64, color: 'var(--ibl-success)', mb: 1.5 }} />
-          <Typography component="h2" sx={{ color: 'var(--ibl-primary-dark)', fontWeight: 800, fontSize: '1.6rem', mb: 1 }}>
+          {/* Compact on phones so the next steps below stay in view instead of filling the screen */}
+          <CheckCircleIcon sx={{ fontSize: { xs: 44, md: 64 }, color: 'var(--ibl-success)', mb: { xs: 1, md: 1.5 } }} />
+          <Typography component="h2" sx={{ color: 'var(--ibl-primary-dark)', fontWeight: 800, fontSize: { xs: '1.3rem', md: '1.6rem' }, mb: 1 }}>
             {t.successTitle(form.registrant.firstName)}
           </Typography>
-          <Typography sx={{ color: 'var(--ibl-text-body)', lineHeight: 1.7 }}>
+          <Typography sx={{ color: 'var(--ibl-text-body)', lineHeight: 1.6, fontSize: { xs: '0.92rem', md: '1rem' } }}>
             {t.successBody(t.conferenceName)}
           </Typography>
           {!isFreeCategory(form.category) && fee > 0 && (
@@ -395,18 +467,31 @@ const Registration: React.FC = () => {
               {t.successFee} <strong style={{ color: 'var(--ibl-primary-dark)' }}>${fee.toLocaleString('en-US')}</strong> {t.successFeeNote}
             </Typography>
           )}
-          {hasMediaStep && <MediaUploadCard t={t} lang={lang} registrationId={registrationId} />}
+          {nextSteps.length > 0 && <NextSteps t={t} steps={nextSteps} />}
+        </CenterCard>
+
+        {hasMediaStep && (
+          <Box ref={mediaRef} sx={{
+            maxWidth: 560, mx: 'auto', mt: 3, px: 2, scrollMarginTop: 16,
+            '& > *': { mt: '0 !important' },
+          }}>
+            <MediaUploadCard t={t} lang={lang} registrationId={registrationId} />
+          </Box>
+        )}
+
+        {/* Missionaries: explain the missionary page project and invite them to send their info */}
+        {form.category === 'missionary' && (
+          <Box ref={pageInfoRef} sx={{ maxWidth: 720, mx: 'auto', mt: 3, px: 2, scrollMarginTop: 16 }}>
+            <MissionaryPageInfo lang={lang} />
+          </Box>
+        )}
+
+        <Box sx={{ textAlign: 'center' }}>
           <Button onClick={() => { setForm(initialForm()); setSubmitted(false); goTo('form'); }}
             sx={{ mt: 3, textTransform: 'none', fontWeight: 600, color: 'var(--ibl-primary)' }}>
             {t.registerAnother}
           </Button>
-        </CenterCard>
-        {/* Missionaries: explain the missionary page project and invite them to send their info */}
-        {form.category === 'missionary' && (
-          <Box sx={{ maxWidth: 720, mx: 'auto', mt: 3, px: 2 }}>
-            <MissionaryPageInfo lang={lang} />
-          </Box>
-        )}
+        </Box>
       </>,
     );
   }

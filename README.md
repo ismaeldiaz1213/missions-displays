@@ -91,7 +91,7 @@ The local site uses the real Firebase project — changes made in `/admin` local
 | `/` | Kiosk home video |
 | `/region-selection`, `/norte-america`, … | Missionary map & continent pages |
 | `/misionero/:id` | Missionary mini-site |
-| `/admin` | Admin portal (missionaries + conference registrations, Excel/PDF export, uploaded videos) |
+| `/admin` | Admin portal (missionaries, page requests, conference registrations with Excel/PDF export, and the pickup planner) |
 | `/conferencia/registro` | Conference registration — unlisted, linked from the church website. `?lang=en` for English |
 | `/conferencia/subir/:registrationId` | Private MP4 upload link shown to missionaries and evangelists after registering |
 | `/misioneros/solicitud` | Public missionary page request form (linked from the home page). Admins approve requests in **Admin → Solicitudes**, which creates a hidden draft to review and publish |

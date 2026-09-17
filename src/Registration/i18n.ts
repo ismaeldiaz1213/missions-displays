@@ -37,6 +37,14 @@ const es = {
   successFeeNote: '— no se cobra nada ahora.',
   registerAnother: 'Registrar a otra persona',
 
+  nextStepsTitle: 'Antes de cerrar esta página:',
+  stepVideosTitle: 'Guarde su enlace para subir videos',
+  stepVideosBody: 'Le sirve para subir o cambiar videos hasta antes de la conferencia.',
+  stepPageTitle: 'Ayúdenos a crear su página de misionero',
+  stepPageBody: 'Queremos que nuestra iglesia lo conozca y ore por usted. Vea qué necesitamos.',
+  stepGo: 'Ver',
+  scrollCue: 'Deslice hacia abajo',
+
   mediaTitle: '¿Necesita subir más videos después?',
   mediaBody: 'Guarde este enlace. Puede usarlo para subir videos hasta antes de la conferencia.',
   mediaLostLink: 'Si pierde este enlace, comuníquese con el hermano Jerry y con gusto se lo enviaremos de nuevo.',
@@ -204,6 +212,14 @@ const en: Strings = {
   successFee: 'Estimated hotel cost:',
   successFeeNote: '— nothing is charged now.',
   registerAnother: 'Register another person',
+
+  nextStepsTitle: 'Before you close this page:',
+  stepVideosTitle: 'Save your video upload link',
+  stepVideosBody: 'Use it to upload or replace videos any time before the conference.',
+  stepPageTitle: 'Help us build your missionary page',
+  stepPageBody: 'We want our church to know you and pray for you. See what we need.',
+  stepGo: 'See',
+  scrollCue: 'Scroll down',
 
   mediaTitle: 'Need to upload more videos later?',
   mediaBody: 'Save this link. You can use it to upload videos until the conference begins.',

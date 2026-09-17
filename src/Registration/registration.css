@@ -65,3 +65,15 @@
 @media (prefers-reduced-motion: reduce) {
   .ibl-reg .reg-reveal { animation: none; }
 }
+
+/* Nudge on the confirmation page so people notice there is more below the fold */
+@keyframes ibl-reg-bounce {
+  0%, 100% { transform: translateY(0); opacity: 0.75; }
+  50%      { transform: translateY(5px); opacity: 1; }
+}
+.ibl-reg .reg-bounce {
+  animation: ibl-reg-bounce 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ibl-reg .reg-bounce { animation: none; }
+}

@@ -13,10 +13,12 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import PublicIcon from '@mui/icons-material/Public';
 import HowToRegIcon from '@mui/icons-material/HowToReg';
 import InboxIcon from '@mui/icons-material/Inbox';
+import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import MissionaryTable from './MissionaryTable';
 import StorageIndicator from './StorageIndicator';
 import RegistrationTable from './registrations/RegistrationTable';
 import RequestTable from './requests/RequestTable';
+import PickupBoard from './pickups/PickupBoard';
 import { listMissionaryRequests } from '../data/missionaryRequests';
 import { firebaseApp, isAdminEmail } from '../firebase';
 
@@ -47,7 +49,7 @@ const Admin: React.FC = () => {
   const [storageRefresh, setStorageRefresh] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const tab = tabParam === 'registros' || tabParam === 'solicitudes' ? tabParam : 'misioneros';
+  const tab = tabParam === 'registros' || tabParam === 'solicitudes' || tabParam === 'recogidas' ? tabParam : 'misioneros';
   const [pendingRequests, setPendingRequests] = useState(0);
 
   useEffect(() => {
@@ -149,7 +151,8 @@ const Admin: React.FC = () => {
         <Tabs
           value={tab}
           onChange={(_, v) => setSearchParams(v === 'misioneros' ? {} : { tab: v }, { replace: true })}
-          variant={isMobile ? 'fullWidth' : 'standard'}
+          variant={isMobile ? 'scrollable' : 'standard'}
+          allowScrollButtonsMobile
           sx={{ px: { xs: 0, sm: 3 }, borderBottom: '1px solid #2a2a2a', bgcolor: '#141414' }}
         >
           <Tab value="misioneros" label="Misioneros" icon={<PublicIcon fontSize="small" />} iconPosition="start" sx={{ textTransform: 'none', fontWeight: 600, minHeight: 52 }} />
@@ -157,6 +160,7 @@ const Admin: React.FC = () => {
             icon={<Badge badgeContent={pendingRequests} color="error"><InboxIcon fontSize="small" /></Badge>}
             label="Solicitudes" />
           <Tab value="registros" label="Registros" icon={<HowToRegIcon fontSize="small" />} iconPosition="start" sx={{ textTransform: 'none', fontWeight: 600, minHeight: 52 }} />
+          <Tab value="recogidas" label="Recogidas" icon={<DirectionsCarIcon fontSize="small" />} iconPosition="start" sx={{ textTransform: 'none', fontWeight: 600, minHeight: 52 }} />
         </Tabs>
 
         <Box sx={{ p: 3 }}>
@@ -173,6 +177,8 @@ const Admin: React.FC = () => {
             </>
           ) : tab === 'solicitudes' ? (
             <RequestTable onPendingCount={setPendingRequests} />
+          ) : tab === 'recogidas' ? (
+            <PickupBoard />
           ) : (
             <RegistrationTable />
           )}
