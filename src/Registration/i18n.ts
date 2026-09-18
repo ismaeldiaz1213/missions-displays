@@ -30,6 +30,14 @@ const es = {
 
   steps: ['Registro', 'Videos', 'Confirmación'],
 
+  lodgingQuestion: '¿Necesitará hospedaje durante la conferencia?',
+  lodgingSub: 'Algunos se quedan con familiares o hacen su propio arreglo.',
+  lodgingYes: 'Sí, necesito hospedaje',
+  lodgingNo: 'No, me quedo en otro lugar',
+  lodging: 'Hospedaje',
+  noLodgingNote: 'No se cobra nada porque usted tiene su propio alojamiento.',
+  selectLodging: 'Indique si necesita hospedaje',
+
   selectTransport: 'Seleccione cómo llegará',
   successTitle: (name: string) => `¡Su registro fue enviado${name ? `, ${name}` : ''}!`,
   successBody: (conf: string) => `Gracias por registrarse para la ${conf}. Nos comunicaremos con usted para confirmar los detalles de hospedaje y transporte.`,
@@ -205,6 +213,14 @@ const en: Strings = {
   infoVideoNote: 'Missionaries and evangelists: after completing this form you will be able to upload your presentation video in MP4 format.',
 
   steps: ['Registration', 'Videos', 'Confirmation'],
+
+  lodgingQuestion: 'Will you need lodging during the conference?',
+  lodgingSub: 'Some guests stay with family or make their own arrangements.',
+  lodgingYes: 'Yes, I need lodging',
+  lodgingNo: 'No, staying elsewhere',
+  lodging: 'Lodging',
+  noLodgingNote: 'Nothing is charged because you have your own lodging.',
+  selectLodging: 'Please tell us if you need lodging',
 
   selectTransport: 'Select how you will arrive',
   successTitle: (name) => `Your registration was submitted${name ? `, ${name}` : ''}!`,

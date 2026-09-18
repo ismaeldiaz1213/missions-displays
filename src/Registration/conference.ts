@@ -125,6 +125,8 @@ export interface RegistrationInput {
   bringingChildren: boolean;
   children: ChildrenInfo | null;
   attendanceDays: string[];
+  // Some pastors stay with family or book their own room; they aren't charged for the hotel.
+  needsLodging: boolean;
   travel: TravelInfo;
   heardAbout: HeardAbout;
   heardAboutOther: string;
@@ -139,9 +141,11 @@ export interface Registration extends RegistrationInput {
 
 export const adultCount = (r: Pick<RegistrationInput, 'bringingWife'>) => (r.bringingWife ? 2 : 1);
 
-// Missionaries and evangelists (and their wives) don't pay. Everyone else: $50 per adult per day.
-export const calculateHotelFee = (r: { category: string; bringingWife: boolean; attendanceDays: readonly string[] }) =>
-  isFreeCategory(r.category) ? 0 : HOTEL_FEE_PER_DAY * r.attendanceDays.length * adultCount(r);
+// Missionaries and evangelists (and their wives) don't pay, and neither does anyone who arranged
+// their own lodging. Everyone else: $50 per adult per day.
+export const calculateHotelFee = (r: {
+  category: string; bringingWife: boolean; attendanceDays: readonly string[]; needsLodging: boolean;
+}) => (isFreeCategory(r.category) || !r.needsLodging ? 0 : HOTEL_FEE_PER_DAY * r.attendanceDays.length * adultCount(r));
 
 export const formatConferenceDay = (
   iso: string,

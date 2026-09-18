@@ -117,7 +117,7 @@ service cloud.firestore {
     function validRegistration(d) {
       return d.keys().hasOnly(['language', 'category', 'registrant', 'homeChurch', 'homeChurchCity',
                                'missionaryBoard', 'sendingChurch', 'bringingWife', 'wife',
-                               'bringingChildren', 'children', 'attendanceDays', 'travel',
+                               'bringingChildren', 'children', 'attendanceDays', 'needsLodging', 'travel',
                                'heardAbout', 'heardAboutOther', 'specialNeeds', 'hotelFee', 'createdAt'])
         && d.language in ['es', 'en']
         && d.category in ['missionary', 'evangelist', 'pastor', 'layman']
@@ -131,12 +131,15 @@ service cloud.firestore {
         && (d.bringingChildren ? validChildren(d.children) : d.children == null)
         && d.attendanceDays is list && d.attendanceDays.size() >= 1 && d.attendanceDays.size() <= 4
         && d.attendanceDays.hasOnly(['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05'])
+        && d.needsLodging is bool
         && validTravel(d.travel)
         && d.heardAbout in ['pastor', 'missionary', 'friend', 'social', 'website', 'attended', 'other']
         && str(d.heardAboutOther, 200) && (d.heardAbout != 'other' || d.heardAboutOther.size() > 0)
         && str(d.specialNeeds, 2000)
-        // $50 per adult per day; missionaries and evangelists free (matches calculateHotelFee)
-        && d.hotelFee == (d.category in ['missionary', 'evangelist'] ? 0 : 50 * d.attendanceDays.size() * (d.bringingWife ? 2 : 1))
+        // $50 per adult per day; free for missionaries, evangelists, and anyone with their own
+        // lodging (matches calculateHotelFee)
+        && d.hotelFee == (d.category in ['missionary', 'evangelist'] || !d.needsLodging
+                          ? 0 : 50 * d.attendanceDays.size() * (d.bringingWife ? 2 : 1))
         && d.createdAt == request.time;
     }
 

@@ -16,6 +16,7 @@ export interface SummaryInput {
   bringingChildren: boolean;
   children: { count: number } | null;
   attendanceDays: string[];
+  needsLodging: boolean | null;
 }
 
 const Row: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
@@ -30,7 +31,9 @@ const RegistrationSummary: React.FC<{ form: SummaryInput; t: Strings; locale: st
   const days = form.attendanceDays.length;
   const children = form.bringingChildren ? form.children?.count ?? 0 : 0;
   const isFree = isFreeCategory(form.category);
-  const fee = calculateHotelFee(form);
+  // Until they answer, show the full estimate rather than a $0 that could look final.
+  const needsLodging = form.needsLodging !== false;
+  const fee = calculateHotelFee({ ...form, needsLodging });
 
   return (
     <Box sx={{
@@ -51,6 +54,7 @@ const RegistrationSummary: React.FC<{ form: SummaryInput; t: Strings; locale: st
             <Box>{form.attendanceDays.map((d) => <div key={d}>{formatConferenceDay(d, undefined, locale)}</div>)}</Box>
           )}
         />
+        <Row label={t.lodging} value={form.needsLodging === null ? '—' : form.needsLodging ? t.yes : t.no} />
         <Divider sx={{ my: 1.25, borderColor: 'var(--ibl-border)' }} />
         <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           {t.hotelEstimate}
@@ -66,7 +70,7 @@ const RegistrationSummary: React.FC<{ form: SummaryInput; t: Strings; locale: st
               ${fee.toLocaleString('en-US')}
             </Typography>
             <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.82rem' }}>
-              {t.feeFormula(HOTEL_FEE_PER_DAY, days, adults)}
+              {needsLodging ? t.feeFormula(HOTEL_FEE_PER_DAY, days, adults) : t.noLodgingNote}
             </Typography>
           </>
         )}

@@ -62,8 +62,9 @@ const numericInput = { inputMode: 'numeric' as const, pattern: '[0-9]*' };
 
 const emptyContact = (): WifeInfo => ({ firstName: '', lastName: '', email: '', phone: '' });
 
-type FormState = Omit<RegistrationInput, 'language' | 'category' | 'wife' | 'children' | 'travel' | 'heardAbout'> & {
+type FormState = Omit<RegistrationInput, 'language' | 'category' | 'wife' | 'children' | 'travel' | 'heardAbout' | 'needsLodging'> & {
   category: Category | '';
+  needsLodging: boolean | null;
   registrant: PersonInfo;
   wife: WifeInfo;
   children: ChildrenInfo;
@@ -83,6 +84,7 @@ const initialForm = (): FormState => ({
   bringingChildren: false,
   children: { count: 1, infants: 0, ages: '', notes: '' },
   attendanceDays: [...CONFERENCE_DAYS],
+  needsLodging: null,
   travel: {
     needsPickup: null, transport: '', airline: '', flightNumber: '', airport: '', busCompany: '', busStation: '',
     transportDetails: '', pickupLocation: '', arrivalDate: '', arrivalTime: '',
@@ -120,6 +122,7 @@ const validate = (f: FormState, msg: Strings['errors']): Record<string, string> 
   if (f.bringingChildren && f.children.count < 1) e['children.count'] = msg.min1;
   if (f.bringingChildren && f.children.infants > f.children.count) e['children.infants'] = msg.infantsTooMany;
   if (f.attendanceDays.length === 0) e.attendanceDays = msg.selectDay;
+  if (f.needsLodging === null) e.needsLodging = msg.required;
 
   if (f.travel.needsPickup === null) e['travel.needsPickup'] = msg.required;
   req('travel.arrivalDate', f.travel.arrivalDate);
@@ -151,6 +154,7 @@ const toInput = (f: FormState, language: Lang): RegistrationInput => {
     ...f,
     language,
     category: f.category as Category,
+    needsLodging: !!f.needsLodging,
     // Board and sending church only apply to missionaries
     missionaryBoard: f.category === 'missionary' ? f.missionaryBoard : '',
     sendingChurch: f.category === 'missionary' ? f.sendingChurch : '',
@@ -336,7 +340,7 @@ const Registration: React.FC = () => {
   const locale = LOCALES[lang];
 
   const errors = useMemo(() => (submitted ? validate(form, t.errors) : {}), [submitted, form, t]);
-  const fee = calculateHotelFee(form);
+  const fee = calculateHotelFee({ ...form, needsLodging: !!form.needsLodging });
   // Missionaries/evangelists get a video step after the form (while uploads are open)
   const hasMediaStep = canUploadMedia(form.category) && isMediaUploadOpen() && !honeypot;
 
@@ -589,6 +593,12 @@ const Registration: React.FC = () => {
             ))}
           </Box>
           {errors.attendanceDays && <Typography sx={errorTextSx}>{errors.attendanceDays}</Typography>}
+
+          <Typography sx={{ ...labelSx, mt: 3 }}>{t.lodgingQuestion}</Typography>
+          <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.85rem', mt: -0.75, mb: 1.25 }}>{t.lodgingSub}</Typography>
+          <YesNo id="reg-needsLodging" value={form.needsLodging} onChange={(v) => set({ needsLodging: v })}
+            yes={t.lodgingYes} no={t.lodgingNo} error={!!errors.needsLodging} />
+          {errors.needsLodging && <Typography sx={errorTextSx}>{t.selectLodging}</Typography>}
         </FormSection>
 
         <FormSection step={++step} title={t.travelTitle} subtitle={t.travelSub}>

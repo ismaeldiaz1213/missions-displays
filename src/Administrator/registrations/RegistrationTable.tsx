@@ -141,7 +141,9 @@ const RegistrationDetail: React.FC<{ r: Registration; onClose: () => void; fullS
       <DetailGroup title="Asistencia y hotel" rows={[
         ['Días', r.attendanceDays.map((d) => formatConferenceDay(d, { weekday: 'long', day: 'numeric', month: 'long' })).join('\n')],
         ['Personas', `${peopleCount(r)} (${r.bringingWife ? 2 : 1} adulto${r.bringingWife ? 's' : ''}, ${childCount(r)} niño${childCount(r) === 1 ? '' : 's'})`],
-        ['Hotel estimado', isFreeCategory(r.category) ? `Sin costo (${CATEGORY_LABELS[r.category].toLowerCase()})` : money(r.hotelFee ?? 0)],
+        ['Hospedaje', r.needsLodging ? 'Necesita hospedaje' : 'Tiene su propio alojamiento'],
+        ['Hotel estimado', isFreeCategory(r.category) ? `Sin costo (${CATEGORY_LABELS[r.category].toLowerCase()})`
+          : !r.needsLodging ? 'Sin costo (alojamiento propio)' : money(r.hotelFee ?? 0)],
       ]} />
       <DetailGroup title="Viaje" rows={[
         ['Llegada', travelMode(r)],
@@ -282,6 +284,8 @@ const RegistrationTable: React.FC = () => {
           hint={(Object.keys(CATEGORY_LABELS) as Category[]).filter((k) => stats.byCategory[k]).map((k) => `${stats.byCategory[k]} ${CATEGORY_LABELS[k].toLowerCase()}`).join(' · ') || undefined} />
         <Stat label="Personas" value={stats.people} hint={`${stats.adults} adultos · ${stats.children} niños${stats.infants ? ` (${stats.infants} bebés)` : ''}`} />
         <Stat label="Necesitan recogida" value={stats.pickups} hint={stats.rvs ? `${stats.rvs} llegan en RV` : undefined} />
+        <Stat label="Necesitan hospedaje" value={stats.lodging}
+          hint={stats.registrations - stats.lodging ? `${stats.registrations - stats.lodging} tienen su propio alojamiento` : undefined} />
         <Stat label="Hotel estimado" value={money(stats.hotelTotal)} hint="No se ha cobrado" />
       </Box>
 
