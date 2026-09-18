@@ -47,6 +47,10 @@ export const transportLabel = (r: Registration) =>
 export const travelMode = (r: Registration) =>
   r.travel.needsPickup ? `Recoger · ${transportLabel(r)}` : r.travel.arrivingByRV ? 'En RV' : 'Por su cuenta';
 
+/** Three-way: some registrations were saved before the form asked about lodging. */
+export const lodgingLabel = (r: Registration) =>
+  r.needsLodging === undefined ? 'Sin respuesta' : r.needsLodging ? 'Necesita hospedaje' : 'Alojamiento propio';
+
 export const homeChurchLabel = (r: Registration) => [r.homeChurch, r.homeChurchCity].filter(Boolean).join(', ');
 
 export const heardAboutLabel = (r: Registration) =>
@@ -96,7 +100,7 @@ export const REGISTRATION_COLUMNS: Column[] = [
   { header: 'Notas niños', width: 26, value: (r) => r.children?.notes ?? '' },
   { header: 'Total personas', width: 10, value: peopleCount },
   { header: 'Días', width: 20, value: (r) => formatDays(r.attendanceDays) },
-  { header: 'Hospedaje', width: 11, value: (r) => yesNo(r.needsLodging) },
+  { header: 'Hospedaje', width: 18, value: lodgingLabel },
   { header: 'Recoger', width: 9, value: (r) => yesNo(r.travel.needsPickup) },
   { header: 'Transporte', width: 11, value: transportLabel },
   { header: 'Aerolínea', width: 16, value: (r) => r.travel.airline },
@@ -131,7 +135,8 @@ export const summarize = (regs: Registration[]) => {
     children: regs.reduce((n, r) => n + childCount(r), 0),
     infants: regs.reduce((n, r) => n + infantCount(r), 0),
     people: regs.reduce((n, r) => n + peopleCount(r), 0),
-    lodging: regs.filter((r) => r.needsLodging).length,
+    lodging: regs.filter((r) => r.needsLodging === true).length,
+    lodgingUnknown: regs.filter((r) => r.needsLodging === undefined).length,
     pickups: regs.filter((r) => r.travel.needsPickup).length,
     rvs: regs.filter((r) => r.travel.arrivingByRV).length,
     hotelTotal: regs.reduce((n, r) => n + (r.hotelFee ?? 0), 0),

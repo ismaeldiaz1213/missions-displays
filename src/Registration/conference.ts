@@ -133,10 +133,12 @@ export interface RegistrationInput {
   specialNeeds: string;
 }
 
-export interface Registration extends RegistrationInput {
+export interface Registration extends Omit<RegistrationInput, 'needsLodging'> {
   id: string;
   createdAt: string;
   hotelFee: number;
+  /** Optional: registrations saved before we started asking don't have it. */
+  needsLodging?: boolean;
 }
 
 export const adultCount = (r: Pick<RegistrationInput, 'bringingWife'>) => (r.bringingWife ? 2 : 1);

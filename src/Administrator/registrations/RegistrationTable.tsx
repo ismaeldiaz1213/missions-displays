@@ -26,7 +26,7 @@ import {
 } from '../../Registration/conference';
 import {
   childCount, formatArrival, formatDateShort, formatDays, formatSubmitted, fullName,
-  heardAboutLabel, homeChurchLabel, infantCount, money, peopleCount, summarize, travelDetails, travelMode,
+  heardAboutLabel, homeChurchLabel, infantCount, lodgingLabel, money, peopleCount, summarize, travelDetails, travelMode,
 } from './registrationData';
 
 const REGISTRATION_PATH = '/conferencia/registro';
@@ -141,9 +141,9 @@ const RegistrationDetail: React.FC<{ r: Registration; onClose: () => void; fullS
       <DetailGroup title="Asistencia y hotel" rows={[
         ['Días', r.attendanceDays.map((d) => formatConferenceDay(d, { weekday: 'long', day: 'numeric', month: 'long' })).join('\n')],
         ['Personas', `${peopleCount(r)} (${r.bringingWife ? 2 : 1} adulto${r.bringingWife ? 's' : ''}, ${childCount(r)} niño${childCount(r) === 1 ? '' : 's'})`],
-        ['Hospedaje', r.needsLodging ? 'Necesita hospedaje' : 'Tiene su propio alojamiento'],
+        ['Hospedaje', lodgingLabel(r)],
         ['Hotel estimado', isFreeCategory(r.category) ? `Sin costo (${CATEGORY_LABELS[r.category].toLowerCase()})`
-          : !r.needsLodging ? 'Sin costo (alojamiento propio)' : money(r.hotelFee ?? 0)],
+          : r.needsLodging === false ? 'Sin costo (alojamiento propio)' : money(r.hotelFee ?? 0)],
       ]} />
       <DetailGroup title="Viaje" rows={[
         ['Llegada', travelMode(r)],
@@ -285,7 +285,10 @@ const RegistrationTable: React.FC = () => {
         <Stat label="Personas" value={stats.people} hint={`${stats.adults} adultos · ${stats.children} niños${stats.infants ? ` (${stats.infants} bebés)` : ''}`} />
         <Stat label="Necesitan recogida" value={stats.pickups} hint={stats.rvs ? `${stats.rvs} llegan en RV` : undefined} />
         <Stat label="Necesitan hospedaje" value={stats.lodging}
-          hint={stats.registrations - stats.lodging ? `${stats.registrations - stats.lodging} tienen su propio alojamiento` : undefined} />
+          hint={[
+            stats.registrations - stats.lodging - stats.lodgingUnknown ? `${stats.registrations - stats.lodging - stats.lodgingUnknown} con alojamiento propio` : '',
+            stats.lodgingUnknown ? `${stats.lodgingUnknown} sin respuesta` : '',
+          ].filter(Boolean).join(' · ') || undefined} />
         <Stat label="Hotel estimado" value={money(stats.hotelTotal)} hint="No se ha cobrado" />
       </Box>
 
