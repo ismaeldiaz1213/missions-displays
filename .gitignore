@@ -31,3 +31,7 @@ amplify_outputs.json
 .firebase/
 firebase-debug.log
 firestore-debug.log
+
+# Conference artwork originals (~24 MB per PNG). The web-sized exports in
+# public/conferencia/ are committed instead; see the README for the export commands.
+src/assets/MC */

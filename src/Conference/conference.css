@@ -1,0 +1,100 @@
+/*
+ * Harvest theme for the 2026 conference: wheat, gold and deep maroon, taken from the
+ * official artwork in src/assets/MC 2026. Scoped to .ibl-harvest so the rest of the
+ * missionary site keeps its blue palette; the registration pages opt in by adding the class.
+ */
+.ibl-harvest {
+  --ibl-primary-dark: #5E1723;
+  --ibl-primary: #8C2436;
+  --ibl-primary-deep: #4A111B;
+  --ibl-accent: #C08A2E;
+  --ibl-accent-soft: #E3C381;
+  --ibl-success: #4F7A3A;
+  --ibl-danger: #A32B22;
+  --ibl-surface: #FFFCF6;
+  --ibl-page-top: #F8F1E3;
+  --ibl-page-bottom: #F0E4CE;
+  --ibl-text: #2E1D12;
+  --ibl-text-body: #453021;
+  --ibl-text-muted: #7C6650;
+  --ibl-border: #E3D5BC;
+  --ibl-on-primary: #FFF8EC;
+
+  --ibl-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+}
+
+/* Display type for the landing page headings */
+.ibl-harvest .conf-display {
+  font-family: var(--ibl-display);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.08;
+}
+
+/* Small caps label above each section */
+.ibl-harvest .conf-eyebrow {
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+/* Photographic wheat texture, kept faint so text stays readable */
+.ibl-harvest .conf-texture::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--conf-texture);
+  background-size: cover;
+  background-position: center;
+  opacity: 0.16;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* The globe from the artwork, used as a watermark. A mask lets us paint it any color. */
+.ibl-harvest .conf-globe {
+  -webkit-mask-image: var(--conf-globe);
+  mask-image: var(--conf-globe);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  pointer-events: none;
+}
+
+/* Thin gold rule with a diamond in the middle, used between sections */
+.ibl-harvest .conf-rule {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.ibl-harvest .conf-rule::before,
+.ibl-harvest .conf-rule::after {
+  content: '';
+  height: 1px;
+  width: clamp(36px, 12vw, 120px);
+  background: linear-gradient(90deg, transparent, var(--ibl-accent));
+}
+.ibl-harvest .conf-rule::after {
+  background: linear-gradient(90deg, var(--ibl-accent), transparent);
+}
+
+/* Sections fade up once when they scroll into view */
+.ibl-harvest .conf-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+.ibl-harvest .conf-reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ibl-harvest .conf-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

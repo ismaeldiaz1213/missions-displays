@@ -1,11 +1,14 @@
 import React from 'react';
 import { Box, ButtonBase, Typography } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { Link as RouterLink } from 'react-router-dom';
 import HourglassBottomIcon from '@mui/icons-material/HourglassBottom';
 import iblLogo from '../../assets/ibl_logo.png';
 import { closeDateLabel, conferenceRangeLabel, daysUntilClose } from '../conference';
 import { LOCALES, type Lang, type Strings } from '../i18n';
 import '../registration.css';
+import '../../Conference/conference.css';
 
 const LanguageToggle: React.FC<{ lang: Lang; onChange: (l: Lang) => void; label: string }> = ({ lang, onChange, label }) => (
   <Box role="radiogroup" aria-label={label} sx={{
@@ -32,9 +35,11 @@ interface HeroProps {
   onLangChange: (l: Lang) => void;
   /** Replaces the conference name and hides the conference dates (used by non-conference pages). */
   title?: string;
+  /** Shows a "back to the conference page" link above the title. */
+  backTo?: string;
 }
 
-const Hero: React.FC<HeroProps> = ({ showDeadline, t, lang, onLangChange, title }) => {
+const Hero: React.FC<HeroProps> = ({ showDeadline, t, lang, onLangChange, title, backTo }) => {
   const days = daysUntilClose();
   const locale = LOCALES[lang];
   const pillSx = {
@@ -57,7 +62,16 @@ const Hero: React.FC<HeroProps> = ({ showDeadline, t, lang, onLangChange, title 
         background: 'radial-gradient(circle, rgba(255,255,255,0.16) 0%, transparent 65%)', pointerEvents: 'none',
       }} />
       <Box sx={{ position: 'relative', maxWidth: 1080, mx: 'auto' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: { xs: 1.5, md: 1 } }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: { xs: 1.5, md: 1 } }}>
+          {backTo ? (
+            <Box component={RouterLink} to={backTo} sx={{
+              display: 'inline-flex', alignItems: 'center', gap: 0.5, textDecoration: 'none',
+              color: 'rgba(255,255,255,0.8)', fontWeight: 600, fontSize: '0.85rem',
+              '&:hover': { color: 'var(--ibl-on-primary)' },
+            }}>
+              <ArrowBackIcon sx={{ fontSize: '1rem' }} />{t.backToConference}
+            </Box>
+          ) : <span />}
           <LanguageToggle lang={lang} onChange={onLangChange} label={t.language} />
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2, md: 3.5 } }}>
@@ -101,9 +115,12 @@ export const CenterCard: React.FC<{ children: React.ReactNode }> = ({ children }
 );
 
 
-/** Branded page frame (gradient background + conference header) shared by the registration and upload pages. */
-const PageShell: React.FC<HeroProps & { children: React.ReactNode }> = ({ children, ...hero }) => (
-  <Box className="ibl-reg" sx={{ minHeight: '100vh', background: 'linear-gradient(180deg, var(--ibl-page-top) 0%, var(--ibl-page-bottom) 100%)', pb: 6 }}>
+/**
+ * Branded page frame (gradient background + conference header) shared by the registration and upload pages.
+ * Conference pages use the 2026 harvest palette; other pages (the missionary page request) keep the site blue.
+ */
+const PageShell: React.FC<HeroProps & { children: React.ReactNode; harvest?: boolean }> = ({ children, harvest = true, ...hero }) => (
+  <Box className={`ibl-reg${harvest ? ' ibl-harvest' : ''}`} sx={{ minHeight: '100vh', background: 'linear-gradient(180deg, var(--ibl-page-top) 0%, var(--ibl-page-bottom) 100%)', pb: 6 }}>
     <Hero {...hero} />
     {children}
   </Box>

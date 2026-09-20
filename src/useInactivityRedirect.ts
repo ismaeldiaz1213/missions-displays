@@ -4,7 +4,7 @@ import { useMediaQuery } from '@mui/material';
 
 const TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
 const SKIP_PATHS = ['/', '/admin'];
-const SKIP_PREFIXES = ['/conferencia/', '/misioneros/solicitud'];
+const SKIP_PREFIXES = ['/conferencia', '/misioneros/solicitud'];
 
 export const useInactivityRedirect = () => {
   const navigate = useNavigate();

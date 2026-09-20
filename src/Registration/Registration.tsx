@@ -388,7 +388,7 @@ const Registration: React.FC = () => {
   };
 
   const shell = (children: React.ReactNode) => (
-    <PageShell showDeadline={open && phase === 'form'} t={t} lang={lang} onLangChange={changeLang}>{children}</PageShell>
+    <PageShell showDeadline={open && phase === 'form'} t={t} lang={lang} onLangChange={changeLang} backTo={`/conferencia?lang=${lang}`}>{children}</PageShell>
   );
 
   if (!open && phase === 'form') {

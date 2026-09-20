@@ -92,6 +92,7 @@ The local site uses the real Firebase project — changes made in `/admin` local
 | `/region-selection`, `/norte-america`, … | Missionary map & continent pages |
 | `/misionero/:id` | Missionary mini-site |
 | `/admin` | Admin portal (missionaries, page requests, conference registrations with Excel/PDF export, and the pickup planner) |
+| `/conferencia` | Conference landing page — the link to give the church website. Poster, video, schedule, info and the registration button. `?lang=en` for English |
 | `/conferencia/registro` | Conference registration — unlisted, linked from the church website. `?lang=en` for English |
 | `/conferencia/subir/:registrationId` | Private MP4 upload link shown to missionaries and evangelists after registering |
 | `/misioneros/solicitud` | Public missionary page request form (linked from the home page). Admins approve requests in **Admin → Solicitudes**, which creates a hidden draft to review and publish |
@@ -99,3 +100,34 @@ The local site uses the real Firebase project — changes made in `/admin` local
 ### Conference settings
 Dates, deadline, and hotel fee live in `src/Registration/conference.ts`. The deadline and fee are **also enforced** in `firestore.rules` / `storage.rules` — update both, then run `npm run deploy:rules`.
 
+
+## Conference pages (2026)
+
+The landing page at `/conferencia` and the registration flow share the **harvest theme** taken from the
+official artwork in `src/assets/MC 2026`: wheat, gold and deep maroon, with Playfair Display for headings.
+The palette lives in `src/Conference/conference.css` under the `.ibl-harvest` class, so the rest of the
+missionary site keeps its blue palette. `PageShell` opts in by default; pass `harvest={false}` for a page
+that should stay blue (the missionary page request form does).
+
+What to edit for next year:
+
+| Change | Where |
+| --- | --- |
+| Dates, deadline, fee | `src/Registration/conference.ts` (also mirrored in `firestore.rules`) |
+| Schedule times | `SCHEDULE` in `src/Conference/conferenceContent.ts` |
+| Conference video | `CONFERENCE_VIDEO_ID` in `src/Conference/conferenceContent.ts` (currently the 2023 recap as a placeholder) |
+| Wording, both languages | `src/Conference/conferenceI18n.ts` |
+| Artwork | Drop new files in `src/assets/MC <year>`, then re-export to `public/conferencia/` (see below) |
+
+The images in `public/conferencia/` are generated from the artwork with ImageMagick, because the originals
+are ~24 MB each:
+
+```bash
+magick "src/assets/MC 2026/2.png" -resize 2400x -quality 82 public/conferencia/poster-2026.jpg
+magick "src/assets/MC 2026/2.png" -resize 1200x -quality 80 public/conferencia/poster-2026-sm.jpg
+# wheat texture: a text-free corner of the artwork
+magick "src/assets/MC 2026/4.png" -crop 1400x856+5500+2600 +repage -resize 1800x -quality 80 public/conferencia/wheat-texture.jpg
+```
+
+`globe-arc.png` is a white silhouette of the globe from the artwork, used through a CSS mask
+(`.conf-globe`) so it can be tinted gold, maroon or cream per section.

@@ -1,7 +1,7 @@
 // Shared by the registration page, the media upload page, and the admin tab.
 // The deadline, days, and fee are ALSO enforced in firestore.rules / storage.rules — keep them in sync.
 
-export const CONFERENCE_NAME = 'Conferencia de Misiones 2026';
+export const CONFERENCE_NAME = 'Conferencia y Escuela de Misiones 2026';
 
 // Conference days (YYYY-MM-DD). The hotel fee is charged per day selected.
 export const CONFERENCE_DAYS = ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05'] as const;

@@ -10,7 +10,8 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 const es = {
   language: 'Idioma',
   churchName: 'Iglesia Bautista Libertad',
-  conferenceName: 'Conferencia de Misiones 2026',
+  conferenceName: 'Conferencia y Escuela de Misiones 2026',
+  backToConference: 'Página de la conferencia',
   registerUntil: (date: string) => `Registro hasta el ${date}`,
   lastDay: 'último día',
   daysLeft: (n: number) => `quedan ${plural(n, 'día', 'días')}`,
@@ -195,7 +196,8 @@ export type Strings = typeof es;
 const en: Strings = {
   language: 'Language',
   churchName: 'Iglesia Bautista Libertad',
-  conferenceName: 'Missions Conference 2026',
+  conferenceName: 'Missions Conference & School 2026',
+  backToConference: 'Conference page',
   registerUntil: (date) => `Register by ${date}`,
   lastDay: 'last day',
   daysLeft: (n) => `${plural(n, 'day', 'days')} left`,
