@@ -1,0 +1,21 @@
+/*
+ * Map attribution: keep the credit visible (OpenStreetMap's license asks for it) but
+ * stop it from being a tap target. On the kiosk, visitors kept tapping the "Leaflet"
+ * link and the Ukraine flag next to it and ended up on another site.
+ */
+.leaflet-control-attribution {
+  pointer-events: none;
+  user-select: none;
+}
+.leaflet-control-attribution a,
+.leaflet-control-attribution svg,
+.leaflet-attribution-flag {
+  pointer-events: none !important;
+  cursor: default;
+  text-decoration: none;
+  color: inherit;
+}
+/* Leaflet draws its own flag icon before the "Leaflet" link; it reads as a button */
+.leaflet-attribution-flag {
+  display: none !important;
+}

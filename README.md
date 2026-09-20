@@ -101,6 +101,14 @@ The local site uses the real Firebase project — changes made in `/admin` local
 Dates, deadline, and hotel fee live in `src/Registration/conference.ts`. The deadline and fee are **also enforced** in `firestore.rules` / `storage.rules` — update both, then run `npm run deploy:rules`.
 
 
+## Maps
+
+Every Leaflet map renders `src/mapTiles.tsx`, which points at OpenStreetMap's own tiles.
+CARTO's basemap (used until Sept 2026) now stamps "API KEY REQUIRED" across tiles from
+unregistered sites, so it was swapped out. OSM tiles are free and need no key; keep the
+attribution visible if you change providers. `src/mapTiles.css` keeps the attribution
+readable but not clickable, because kiosk visitors kept tapping the Leaflet link.
+
 ## Conference pages (2026)
 
 The landing page at `/conferencia` and the registration flow share the **harvest theme** taken from the

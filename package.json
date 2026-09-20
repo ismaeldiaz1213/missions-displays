@@ -20,6 +20,7 @@
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "leaflet": "^1.9.4",
+    "qrcode.react": "^4.2.0",
     "react": "^19.0.0-rc.1",
     "react-chrono": "^2.9.1",
     "react-dom": "^19.0.0-rc.1",

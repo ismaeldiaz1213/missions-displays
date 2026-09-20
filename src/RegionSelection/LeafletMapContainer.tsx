@@ -1,8 +1,9 @@
 import React from 'react';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import { MapContainer, Marker } from 'react-leaflet';
 import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import BaseTiles from '../mapTiles';
 import {
   NORTH_AMERICA_LAT_CENTER, NORTH_AMERICA_LON_CENTER,
   SOUTH_AMERICA_LAT_CENTER, SOUTH_AMERICA_LON_CENTER,
@@ -75,10 +76,7 @@ const LeafletMapContainer: React.FC = () => {
       zoomControl={true}
       style={{ height: '100%', width: '100%' }}
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-      />
+      <BaseTiles />
       {continents.map((c) => (
         <Marker
           key={c.id}

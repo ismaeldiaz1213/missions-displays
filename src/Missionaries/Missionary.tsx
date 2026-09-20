@@ -6,9 +6,11 @@ import PhotoLibraryOutlinedIcon from '@mui/icons-material/PhotoLibraryOutlined';
 import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ContactMailOutlinedIcon from '@mui/icons-material/ContactMailOutlined';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import { MapContainer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import BaseTiles from '../mapTiles';
+import QrCard from './components/QrCard';
 import { pdfjs, Document, Page } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -146,6 +148,9 @@ const Missionary: React.FC = () => {
 
   return (
     <Box sx={{ minHeight: '100vh', width: '100%', background: 'linear-gradient(180deg, #F0F4F8 0%, #E8F1FC 100%)', display: 'flex', flexDirection: 'column' }}>
+
+      {/* Scan to keep reading on your phone (desktop/kiosk only) */}
+      <QrCard pathname={`/misionero/${m.id}`} label="Escanee para ver esta página en su teléfono" />
 
       {/* ── STICKY NAVBAR ─────────────────────────────────────────────────── */}
       <Box component="nav" sx={{
@@ -323,10 +328,7 @@ const Missionary: React.FC = () => {
                   zoomControl={true}
                   style={{ height: '100%', width: '100%' }}
                 >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                    url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-                  />
+                  <BaseTiles />
                   <Marker
                     position={[m.location.latitude, m.location.longitude]}
                     icon={L.divIcon({

@@ -23,13 +23,10 @@ const Home: React.FC = () => {
         muted
         playsInline
       />
-      <button
-        type="button"
-        className="missionary-request-link"
-        onClick={(e) => { e.stopPropagation(); navigate(MISSIONARY_REQUEST_PATH); }}
-      >
-        ¿Es usted misionero? Envíe su información →
-      </button>
+      <p className="tap-hint" aria-hidden="true">
+        <span className="tap-hint-icon">👆</span>
+        Toque la pantalla para continuar
+      </p>
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { useInactivityRedirect } from './useInactivityRedirect'
+import { usePageViews } from './analytics'
 import NotFound from './NotFound'
 import Home from './Home/Home'
 import RegionSelection from './RegionSelection/RegionSelection'
@@ -23,6 +24,7 @@ import MissionaryRequest from './MissionaryRequest/MissionaryRequest'
 
 const App:React.FC = () => {
   useInactivityRedirect();
+  usePageViews();
   return (
     <>
       <Routes>

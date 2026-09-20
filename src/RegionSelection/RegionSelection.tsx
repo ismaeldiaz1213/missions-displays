@@ -137,7 +137,7 @@ const RegionSelection: React.FC = () => {
             <Button
               size="small"
               onClick={() => setModalOpen(true)}
-              sx={{ color: '#94a3b8', textTransform: 'none', fontSize: '0.85rem' }}
+              sx={{ color: '#475569', textTransform: 'none', fontSize: '0.85rem', fontWeight: 600 }}
             >
               Agradecimientos
             </Button>
@@ -172,7 +172,7 @@ const RegionSelection: React.FC = () => {
           <Button
             size="small"
             onClick={() => setModalOpen(true)}
-            sx={{ color: '#94a3b8', textTransform: 'none', fontSize: '0.75rem', flexShrink: 0 }}
+            sx={{ color: '#475569', textTransform: 'none', fontSize: '0.75rem', fontWeight: 600, flexShrink: 0 }}
           >
             Agradecimientos
           </Button>

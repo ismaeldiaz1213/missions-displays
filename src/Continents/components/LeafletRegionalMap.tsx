@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, Marker, Popup } from 'react-leaflet';
 import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import BaseTiles from '../../mapTiles';
 import { Missionary } from '../../types';
 import { Box, Typography, Button } from '@mui/material';
 import { resolveUrl } from '../../storageUrl';
@@ -68,10 +69,7 @@ const LeafletRegionalMap: React.FC<RegionMapProps> = ({
       scrollWheelZoom={false}
       style={{ height: '100%', width: '100%' }}
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-      />
+        <BaseTiles />
 
       {missionaries.map((missionary) => (
         <Marker
