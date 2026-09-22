@@ -123,7 +123,8 @@ What to edit for next year:
 | --- | --- |
 | Dates, deadline, fee | `src/Registration/conference.ts` (also mirrored in `firestore.rules`) |
 | Schedule times | `SCHEDULE` in `src/Conference/conferenceContent.ts` |
-| Conference video | `CONFERENCE_VIDEO_ID` in `src/Conference/conferenceContent.ts` (currently the 2023 recap as a placeholder) |
+| Invitation video (per language) | `INVITATION_VIDEO` in `src/Conference/conferenceContent.ts` |
+| Past-conference photos and videos | `PAST_GALLERY` in the same file; see `docs/TODO-conference-photos.md` |
 | Wording, both languages | `src/Conference/conferenceI18n.ts` |
 | Artwork | Drop new files in `src/assets/MC <year>`, then re-export to `public/conferencia/` (see below) |
 
@@ -136,6 +137,20 @@ magick "src/assets/MC 2026/2.png" -resize 1200x -quality 80 public/conferencia/p
 # wheat texture: a text-free corner of the artwork
 magick "src/assets/MC 2026/4.png" -crop 1400x856+5500+2600 +repage -resize 1800x -quality 80 public/conferencia/wheat-texture.jpg
 ```
+
+The English invitation came from an iPhone as a 1.9 GB 4K/120 fps HDR (HLG) HEVC `.MOV`,
+which most browsers can't play and which washes out on normal screens. It was converted to a
+~50 MB 1080×1920 H.264 MP4, tone-mapped to regular color (the `.MOV` master stays out of git):
+
+```bash
+VF="zscale=w=1080:h=1920:t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p,fps=30"
+ffmpeg -i in.MOV -map 0:v:0 -vf "$VF" -c:v libx264 -preset slow -profile:v high -b:v 2500k -pass 1 -an -f mp4 /dev/null
+ffmpeg -i in.MOV -map 0:v:0 -map 0:a:0 -vf "$VF" -c:v libx264 -preset slow -profile:v high -b:v 2500k -pass 2 \
+  -c:a aac -b:a 128k -movflags +faststart public/conferencia/english-2026-invitation.mp4
+```
+
+For a landscape video swap `w=1080:h=1920` for `w=1920:h=1080`. Keep the result under 100 MB
+(GitHub's limit); `-b:v` controls the size.
 
 `globe-arc.png` is a white silhouette of the globe from the artwork, used through a CSS mask
 (`.conf-globe`) so it can be tinted gold, maroon or cream per section.

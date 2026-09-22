@@ -18,11 +18,16 @@ const es = {
   verse: 'Rogad, pues, al Señor de la mies, que envíe obreros a su mies.',
   verseRef: 'Mateo 9:38',
 
-  videoLabel: 'Un vistazo',
-  videoTitle: 'Así vivimos la conferencia',
-  videoBody: 'Un resumen de una de nuestras conferencias anteriores. Pronto publicaremos el video de este año.',
+  inviteLabel: 'Invitación 2026',
+  inviteTitle: 'Le invitamos',
+  inviteBody: 'Un mensaje de invitación para la conferencia de este año.',
   videoPlay: 'Reproducir el video',
-  videoOpen: 'Ver en YouTube',
+
+  galleryLabel: 'Conferencias anteriores',
+  galleryTitle: 'Así vivimos la conferencia',
+  galleryBody: 'Fotos y videos de años anteriores. Deslice para ver más.',
+  galleryPrev: 'Anterior',
+  galleryNext: 'Siguiente',
 
   scheduleLabel: 'Horario',
   scheduleTitle: 'Cuatro días en la mies',
@@ -86,11 +91,16 @@ const en: ConferenceStrings = {
   verse: 'Pray ye therefore the Lord of the harvest, that he will send forth labourers into his harvest.',
   verseRef: 'Matthew 9:38',
 
-  videoLabel: 'A glimpse',
-  videoTitle: 'What the conference is like',
-  videoBody: "A recap of one of our previous conferences. This year's video will be posted soon.",
+  inviteLabel: '2026 Invitation',
+  inviteTitle: "You're invited",
+  inviteBody: "A message inviting you to this year's conference.",
   videoPlay: 'Play the video',
-  videoOpen: 'Watch on YouTube',
+
+  galleryLabel: 'Past conferences',
+  galleryTitle: 'What the conference is like',
+  galleryBody: 'Photos and videos from previous years. Swipe to see more.',
+  galleryPrev: 'Previous',
+  galleryNext: 'Next',
 
   scheduleLabel: 'Schedule',
   scheduleTitle: 'Four days in the harvest',

@@ -2,13 +2,39 @@
 // The dates themselves live in src/Registration/conference.ts — this file only adds
 // what the landing page needs: the schedule, the video, and the artwork.
 
+import type { Lang } from '../Registration/i18n';
+
+/** A video is either on YouTube or a file we host ourselves in public/. */
+export type VideoSource =
+  | { kind: 'youtube'; id: string }
+  | { kind: 'file'; src: string; poster: string; portrait?: boolean };
+
 /**
- * YouTube video shown in the "video" section.
- * TODO: replace with the 2026 conference video once it exists. For now this is the
- * 2023 missions conference recap so the page has real content.
+ * The 2026 invitation. The Spanish one is on YouTube; the English one only exists as a
+ * phone video, so we host a web-encoded copy (see the README for the ffmpeg command).
  */
-export const CONFERENCE_VIDEO_ID = '3XOjWSD8qQ0';
-export const CONFERENCE_VIDEO_IS_PLACEHOLDER = true;
+export const INVITATION_VIDEO: Record<Lang, VideoSource> = {
+  es: { kind: 'youtube', id: 'hz0aW2ZHQ5Q' },
+  en: {
+    kind: 'file',
+    src: '/conferencia/english-2026-invitation.mp4',
+    poster: '/conferencia/english-invitation-poster.jpg',
+    portrait: true,
+  },
+};
+
+export type GallerySlide =
+  | { kind: 'youtube'; id: string; caption: Record<Lang, string> }
+  | { kind: 'image'; src: string; alt: Record<Lang, string>; caption?: Record<Lang, string> };
+
+/**
+ * "Conferencias anteriores" carousel: photos and videos from past conferences, in order.
+ * Put photos in public/conferencia/galeria/ (web-sized, ~1600px wide JPGs) and list them here.
+ * TODO(photos): we need more preaching photos — see docs/TODO-conference-photos.md.
+ */
+export const PAST_GALLERY: GallerySlide[] = [
+  { kind: 'youtube', id: '3XOjWSD8qQ0', caption: { es: 'Resumen de la conferencia 2023', en: '2023 conference recap' } },
+];
 
 /** Official 2026 artwork (from src/assets/MC 2026, resized into public/conferencia). */
 export const POSTER_SRC = '/conferencia/poster-2026.jpg';

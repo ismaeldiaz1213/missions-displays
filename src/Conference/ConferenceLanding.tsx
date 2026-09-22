@@ -9,8 +9,9 @@ import { LOCALES, useLang, type Lang } from '../Registration/i18n';
 import { daysUntilClose, isRegistrationOpen } from '../Registration/conference';
 import ScheduleBoard from './components/ScheduleBoard';
 import VideoBlock from './components/VideoBlock';
+import GalleryCarousel from './components/GalleryCarousel';
 import {
-  CHURCH_ADDRESS, CHURCH_SITE, GLOBE_ARC, POSTER_SRC, POSTER_SRC_SMALL, WHEAT_TEXTURE,
+  CHURCH_ADDRESS, CHURCH_SITE, GLOBE_ARC, INVITATION_VIDEO, PAST_GALLERY, POSTER_SRC, POSTER_SRC_SMALL, WHEAT_TEXTURE,
 } from './conferenceContent';
 import { CONFERENCE_PAGE_TITLES, CONFERENCE_STRINGS, type ConferenceStrings } from './conferenceI18n';
 import './conference.css';
@@ -227,14 +228,40 @@ const VerseBand: React.FC<{ t: ConferenceStrings }> = ({ t }) => (
   </Box>
 );
 
-const VideoSection: React.FC<{ t: ConferenceStrings }> = ({ t }) => (
-  <Box component="section" className="conf-texture" sx={{
-    position: 'relative', overflow: 'hidden', bgcolor: 'var(--ibl-primary-dark)',
-    '--conf-texture': `url(${WHEAT_TEXTURE})`, px: { xs: 2, md: 4 }, py: { xs: 7, md: 11 },
-  }}>
-    <Box sx={{ position: 'relative', maxWidth: 1000, mx: 'auto' }}>
-      <SectionHead eyebrow={t.videoLabel} title={t.videoTitle} body={t.videoBody} light />
-      <Reveal><VideoBlock t={t} /></Reveal>
+const darkBandSx = {
+  position: 'relative', overflow: 'hidden', bgcolor: 'var(--ibl-primary-dark)',
+  '--conf-texture': `url(${WHEAT_TEXTURE})`, px: { xs: 2, md: 4 }, py: { xs: 7, md: 11 },
+};
+
+/** This year's invitation video, in the visitor's language. */
+const InvitationSection: React.FC<{ t: ConferenceStrings; lang: Lang }> = ({ t, lang }) => {
+  const source = INVITATION_VIDEO[lang];
+  const portrait = source.kind === 'file' && source.portrait;
+  return (
+    <Box component="section" id="invitacion" className="conf-texture" sx={darkBandSx}>
+      <Box sx={{
+        position: 'relative', maxWidth: portrait ? 880 : 1000, mx: 'auto',
+        // A vertical phone video sits beside its heading on a desktop instead of below it
+        display: portrait ? { md: 'grid' } : 'block', gridTemplateColumns: { md: '1fr auto' },
+        alignItems: 'center', gap: { md: 6 },
+      }}>
+        <Box sx={{ '& > div': portrait ? { textAlign: { md: 'left' }, mx: { md: 0 }, mb: { md: 0 } } : {} }}>
+          <SectionHead eyebrow={t.inviteLabel} title={t.inviteTitle} body={t.inviteBody} light />
+        </Box>
+        <Reveal><VideoBlock source={source} title={t.inviteTitle} playLabel={t.videoPlay} /></Reveal>
+      </Box>
+    </Box>
+  );
+};
+
+/** Photos and videos from past conferences, as a swipeable strip. */
+const GallerySection: React.FC<{ t: ConferenceStrings; lang: Lang }> = ({ t, lang }) => (
+  <Box component="section" className="conf-texture" sx={darkBandSx}>
+    <Box sx={{ position: 'relative', maxWidth: 1240, mx: 'auto' }}>
+      <SectionHead eyebrow={t.galleryLabel} title={t.galleryTitle} body={PAST_GALLERY.length > 1 ? t.galleryBody : undefined} light />
+      <Reveal>
+        <GalleryCarousel slides={PAST_GALLERY} lang={lang} playLabel={t.videoPlay} prevLabel={t.galleryPrev} nextLabel={t.galleryNext} />
+      </Reveal>
     </Box>
   </Box>
 );
@@ -360,8 +387,9 @@ const ConferenceLanding: React.FC = () => {
     }}>
       <Hero t={t} lang={lang} onLang={changeLang} open={open} days={days} />
       <VerseBand t={t} />
-      <VideoSection t={t} />
+      <InvitationSection t={t} lang={lang} />
       <ScheduleSection t={t} locale={locale} />
+      <GallerySection t={t} lang={lang} />
       <InfoSection t={t} />
       <CtaSection t={t} lang={lang} open={open} days={days} />
       <Footer t={t} />
