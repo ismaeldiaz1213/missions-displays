@@ -2,7 +2,7 @@
 import { CATEGORY_LABELS, CONFERENCE_NAME, formatConferenceDay, isFreeCategory, type Category, type Registration } from '../../Registration/conference';
 import {
   REGISTRATION_COLUMNS, byArrival, childCount, formatArrival, formatDays, fullName,
-  homeChurchLabel, infantCount, money, peopleCount, summarize, travelDetails, travelMode,
+  homeChurchLabel, hotelFeeOf, infantCount, money, peopleCount, summarize, travelDetails, travelMode,
 } from './registrationData';
 
 // Reads a brand color from the --ibl-* CSS variables so exports follow the site palette.
@@ -232,7 +232,7 @@ export const exportRegistrationsPdf = async (regs: Registration[]) => {
       return [
         String(i + 1), fullName(r.registrant), CATEGORY_LABELS[r.category] ?? r.category, org,
         [r.registrant.phone, r.registrant.email].filter(Boolean).join('\n'),
-        family, formatDays(r.attendanceDays), arrival, isFreeCategory(r.category) ? 'Sin costo' : money(r.hotelFee ?? 0),
+        family, formatDays(r.attendanceDays), arrival, isFreeCategory(r.category) ? 'Sin costo' : money(hotelFeeOf(r)),
       ];
     }),
     columnStyles: {

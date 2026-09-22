@@ -26,7 +26,7 @@ import {
 } from '../../Registration/conference';
 import {
   childCount, formatArrival, formatDateShort, formatDays, formatSubmitted, fullName,
-  heardAboutLabel, homeChurchLabel, infantCount, lodgingLabel, money, peopleCount, summarize, travelDetails, travelMode,
+  heardAboutLabel, homeChurchLabel, hotelFeeOf, infantCount, lodgingLabel, money, peopleCount, summarize, travelDetails, travelMode,
 } from './registrationData';
 
 const REGISTRATION_PATH = '/conferencia/registro';
@@ -143,7 +143,7 @@ const RegistrationDetail: React.FC<{ r: Registration; onClose: () => void; fullS
         ['Personas', `${peopleCount(r)} (${r.bringingWife ? 2 : 1} adulto${r.bringingWife ? 's' : ''}, ${childCount(r)} niño${childCount(r) === 1 ? '' : 's'})`],
         ['Hospedaje', lodgingLabel(r)],
         ['Hotel estimado', isFreeCategory(r.category) ? `Sin costo (${CATEGORY_LABELS[r.category].toLowerCase()})`
-          : r.needsLodging === false ? 'Sin costo (alojamiento propio)' : money(r.hotelFee ?? 0)],
+          : r.needsLodging === false ? 'Sin costo (alojamiento propio)' : money(hotelFeeOf(r))],
       ]} />
       <DetailGroup title="Viaje" rows={[
         ['Llegada', travelMode(r)],
@@ -344,7 +344,7 @@ const RegistrationTable: React.FC = () => {
                   👥 {peopleCount(r)} · 🗓 {formatDays(r.attendanceDays)} · {travelMode(r)} · {formatArrival(r)}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
-                  <Typography sx={{ fontWeight: 700 }}>{isFreeCategory(r.category) ? 'Sin costo' : money(r.hotelFee ?? 0)}</Typography>
+                  <Typography sx={{ fontWeight: 700 }}>{isFreeCategory(r.category) ? 'Sin costo' : money(hotelFeeOf(r))}</Typography>
                   {r.travel.needsPickup && <PickupChip />}
                 </Box>
               </CardActionArea>
@@ -405,7 +405,7 @@ const RegistrationTable: React.FC = () => {
                     </Box>
                   </TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                    {isFreeCategory(r.category) ? <Typography sx={{ color: 'var(--ibl-success)', fontSize: '0.85rem' }}>Sin costo</Typography> : money(r.hotelFee ?? 0)}
+                    {isFreeCategory(r.category) ? <Typography sx={{ color: 'var(--ibl-success)', fontSize: '0.85rem' }}>Sin costo</Typography> : money(hotelFeeOf(r))}
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()} sx={{ whiteSpace: 'nowrap' }}>
                     <IconButton size="small" onClick={() => setViewing(r)} sx={{ color: 'var(--ibl-primary)' }}><VisibilityIcon fontSize="small" /></IconButton>

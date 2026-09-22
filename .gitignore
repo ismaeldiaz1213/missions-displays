@@ -35,3 +35,7 @@ firestore-debug.log
 # Conference artwork originals (~24 MB per PNG). The web-sized exports in
 # public/conferencia/ are committed instead; see the README for the export commands.
 src/assets/MC */
+
+# Raw video masters (GitHub rejects files over 100 MB). Commit the web-encoded MP4 instead.
+public/*.MOV
+public/*.mov

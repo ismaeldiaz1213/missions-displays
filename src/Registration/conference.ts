@@ -13,7 +13,7 @@ export const REGISTRATION_UTC_OFFSET = '-05:00';
 
 export const registrationClosesAt = () => new Date(`${REGISTRATION_LAST_DAY}T23:59:59.999${REGISTRATION_UTC_OFFSET}`);
 
-export const HOTEL_FEE_PER_DAY = 50;
+export const HOTEL_FEE_PER_DAY = 40;
 
 // Missionaries and evangelists can upload MP4 videos until the conference starts (Nov 2, 00:00 Central).
 export const MEDIA_UPLOADS_CLOSE_AT = '2026-11-02T00:00:00-06:00';
@@ -144,7 +144,7 @@ export interface Registration extends Omit<RegistrationInput, 'needsLodging'> {
 export const adultCount = (r: Pick<RegistrationInput, 'bringingWife'>) => (r.bringingWife ? 2 : 1);
 
 // Missionaries and evangelists (and their wives) don't pay, and neither does anyone who arranged
-// their own lodging. Everyone else: $50 per adult per day.
+// their own lodging. Everyone else: $40 per adult per day.
 export const calculateHotelFee = (r: {
   category: string; bringingWife: boolean; attendanceDays: readonly string[]; needsLodging: boolean;
 }) => (isFreeCategory(r.category) || !r.needsLodging ? 0 : HOTEL_FEE_PER_DAY * r.attendanceDays.length * adultCount(r));

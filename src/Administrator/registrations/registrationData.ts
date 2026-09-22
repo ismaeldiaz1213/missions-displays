@@ -1,5 +1,6 @@
 import {
   CATEGORY_LABELS,
+  calculateHotelFee,
   CONFERENCE_DAYS,
   HEARD_ABOUT_LABELS,
   TRANSPORT_LABELS,
@@ -61,6 +62,14 @@ export const formatSubmitted = (iso: string) => {
   return isNaN(d.getTime()) ? '' : d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
+/**
+ * Estimated hotel cost at the current rate. We recompute instead of trusting the stored
+ * hotelFee because the rate changed from $50 to $40 while registration was already open.
+ * Registrations saved before we asked about lodging were all quoted a room, so a missing
+ * needsLodging counts as "yes".
+ */
+export const hotelFeeOf = (r: Registration) => calculateHotelFee({ ...r, needsLodging: r.needsLodging ?? true });
+
 export const money = (n: number) => `$${n.toLocaleString('en-US')}`;
 
 export const byArrival = (a: Registration, b: Registration) =>
@@ -117,7 +126,7 @@ export const REGISTRATION_COLUMNS: Column[] = [
   { header: 'Notas de viaje', width: 30, value: (r) => r.travel.notes },
   { header: 'Cómo se enteró', width: 22, value: heardAboutLabel },
   { header: 'Comentarios', width: 34, value: (r) => r.specialNeeds },
-  { header: 'Hotel estimado', width: 13, value: (r) => r.hotelFee ?? 0, money: true },
+  { header: 'Hotel estimado', width: 13, value: hotelFeeOf, money: true },
 ];
 
 // ── Summary ──────────────────────────────────────────────────────────────────
@@ -139,7 +148,7 @@ export const summarize = (regs: Registration[]) => {
     lodgingUnknown: regs.filter((r) => r.needsLodging === undefined).length,
     pickups: regs.filter((r) => r.travel.needsPickup).length,
     rvs: regs.filter((r) => r.travel.arrivingByRV).length,
-    hotelTotal: regs.reduce((n, r) => n + (r.hotelFee ?? 0), 0),
+    hotelTotal: regs.reduce((n, r) => n + hotelFeeOf(r), 0),
     byCategory,
     byDay,
   };
