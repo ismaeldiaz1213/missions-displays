@@ -138,6 +138,7 @@ export const exportRegistrationsExcel = async (regs: Registration[]) => {
     ...(Object.keys(CATEGORY_LABELS) as Category[]).map((k) => [`Categoría: ${CATEGORY_LABELS[k]}`, s.byCategory[k]]),
     ...Object.entries(s.byDay).map(([d, n]) => [`Personas el ${formatConferenceDay(d, { weekday: 'long', day: 'numeric', month: 'long' })}`, n]),
     ['Necesitan hospedaje', s.lodging],
+    ['Habitaciones necesarias', s.roomsNeeded],
     ...(s.lodgingUnknown ? [['  sin respuesta (registro anterior)', s.lodgingUnknown]] : []),
     ['Necesitan que los recojan', s.pickups],
     ['Llegan en RV', s.rvs],
@@ -180,7 +181,7 @@ export const exportRegistrationsPdf = async (regs: Registration[]) => {
     ['Registros', String(s.registrations)],
     ['Personas', `${s.people}`],
     ['Adultos / Niños', `${s.adults} / ${s.children}`],
-    ['Hospedaje', String(s.lodging)],
+    ['Habitaciones', String(s.roomsNeeded)],
     ['Recoger', String(s.pickups)],
     ['Hotel estimado', money(s.hotelTotal)],
   ];

@@ -5,6 +5,7 @@ import {
   HOTEL_FEE_PER_DAY,
   adultCount,
   calculateHotelFee,
+  roomCount,
   formatConferenceDay,
   isFreeCategory,
   type Category,
@@ -14,7 +15,7 @@ export interface SummaryInput {
   category: Category | '';
   bringingWife: boolean;
   bringingChildren: boolean;
-  children: { count: number } | null;
+  children: { count: number; infants: number } | null;
   attendanceDays: string[];
   needsLodging: boolean | null;
 }
@@ -34,6 +35,7 @@ const RegistrationSummary: React.FC<{ form: SummaryInput; t: Strings; locale: st
   // Until they answer, show the full estimate rather than a $0 that could look final.
   const needsLodging = form.needsLodging !== false;
   const fee = calculateHotelFee({ ...form, needsLodging });
+  const rooms = roomCount(form);
 
   return (
     <Box sx={{
@@ -55,6 +57,7 @@ const RegistrationSummary: React.FC<{ form: SummaryInput; t: Strings; locale: st
           )}
         />
         <Row label={t.lodging} value={form.needsLodging === null ? '—' : form.needsLodging ? t.yes : t.no} />
+        {!isFree && needsLodging && <Row label={t.rooms} value={rooms} />}
         <Divider sx={{ my: 1.25, borderColor: 'var(--ibl-border)' }} />
         <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           {t.hotelEstimate}
@@ -70,8 +73,13 @@ const RegistrationSummary: React.FC<{ form: SummaryInput; t: Strings; locale: st
               ${fee.toLocaleString('en-US')}
             </Typography>
             <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.82rem' }}>
-              {needsLodging ? t.feeFormula(HOTEL_FEE_PER_DAY, days, adults) : t.noLodgingNote}
+              {needsLodging ? t.feeFormula(HOTEL_FEE_PER_DAY, days, rooms) : t.noLodgingNote}
             </Typography>
+            {needsLodging && (
+              <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.78rem', mt: 0.5 }}>
+                {t.roomNote}
+              </Typography>
+            )}
           </>
         )}
         <Box sx={{

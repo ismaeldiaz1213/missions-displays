@@ -101,6 +101,32 @@ The local site uses the real Firebase project — changes made in `/admin` local
 Dates, deadline, and hotel fee live in `src/Registration/conference.ts`. The deadline and fee are **also enforced** in `firestore.rules` / `storage.rules` — update both, then run `npm run deploy:rules`.
 
 
+## Hotel fee
+
+The fee is **per room per night**, not per person: `HOTEL_FEE_PER_DAY × nights × rooms`.
+A room sleeps `ROOM_CAPACITY` (4) — the registrant, his wife and up to two children — and
+infants under 2 don't count toward it, so a couple with two kids and a baby still needs one
+room. Missionaries, evangelists and anyone with their own lodging pay nothing. All of it lives
+in `calculateHotelFee` / `roomCount` in `src/Registration/conference.ts` and is mirrored in
+`firestore.rules`.
+
+The admin table, detail dialog and exports call `hotelFeeOf(r)`, which **recomputes** at today's
+rules rather than trusting the `hotelFee` stored on the document, so registrations saved under an
+older formula still show the right amount.
+
+```bash
+npm run test:rules              # fee rules against the Firestore emulator (20 cases)
+npm run test:rules:transition   # same, with the legacy amounts still allowed
+```
+
+**Changing the formula** means the rules and already-loaded pages disagree for a while, so:
+
+```bash
+npm run deploy:rules:transition   # 1. accept both the old and new amounts
+git push                          # 2. ship the new site
+npm run deploy:rules              # 3. a day later, back to strict
+```
+
 ## Maps
 
 Every Leaflet map renders `src/mapTiles.tsx`, which points at OpenStreetMap's own tiles.

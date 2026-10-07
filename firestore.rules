@@ -114,11 +114,18 @@ service cloud.firestore {
         && (t.needsPickup ? validPickup(t) : t.transport == '');
     }
 
-    // $40 per adult per day; free for missionaries, evangelists, and anyone with their own
-    // lodging. Must match HOTEL_FEE_PER_DAY / calculateHotelFee in src/Registration/conference.ts.
+    // A room sleeps four; infants under 2 share with their parents and don't count.
+    function occupants(d) {
+      return (d.bringingWife ? 2 : 1)
+        + (d.bringingChildren ? d.children.count - d.children.infants : 0);
+    }
+
+    // $40 per ROOM per day — a man and his wife share one room. Free for missionaries,
+    // evangelists, and anyone with their own lodging. Must match calculateHotelFee in
+    // src/Registration/conference.ts.
     function hotelFee(d, rate) {
       return d.category in ['missionary', 'evangelist'] || !d.needsLodging
-        ? 0 : rate * d.attendanceDays.size() * (d.bringingWife ? 2 : 1);
+        ? 0 : rate * d.attendanceDays.size() * int(math.ceil(occupants(d) / 4.0));
     }
 
     function validRegistration(d) {

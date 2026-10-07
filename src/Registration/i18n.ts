@@ -116,7 +116,7 @@ const es = {
 
   daysTitle: 'Días de asistencia',
   daysSubFree: 'Seleccione los días que estará presente.',
-  daysSub: (fee: number) => `Seleccione los días que necesitará hotel ($${fee} por persona, por día).`,
+  daysSub: (fee: number) => `Seleccione los días que necesitará hotel ($${fee} por habitación, por día).`,
 
   travelTitle: 'Viaje y llegada',
   travelSub: 'Nos ayuda a coordinar quién necesita que lo recojan.',
@@ -170,8 +170,10 @@ const es = {
   hotelEstimate: 'Hotel estimado',
   noCost: 'Sin costo',
   freeCategoryNote: 'Misioneros y evangelistas no pagan hotel.',
-  feeFormula: (fee: number, days: number, adults: number) =>
-    `$${fee} × ${plural(days, 'día', 'días')} × ${plural(adults, 'adulto', 'adultos')}`,
+  feeFormula: (fee: number, days: number, rooms: number) =>
+    `$${fee} × ${plural(days, 'día', 'días')} × ${plural(rooms, 'habitación', 'habitaciones')}`,
+  rooms: 'Habitaciones',
+  roomNote: 'Cada habitación es para hasta 4 personas. Los bebés menores de 2 años no cuentan.',
   notCharged: 'No se cobra nada ahora. Este registro es solo para planificación.',
 
   fixErrors: 'Revise los campos marcados en rojo.',
@@ -301,7 +303,7 @@ const en: Strings = {
 
   daysTitle: 'Attendance days',
   daysSubFree: 'Select the days you will attend.',
-  daysSub: (fee) => `Select the days you will need a hotel ($${fee} per person, per day).`,
+  daysSub: (fee) => `Select the days you will need a hotel ($${fee} per room, per day).`,
 
   travelTitle: 'Travel & arrival',
   travelSub: 'This helps us coordinate who needs to be picked up.',
@@ -355,7 +357,9 @@ const en: Strings = {
   hotelEstimate: 'Estimated hotel',
   noCost: 'No cost',
   freeCategoryNote: 'Missionaries and evangelists do not pay for the hotel.',
-  feeFormula: (fee, days, adults) => `$${fee} × ${plural(days, 'day', 'days')} × ${plural(adults, 'adult', 'adults')}`,
+  feeFormula: (fee, days, rooms) => `$${fee} × ${plural(days, 'day', 'days')} × ${plural(rooms, 'room', 'rooms')}`,
+  rooms: 'Rooms',
+  roomNote: 'Each room sleeps up to 4. Infants under 2 do not count.',
   notCharged: 'Nothing is charged now. This registration is for planning purposes only.',
 
   fixErrors: 'Please review the fields marked in red.',

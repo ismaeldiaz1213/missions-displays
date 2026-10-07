@@ -26,7 +26,7 @@ import {
 } from '../../Registration/conference';
 import {
   childCount, formatArrival, formatDateShort, formatDays, formatSubmitted, fullName,
-  heardAboutLabel, homeChurchLabel, hotelFeeOf, infantCount, lodgingLabel, money, peopleCount, summarize, travelDetails, travelMode,
+  heardAboutLabel, homeChurchLabel, hotelFeeOf, infantCount, lodgingLabel, money, peopleCount, roomsOf, summarize, travelDetails, travelMode,
 } from './registrationData';
 
 const REGISTRATION_PATH = '/conferencia/registro';
@@ -142,6 +142,7 @@ const RegistrationDetail: React.FC<{ r: Registration; onClose: () => void; fullS
         ['Días', r.attendanceDays.map((d) => formatConferenceDay(d, { weekday: 'long', day: 'numeric', month: 'long' })).join('\n')],
         ['Personas', `${peopleCount(r)} (${r.bringingWife ? 2 : 1} adulto${r.bringingWife ? 's' : ''}, ${childCount(r)} niño${childCount(r) === 1 ? '' : 's'})`],
         ['Hospedaje', lodgingLabel(r)],
+        ['Habitaciones', r.needsLodging === false ? '—' : `${roomsOf(r)} (hasta 4 personas por habitación)`],
         ['Hotel estimado', isFreeCategory(r.category) ? `Sin costo (${CATEGORY_LABELS[r.category].toLowerCase()})`
           : r.needsLodging === false ? 'Sin costo (alojamiento propio)' : money(hotelFeeOf(r))],
       ]} />
@@ -284,6 +285,7 @@ const RegistrationTable: React.FC = () => {
           hint={(Object.keys(CATEGORY_LABELS) as Category[]).filter((k) => stats.byCategory[k]).map((k) => `${stats.byCategory[k]} ${CATEGORY_LABELS[k].toLowerCase()}`).join(' · ') || undefined} />
         <Stat label="Personas" value={stats.people} hint={`${stats.adults} adultos · ${stats.children} niños${stats.infants ? ` (${stats.infants} bebés)` : ''}`} />
         <Stat label="Necesitan recogida" value={stats.pickups} hint={stats.rvs ? `${stats.rvs} llegan en RV` : undefined} />
+        <Stat label="Habitaciones" value={stats.roomsNeeded} hint="Hasta 4 personas por habitación" />
         <Stat label="Necesitan hospedaje" value={stats.lodging}
           hint={[
             stats.registrations - stats.lodging - stats.lodgingUnknown ? `${stats.registrations - stats.lodging - stats.lodgingUnknown} con alojamiento propio` : '',

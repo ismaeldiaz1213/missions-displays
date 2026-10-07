@@ -143,11 +143,26 @@ export interface Registration extends Omit<RegistrationInput, 'needsLodging'> {
 
 export const adultCount = (r: Pick<RegistrationInput, 'bringingWife'>) => (r.bringingWife ? 2 : 1);
 
-// Missionaries and evangelists (and their wives) don't pay, and neither does anyone who arranged
-// their own lodging. Everyone else: $40 per adult per day.
+/** A hotel room sleeps four: the registrant, their wife, and up to two children. */
+export const ROOM_CAPACITY = 4;
+
+/** Who takes up space in a room. Infants (under 2) share with their parents and don't count. */
+export const occupantCount = (r: {
+  bringingWife: boolean; bringingChildren: boolean; children?: { count: number; infants: number } | null;
+}) => adultCount(r) + (r.bringingChildren ? Math.max(0, (r.children?.count ?? 0) - (r.children?.infants ?? 0)) : 0);
+
+/** Rooms needed, rounded up — a family of five needs two rooms. Always at least one. */
+export const roomCount = (r: Parameters<typeof occupantCount>[0]) =>
+  Math.max(1, Math.ceil(occupantCount(r) / ROOM_CAPACITY));
+
+/**
+ * The fee is per ROOM per day, not per person: a man and his wife share one room.
+ * Missionaries and evangelists don't pay, and neither does anyone with their own lodging.
+ */
 export const calculateHotelFee = (r: {
-  category: string; bringingWife: boolean; attendanceDays: readonly string[]; needsLodging: boolean;
-}) => (isFreeCategory(r.category) || !r.needsLodging ? 0 : HOTEL_FEE_PER_DAY * r.attendanceDays.length * adultCount(r));
+  category: string; attendanceDays: readonly string[]; needsLodging: boolean;
+} & Parameters<typeof occupantCount>[0]) =>
+  (isFreeCategory(r.category) || !r.needsLodging ? 0 : HOTEL_FEE_PER_DAY * r.attendanceDays.length * roomCount(r));
 
 export const formatConferenceDay = (
   iso: string,

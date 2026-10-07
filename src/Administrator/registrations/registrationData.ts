@@ -1,6 +1,7 @@
 import {
   CATEGORY_LABELS,
   calculateHotelFee,
+  roomCount,
   CONFERENCE_DAYS,
   HEARD_ABOUT_LABELS,
   TRANSPORT_LABELS,
@@ -69,6 +70,9 @@ export const formatSubmitted = (iso: string) => {
  * needsLodging counts as "yes".
  */
 export const hotelFeeOf = (r: Registration) => calculateHotelFee({ ...r, needsLodging: r.needsLodging ?? true });
+
+/** Rooms this family needs — what the fee is actually based on. */
+export const roomsOf = (r: Registration) => roomCount(r);
 
 export const money = (n: number) => `$${n.toLocaleString('en-US')}`;
 
@@ -145,6 +149,7 @@ export const summarize = (regs: Registration[]) => {
     infants: regs.reduce((n, r) => n + infantCount(r), 0),
     people: regs.reduce((n, r) => n + peopleCount(r), 0),
     lodging: regs.filter((r) => r.needsLodging === true).length,
+    roomsNeeded: regs.filter((r) => r.needsLodging !== false).reduce((n, r) => n + roomsOf(r), 0),
     lodgingUnknown: regs.filter((r) => r.needsLodging === undefined).length,
     pickups: regs.filter((r) => r.travel.needsPickup).length,
     rvs: regs.filter((r) => r.travel.arrivingByRV).length,
