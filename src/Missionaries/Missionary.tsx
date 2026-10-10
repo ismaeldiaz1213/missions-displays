@@ -1,41 +1,46 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Button, CircularProgress, Typography, Chip, IconButton } from '@mui/material';
+import { Box, Button, ButtonBase, CircularProgress, Typography } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import PublicIcon from '@mui/icons-material/Public';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import PhotoLibraryOutlinedIcon from '@mui/icons-material/PhotoLibraryOutlined';
 import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ContactMailOutlinedIcon from '@mui/icons-material/ContactMailOutlined';
-import { MapContainer, Marker } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import BaseTiles from '../mapTiles';
-import QrCard from './components/QrCard';
-import { pdfjs, Document, Page } from 'react-pdf';
-import 'react-pdf/dist/Page/AnnotationLayer.css';
-import 'react-pdf/dist/Page/TextLayer.css';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
+import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
+import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
+import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
+import TravelExploreIcon from '@mui/icons-material/TravelExplore';
+import { QRCodeSVG } from 'qrcode.react';
 import type { Missionary as MissionaryType } from '../types';
 import ContactDialog from './components/ContactDialog';
 import MissionaryLocalInfo from './components/MissionaryLocalInfo';
 import ImageLightbox from './components/ImageLightbox';
-import returnToMap from '../assets/backToMapButton.png';
+import VideoPlayer from './components/VideoPlayer';
+import LocationGlobe from './components/LocationGlobe';
 import iblLogo from '../assets/ibl_logo.png';
 import { isVideoPath, resolveUrl } from '../storageUrl';
 import { getMissionary } from '../data/missionaries';
+import { useCachedLoad } from '../data/useCachedLoad';
+import { publicUrlFor } from '../siteUrl';
+import { HOUSTON_LAT, HOUSTON_LON, distanceKm } from '../constants';
+import './missionaryStyle.css';
+import KioskRail from '../ui/KioskRail';
+import { cardSx } from '../ui/brand';
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url,
-).toString();
+const PrayerLetterDialog = lazy(() => import('./components/PrayerLetterDialog'));
 
-const CONTINENT_ROUTES: Record<string, string> = {
-  'north-america': '/norte-america',
-  'central-america': '/centro-america',
-  'south-america': '/sur-america',
-  'europe': '/europa',
-  'africa': '/africa',
-  'asia': '/asia',
-  'oceania': '/oceania',
+const CONTINENTS: Record<string, { route: string; name: string }> = {
+  'north-america': { route: '/norte-america', name: 'Norte América' },
+  'central-america': { route: '/centro-america', name: 'Centro América' },
+  'south-america': { route: '/sur-america', name: 'Sur América' },
+  'europe': { route: '/europa', name: 'Europa' },
+  'africa': { route: '/africa', name: 'África' },
+  'asia': { route: '/asia', name: 'Asia' },
+  'oceania': { route: '/oceania', name: 'Oceanía' },
 };
 
 const DEFAULTS: MissionaryType = {
@@ -43,8 +48,6 @@ const DEFAULTS: MissionaryType = {
   location: { city: '', country: '', latitude: 0, longitude: 0 },
   description: '', media: [], contactInfo: [], missionType: '',
 };
-
-type Section = 'about' | 'carta';
 
 const formatStartDate = (date: string): string => {
   if (/^\d{4}$/.test(date)) return date;
@@ -58,505 +61,401 @@ const formatStartDate = (date: string): string => {
   return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
 };
 
+const scrollToId = (id: string) => {
+  if (id === 'top') window.scrollTo({ top: 0, behavior: 'smooth' });
+  else document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+/** Which section is on screen, for the rail's highlight. */
+const useActiveSection = (ids: string[]) => {
+  const [active, setActive] = useState(ids[0]);
+  const key = ids.join(',');
+  useEffect(() => {
+    const visible = new Map<string, boolean>();
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((e) => visible.set(e.target.id, e.isIntersecting));
+      const first = ids.find((id) => visible.get(id));
+      if (first) setActive(first);
+    }, { rootMargin: '-35% 0px -55% 0px' });
+    ids.forEach((id) => { const el = document.getElementById(id); if (el) observer.observe(el); });
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return active;
+};
+
+const SectionTitle: React.FC<{ children: React.ReactNode; count?: number }> = ({ children, count }) => (
+  <Typography component="h2" sx={{ color: '#0F172A', fontWeight: 800, fontSize: { xs: '1.35rem', md: '1.6rem' }, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+    {children}
+    {count !== undefined && (
+      <Box component="span" sx={{ fontSize: '0.9rem', fontWeight: 800, color: '#2563EB', bgcolor: '#DBEAFE', px: 1.2, py: 0.3, borderRadius: '999px' }}>
+        {count}
+      </Box>
+    )}
+  </Typography>
+);
+
+const HeroPill: React.FC<{ icon: React.ReactNode; children: React.ReactNode }> = ({ icon, children }) => (
+  <Box sx={{
+    display: 'inline-flex', alignItems: 'center', gap: 0.75, px: 1.5, py: 0.75, borderRadius: '999px',
+    bgcolor: 'rgba(255,255,255,0.85)', border: '1px solid #DBEAFE',
+    color: '#1E3A8A', fontWeight: 600, fontSize: { xs: '0.85rem', md: '0.95rem' },
+    boxShadow: '0 2px 8px rgba(30,58,138,0.06)',
+    '& svg': { fontSize: '1.1rem', color: '#2563EB' },
+  }}>
+    {icon}{children}
+  </Box>
+);
+
+interface Action { key: string; label: string; railLabel: string; icon: React.ReactNode; onClick: () => void; section?: string }
+
 const Missionary: React.FC = () => {
   const { missionary: missionaryId } = useParams<{ missionary: string }>();
   const navigate = useNavigate();
-  const photosRef = useRef<HTMLDivElement>(null);
 
-  const [missionaryData, setMissionaryData] = useState<MissionaryType>(DEFAULTS);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [activeSection, setActiveSection] = useState<Section>('about');
+  // Saved copy first (instant on slow Wi-Fi), then refreshed from the network
+  const { data, loading, error } = useCachedLoad(missionaryId ? `missionary:${missionaryId}` : null, () => getMissionary(missionaryId!));
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
-  const [numPages, setNumPages] = useState(0);
-  const [pageNumber, setPageNumber] = useState(1);
+  const [letterOpen, setLetterOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [resolvedProfileImage, setResolvedProfileImage] = useState('/default-missionary.svg');
-  const [resolvedMediaUrls, setResolvedMediaUrls] = useState<string[]>([]);
-  const [resolvedVideoUrls, setResolvedVideoUrls] = useState<string[]>([]);
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [profileUrl, setProfileUrl] = useState('');
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
+
+  const m: MissionaryType = { ...DEFAULTS, ...data };
 
   useEffect(() => {
-    if (!missionaryId) { setLoading(false); return; }
-    const fetchMissionary = async () => {
-      try {
-        const data = await getMissionary(missionaryId);
-        if (!data) throw new Error('Misionero no encontrado');
-        setMissionaryData({ ...DEFAULTS, ...data });
-      } catch (err) {
-        setError(String(err));
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchMissionary();
-  }, [missionaryId]);
+    resolveUrl(m.profileImage, '').then(setProfileUrl);
+  }, [m.profileImage]);
 
-  // Resolve profile image
   useEffect(() => {
-    resolveUrl(missionaryData.profileImage, '/default-missionary.svg').then(setResolvedProfileImage);
-  }, [missionaryData.profileImage]);
+    Promise.all(m.media.filter((item) => !isVideoPath(item.url)).map((item) => resolveUrl(item.url, '')))
+      .then((urls) => setPhotoUrls(urls.filter(Boolean)));
+  }, [m.media]);
 
-  // Resolve all media photos
   useEffect(() => {
-    const resolveAll = (items: MissionaryType['media']) =>
-      Promise.all(items.map((item) => resolveUrl(item.url, ''))).then((urls) => urls.filter(Boolean));
-    resolveAll(missionaryData.media.filter((item) => !isVideoPath(item.url))).then(setResolvedMediaUrls);
-    resolveAll(missionaryData.media.filter((item) => isVideoPath(item.url))).then(setResolvedVideoUrls);
-  }, [missionaryData.media]);
+    resolveUrl(m.prayerLetter, '').then((url) => setPdfUrl(url || null));
+  }, [m.prayerLetter]);
 
-  // Resolve prayer letter URL (S3 key → signed URL, or use directly if already a full URL)
-  useEffect(() => {
-    resolveUrl(missionaryData.prayerLetter, '').then((url) => setPdfUrl(url || null));
-  }, [missionaryData.prayerLetter]);
-
-  const scrollToPhotos = () => {
-    setActiveSection('about');
-    setTimeout(() => photosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
-  };
-
-  const m = missionaryData;
   const displayName = [m.name, m.lastName].filter(Boolean).join(' ');
-  const hasPhotos = resolvedMediaUrls.length > 0;
-  const hasVideos = resolvedVideoUrls.length > 0;
-  const hasMedia = hasPhotos || hasVideos;
-  const mediaLabel = hasPhotos && hasVideos ? 'Fotos y Videos' : hasVideos ? 'Videos' : 'Fotos';
-  const hasPrayerLetter = !!pdfUrl;
+  const videos = m.media.filter((item) => isVideoPath(item.url));
+  const hasPhotos = photoUrls.length > 0;
+  const hasVideos = videos.length > 0;
   const hasContactInfo = m.contactInfo.length > 0;
+  const hasAbout = !!(m.description || m.specialNotes);
   const locationText = [m.location?.city, m.location?.state, m.location?.country].filter(Boolean).join(', ');
-  const continentRoute = m.continent ? (CONTINENT_ROUTES[m.continent] ?? null) : null;
+  const hasCoords = !!m.location && m.location.latitude !== 0 && m.location.longitude !== 0;
+  const continent = m.continent ? CONTINENTS[m.continent] : undefined;
+  const kmFromHouston = hasCoords ? distanceKm(HOUSTON_LAT, HOUSTON_LON, m.location.latitude, m.location.longitude) : 0;
 
-  if (loading) {
+  const actions: Action[] = [
+    ...(hasVideos ? [{ key: 'videos', section: 'videos', label: videos.length > 1 ? 'Ver videos' : 'Ver video', railLabel: videos.length > 1 ? 'Videos' : 'Video', icon: <PlayCircleOutlineIcon />, onClick: () => scrollToId('videos') }] : []),
+    ...(hasPhotos ? [{ key: 'fotos', section: 'fotos', label: `Fotos (${photoUrls.length})`, railLabel: 'Fotos', icon: <PhotoLibraryOutlinedIcon />, onClick: () => scrollToId('fotos') }] : []),
+    ...(pdfUrl ? [{ key: 'carta', label: 'Carta de oración', railLabel: 'Carta de\noración', icon: <ArticleOutlinedIcon />, onClick: () => setLetterOpen(true) }] : []),
+    ...(hasContactInfo ? [{ key: 'contacto', label: 'Contactar', railLabel: 'Contactar', icon: <ContactMailOutlinedIcon />, onClick: () => setContactDialogOpen(true) }] : []),
+  ];
+  const railItems: Action[] = [
+    { key: 'top', section: 'top', label: 'Inicio', railLabel: hasAbout ? 'Sobre\nellos' : 'Inicio', icon: <InfoOutlinedIcon />, onClick: () => scrollToId('top') },
+    ...actions.slice(0, hasVideos && hasPhotos ? 2 : hasVideos || hasPhotos ? 1 : 0),
+    ...(hasCoords ? [{ key: 'ubicacion', section: 'ubicacion', label: 'Dónde sirven', railLabel: 'Dónde\nsirven', icon: <TravelExploreIcon />, onClick: () => scrollToId('ubicacion') }] : []),
+    ...actions.slice(hasVideos && hasPhotos ? 2 : hasVideos || hasPhotos ? 1 : 0),
+  ];
+  const activeSection = useActiveSection(railItems.filter((r) => r.section).map((r) => r.section!));
+
+  if (loading && !data) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: '#F0F4F8' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: '#F4F7FB' }}>
         <CircularProgress sx={{ color: '#2563EB' }} />
       </Box>
     );
   }
 
-  if (error) {
+  if (!data) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: '#F0F4F8', gap: 2 }}>
-        <Typography color="error">{error}</Typography>
-        <Button variant="contained" onClick={() => navigate(-1)}
-          sx={{ background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)', color: 'white' }}>
-          Volver
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: '#F4F7FB', gap: 2, px: 3, textAlign: 'center' }}>
+        <Typography sx={{ color: '#334155', fontWeight: 700, fontSize: '1.2rem' }}>
+          {error ? 'No pudimos cargar esta página. Revise la conexión a internet.' : 'Misionero no encontrado'}
+        </Typography>
+        <Button variant="contained" size="large" startIcon={<PublicIcon />} onClick={() => navigate('/region-selection')}
+          sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '999px', px: 3, bgcolor: '#1E3A8A' }}>
+          Volver al mapa
         </Button>
       </Box>
     );
   }
 
+  const goBack = () => navigate(continent?.route ?? '/region-selection');
+
   return (
-    <Box sx={{ minHeight: '100vh', width: '100%', background: 'linear-gradient(180deg, #F0F4F8 0%, #E8F1FC 100%)', display: 'flex', flexDirection: 'column' }}>
+    <Box id="top" sx={{ minHeight: '100vh', width: '100%', bgcolor: '#F4F7FB', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Scan to keep reading on your phone (desktop/kiosk only) */}
-      <QrCard pathname={`/misionero/${m.id}`} label="Escanee para ver esta página en su teléfono" />
-
-      {/* ── STICKY NAVBAR ─────────────────────────────────────────────────── */}
+      {/* ── MOBILE TOP BAR (the kiosk uses the side rail instead) ────────── */}
       <Box component="nav" sx={{
-        position: 'sticky', top: 0, zIndex: 1000,
-        background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 60%, #1D4ED8 100%)',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), 0 4px 24px rgba(30,58,138,0.45)',
-        px: { xs: 2, md: 4 },
-        py: { xs: 1, md: 1.25 },
-        display: 'flex',
-        flexDirection: { xs: 'column', md: 'row' },
-        alignItems: { xs: 'stretch', md: 'center' },
-        gap: { xs: 0.75, md: 3 },
+        position: 'sticky', top: 0, zIndex: 1000, display: { xs: 'flex', md: 'none' },
+        bgcolor: 'rgba(255,255,255,0.9)', backdropFilter: 'saturate(180%) blur(14px)',
+        borderBottom: '1px solid rgba(15,23,42,0.08)', px: 1.5, py: 1, alignItems: 'center', gap: 1,
       }}>
-        {/* Identity row — always */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, md: 3 }, flex: { md: 1 }, minWidth: 0 }}>
-          <Box
-            component="img"
-            src={resolvedProfileImage}
-            alt={displayName}
-            onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.src = '/default-missionary.svg'; }}
-            sx={{
-              width: { xs: 42, md: 52 }, height: { xs: 42, md: 52 },
-              borderRadius: '50%', objectFit: 'cover', flexShrink: 0,
-              border: '2.5px solid rgba(255,255,255,0.45)',
-              boxShadow: '0 2px 12px rgba(0,0,0,0.25)',
-            }}
-          />
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: { xs: '1rem', md: '1.2rem' }, lineHeight: 1.2, textShadow: '0 1px 3px rgba(0,0,0,0.2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {displayName || 'Misionero'}
-            </Typography>
+        <Button onClick={goBack} startIcon={<ArrowBackIcon />} sx={{
+          textTransform: 'none', fontWeight: 700, color: '#1E3A8A', bgcolor: '#EFF6FF', borderRadius: '999px', px: 1.75, py: 1,
+        }}>
+          {continent ? continent.name : 'Volver'}
+        </Button>
+        <Box sx={{ flex: 1 }} />
+        <Button onClick={() => navigate('/region-selection')} startIcon={<PublicIcon />} sx={{
+          textTransform: 'none', fontWeight: 700, color: '#fff', bgcolor: '#1E3A8A', borderRadius: '999px', px: 1.75, py: 1,
+          '&:hover': { bgcolor: '#2563EB' },
+        }}>
+          Mapa
+        </Button>
+      </Box>
+
+      {/* ── HERO ────────────────────────────────────────────────────────── */}
+      <Box component="header" sx={{ position: 'relative', overflow: 'hidden', bgcolor: '#EFF6FF' }}>
+        {profileUrl && (
+          <Box component="img" src={profileUrl} alt="" aria-hidden sx={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
+            filter: 'blur(48px) saturate(1.3)', transform: 'scale(1.2)', opacity: 0.55,
+          }} />
+        )}
+        <Box sx={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(100deg, rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.82) 45%, rgba(239,246,255,0.55) 100%)',
+        }} />
+
+        <Box sx={{
+          position: 'relative', maxWidth: 1240, mx: 'auto', px: { xs: 2, md: 4 }, pr: { md: '150px', xl: 4 }, py: { xs: 3, md: 6 },
+          display: 'grid', gap: { xs: 3, md: 5 }, alignItems: 'center',
+          gridTemplateColumns: { xs: '1fr', md: profileUrl ? 'minmax(0, 1fr) minmax(0, 1.05fr)' : '1fr' },
+        }}>
+          {/* Family photo — tap to see it full screen */}
+          {profileUrl && (
+            <ButtonBase
+              onClick={() => setLightbox({ images: [profileUrl], index: 0 })}
+              aria-label="Ver la foto en grande"
+              sx={{
+                order: { xs: 0, md: 2 }, position: 'relative', justifySelf: 'center', borderRadius: '22px', overflow: 'hidden',
+                boxShadow: '0 24px 60px rgba(30,58,138,0.25)', border: '5px solid #fff',
+                '&:hover img': { transform: 'scale(1.03)' },
+              }}
+            >
+              <Box component="img" src={profileUrl} alt={displayName}
+                onError={() => setProfileUrl('')}
+                sx={{
+                  display: 'block', maxWidth: '100%', maxHeight: { xs: 300, md: 440 }, width: 'auto', height: 'auto',
+                  transition: 'transform 0.4s ease',
+                }} />
+              <Box sx={{
+                position: 'absolute', right: 12, bottom: 12, display: 'flex', alignItems: 'center', gap: 0.75,
+                px: 1.75, py: 0.9, borderRadius: '999px', bgcolor: 'rgba(255,255,255,0.95)', color: '#1E3A8A',
+                fontSize: '0.95rem', fontWeight: 800, boxShadow: '0 4px 14px rgba(15,23,42,0.2)',
+              }}>
+                <OpenInFullIcon sx={{ fontSize: '1.05rem' }} /> Ver foto
+              </Box>
+            </ButtonBase>
+          )}
+
+          <Box sx={{ order: 1, textAlign: { xs: 'center', md: profileUrl ? 'left' : 'center' } }}>
             {m.missionType && (
-              <Typography sx={{ color: 'rgba(255,255,255,0.72)', fontSize: { xs: '0.78rem', md: '0.85rem' }, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <Typography sx={{ color: '#B45309', fontWeight: 800, fontSize: { xs: '0.8rem', md: '0.9rem' }, letterSpacing: '0.14em', textTransform: 'uppercase', mb: 1 }}>
                 {m.missionType}
               </Typography>
             )}
-          </Box>
+            <Typography component="h1" sx={{
+              color: '#0F1E46', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.02em',
+              fontSize: { xs: '2.1rem', sm: '2.6rem', md: '3.4rem' },
+            }}>
+              {displayName || 'Misionero'}
+            </Typography>
 
-          {/* Back to continent — mobile top-right */}
-          {continentRoute && (
-            <IconButton
-              onClick={() => navigate(continentRoute)}
-              sx={{
-                display: { xs: 'inline-flex', md: 'none' },
-                color: '#fff', bgcolor: 'rgba(255,255,255,0.12)', flexShrink: 0,
-                '&:hover': { bgcolor: 'rgba(255,255,255,0.22)' },
-                '&:active': { bgcolor: 'rgba(255,255,255,0.32)' },
-              }}
-            >
-              <ArrowBackIcon />
-            </IconButton>
-          )}
-        </Box>
-
-        {/* Mobile tab row — hidden on desktop */}
-        <Box sx={{ position: 'relative', display: { xs: 'block', md: 'none' } }}>
-          <Box sx={{
-            position: 'absolute', right: 0, top: 0, bottom: 0, width: 32, zIndex: 1,
-            pointerEvents: 'none',
-            background: 'linear-gradient(to right, transparent, rgba(30,58,138,0.72))',
-            borderRadius: '0 8px 8px 0',
-          }} />
-          <Box sx={{
-            display: 'flex', alignItems: 'center', gap: 0.25,
-            overflowX: 'auto', bgcolor: 'rgba(0,0,0,0.18)', borderRadius: '8px',
-            px: 0.5, py: 0.25,
-            '&::-webkit-scrollbar': { display: 'none' },
-            msOverflowStyle: 'none', scrollbarWidth: 'none',
-          }}>
-            {([
-              { label: 'Sobre el Misionero', icon: <InfoOutlinedIcon sx={{ fontSize: '1rem' }} />, active: activeSection === 'about', onClick: () => setActiveSection('about') },
-              ...(hasMedia ? [{ label: mediaLabel, icon: <PhotoLibraryOutlinedIcon sx={{ fontSize: '1rem' }} />, active: false, onClick: scrollToPhotos }] : []),
-              ...(hasPrayerLetter ? [{ label: 'Carta de Oración', icon: <ArticleOutlinedIcon sx={{ fontSize: '1rem' }} />, active: activeSection === 'carta', onClick: () => { setActiveSection('carta'); setPageNumber(1); } }] : []),
-              ...(hasContactInfo ? [{ label: 'Contactar', icon: <ContactMailOutlinedIcon sx={{ fontSize: '1rem' }} />, active: false, onClick: () => setContactDialogOpen(true) }] : []),
-            ] as { label: string; icon: React.ReactNode; active: boolean; onClick: () => void }[]).map((tab, i) => (
-              <Box
-                key={i}
-                component="button"
-                onClick={tab.onClick}
-                sx={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 0.6, flexShrink: 0,
-                  color: tab.active ? '#fff' : 'rgba(255,255,255,0.65)',
-                  fontWeight: tab.active ? 700 : 500, fontSize: '0.88rem',
-                  px: 1.25, py: 0.75, borderRadius: '6px',
-                  borderBottom: tab.active ? '2px solid #fff' : '2px solid transparent',
-                  transition: 'all 0.2s ease', whiteSpace: 'nowrap',
-                  '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.1)' },
-                }}
-              >
-                {tab.icon}
-                {tab.label}
+            {(locationText || m.organization || m.startDate) && (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2.5, justifyContent: { xs: 'center', md: profileUrl ? 'flex-start' : 'center' } }}>
+                {locationText && <HeroPill icon={<PlaceOutlinedIcon />}>{locationText}</HeroPill>}
+                {m.organization && <HeroPill icon={<ApartmentOutlinedIcon />}>{m.organization}</HeroPill>}
+                {m.startDate && <HeroPill icon={<EventOutlinedIcon />}>Sirviendo desde {formatStartDate(m.startDate)}</HeroPill>}
               </Box>
-            ))}
+            )}
+
+            {actions.length > 0 && (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25, mt: { xs: 3, md: 4 }, justifyContent: { xs: 'center', md: profileUrl ? 'flex-start' : 'center' } }}>
+                {actions.map((a, i) => (
+                  <Button key={a.key} onClick={a.onClick} startIcon={a.icon} sx={{
+                    textTransform: 'none', fontWeight: 800, fontSize: { xs: '0.95rem', md: '1.05rem' },
+                    borderRadius: '999px', px: { xs: 2.25, md: 3 }, py: { xs: 1.1, md: 1.4 },
+                    ...(i === 0
+                      ? { bgcolor: '#2563EB', color: '#fff', boxShadow: '0 8px 22px rgba(37,99,235,0.35)', '&:hover': { bgcolor: '#1D4ED8' } }
+                      : { color: '#1E3A8A', bgcolor: '#fff', border: '1.5px solid #BFDBFE', '&:hover': { bgcolor: '#EFF6FF', borderColor: '#2563EB' } }),
+                  }}>
+                    {a.label}
+                  </Button>
+                ))}
+              </Box>
+            )}
           </Box>
         </Box>
       </Box>
 
-      {/* ── ABOUT SECTION ─────────────────────────────────────────────────── */}
-      {activeSection === 'about' && (
-        <Box sx={{ flex: 1, maxWidth: 920, mx: 'auto', width: '100%', pl: { xs: 2, md: 3 }, pr: { xs: 2, md: '134px' }, py: { xs: 2.5, md: 4 } }}>
-
-          {/* Info chips row */}
-          {(locationText || m.organization || m.startDate) && (
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 4, justifyContent: 'center' }}>
-              {locationText && (
-                <Chip
-                  label={`📍 ${locationText}`}
-                  sx={{ bgcolor: '#fff', border: '1.5px solid rgba(37,99,235,0.2)', color: '#1E3A8A', fontWeight: 600, fontSize: { xs: '0.9rem', md: '0.95rem' }, height: 40, px: 0.5, boxShadow: '0 2px 10px rgba(30,58,138,0.12)' }}
-                />
+      {/* ── CONTENT ─────────────────────────────────────────────────────── */}
+      <Box sx={{
+        flex: 1, width: '100%', maxWidth: 1240, mx: 'auto', px: { xs: 2, md: 4 }, pr: { md: '150px', xl: 4 }, py: { xs: 3, md: 5 },
+        display: 'grid', gap: { xs: 3, md: 4 }, alignItems: 'start',
+        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 340px', lg: 'minmax(0, 1fr) 360px' },
+        '& [id]': { scrollMarginTop: { xs: '84px', md: '24px' } },
+      }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 3, md: 4 }, minWidth: 0 }}>
+          {hasAbout && (
+            <Box id="sobre" sx={cardSx}>
+              {m.description && (
+                <>
+                  <SectionTitle>Sobre nosotros</SectionTitle>
+                  <Typography sx={{ color: '#334155', fontSize: { xs: '1.05rem', md: '1.15rem' }, lineHeight: 1.8, whiteSpace: 'pre-line' }}>
+                    {m.description}
+                  </Typography>
+                </>
               )}
-              {m.organization && (
-                <Chip
-                  label={`🏛 ${m.organization}`}
-                  sx={{ bgcolor: '#fff', border: '1.5px solid rgba(37,99,235,0.2)', color: '#1E3A8A', fontWeight: 600, fontSize: { xs: '0.9rem', md: '0.95rem' }, height: 40, px: 0.5, boxShadow: '0 2px 10px rgba(30,58,138,0.12)' }}
-                />
-              )}
-              {m.startDate && (
-                <Chip
-                  label={`📅 Sirviendo desde ${formatStartDate(m.startDate)}`}
-                  sx={{ bgcolor: '#fff', border: '1.5px solid rgba(37,99,235,0.2)', color: '#1E3A8A', fontWeight: 600, fontSize: { xs: '0.9rem', md: '0.95rem' }, height: 40, px: 0.5, boxShadow: '0 2px 10px rgba(30,58,138,0.12)' }}
-                />
-              )}
-            </Box>
-          )}
-
-          {/* Description */}
-          {m.description && (
-            <Box sx={{ mb: 3 }}>
-              <Typography sx={{ color: '#1E3A8A', fontWeight: 800, fontSize: '1.2rem', mb: 1.25 }}>
-                Descripción
-              </Typography>
-              <Box sx={{
-                bgcolor: '#fff', borderRadius: '16px', p: 3.5,
-                borderLeft: '5px solid #2563EB',
-                boxShadow: '0 4px 24px rgba(30,58,138,0.08)',
-              }}>
-                <Typography sx={{ color: '#374151', fontSize: '1.05rem', lineHeight: 1.8, fontWeight: 400 }}>
-                  {m.description}
-                </Typography>
-              </Box>
-            </Box>
-          )}
-
-          {/* Special notes */}
-          {m.specialNotes && (
-            <Box sx={{
-              bgcolor: 'rgba(37,99,235,0.06)', borderRadius: '12px', p: 2.5, mb: 3,
-              border: '1px solid rgba(37,99,235,0.15)',
-            }}>
-              <Typography sx={{ color: '#1E3A8A', fontWeight: 700, fontSize: '0.85rem', mb: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Notas
-              </Typography>
-              <Typography sx={{ color: '#374151', fontSize: '0.95rem', lineHeight: 1.7 }}>
-                {m.specialNotes}
-              </Typography>
-            </Box>
-          )}
-
-          {/* Location map */}
-          {m.location?.latitude !== 0 && m.location?.longitude !== 0 && (
-            <Box sx={{ mb: 4 }}>
-              <Typography sx={{ color: '#1E3A8A', fontWeight: 800, fontSize: '1.2rem', mb: 1.25 }}>
-                Ubicación
-              </Typography>
-              <Box sx={{
-                borderRadius: '16px', overflow: 'hidden', height: 280,
-                boxShadow: '0 4px 24px rgba(30,58,138,0.12)',
-                border: '2px solid rgba(37,99,235,0.1)',
-              }}>
-                <MapContainer
-                  center={[m.location.latitude, m.location.longitude]}
-                  zoom={5}
-                  scrollWheelZoom={false}
-                  zoomControl={true}
-                  style={{ height: '100%', width: '100%' }}
-                >
-                  <BaseTiles />
-                  <Marker
-                    position={[m.location.latitude, m.location.longitude]}
-                    icon={L.divIcon({
-                      className: '',
-                      html: `<div style="width:18px;height:18px;border-radius:50%;background:#2563EB;border:3px solid #fff;box-shadow:0 2px 10px rgba(30,58,138,0.5);"></div>`,
-                      iconSize: [18, 18],
-                      iconAnchor: [9, 9],
-                    })}
-                  />
-                </MapContainer>
-              </Box>
-            </Box>
-          )}
-
-          {/* Local time & weather */}
-          {m.location?.latitude !== 0 && m.location?.longitude !== 0 && (
-            <MissionaryLocalInfo
-              latitude={m.location.latitude}
-              longitude={m.location.longitude}
-            />
-          )}
-
-          {/* Photo & video gallery */}
-          {hasMedia && (
-            <Box ref={photosRef} sx={{ mt: 2 }}>
-              <Typography sx={{ color: '#1E3A8A', fontWeight: 800, fontSize: '1.2rem', mb: 2.5, pb: 1, borderBottom: '2px solid rgba(37,99,235,0.15)' }}>
-                {mediaLabel}
-              </Typography>
-              {hasVideos && (
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 2, mb: hasPhotos ? 2 : 0 }}>
-                  {resolvedVideoUrls.map((url) => (
-                    <Box key={url} component="video" src={url} controls preload="metadata" playsInline sx={{
-                      width: '100%', aspectRatio: '16/9', bgcolor: '#000', borderRadius: '12px',
-                      boxShadow: '0 4px 16px rgba(30,58,138,0.15)',
-                    }} />
-                  ))}
+              {m.specialNotes && (
+                <Box sx={{ mt: m.description ? 3 : 0, p: 2.5, borderRadius: '14px', bgcolor: '#FFFBEB', border: '1px solid #FDE68A' }}>
+                  <Typography sx={{ color: '#92400E', fontWeight: 800, fontSize: '0.8rem', mb: 0.75, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Notas
+                  </Typography>
+                  <Typography sx={{ color: '#451A03', fontSize: '1rem', lineHeight: 1.7, whiteSpace: 'pre-line' }}>
+                    {m.specialNotes}
+                  </Typography>
                 </Box>
               )}
+            </Box>
+          )}
+
+          {hasVideos && (
+            <Box id="videos">
+              <SectionTitle count={videos.length > 1 ? videos.length : undefined}>{videos.length > 1 ? 'Videos' : 'Video'}</SectionTitle>
+              <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', md: videos.length > 1 ? 'repeat(2, minmax(0, 1fr))' : '1fr' } }}>
+                {videos.map((v, i) => (
+                  <Box key={v.url} sx={{ gridColumn: { md: i === 0 && videos.length > 1 ? '1 / -1' : 'auto' } }}>
+                    <VideoPlayer path={v.url} title={v.title} />
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
+
+          {hasPhotos && (
+            <Box id="fotos">
+              <SectionTitle count={photoUrls.length}>Fotos</SectionTitle>
               <Box sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(auto-fill, minmax(220px, 1fr))' },
-                gap: 2,
+                display: 'grid', gap: { xs: 1, md: 1.5 },
+                gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(3, minmax(0, 1fr))' },
+                gridAutoRows: { xs: '140px', sm: '170px', md: '190px' },
               }}>
-                {resolvedMediaUrls.map((url, i) => (
-                  <Box
-                    key={i}
-                    component="img"
-                    src={url}
-                    alt={`Foto ${i + 1}`}
-                    onClick={() => setLightboxIndex(i)}
-                    onError={(e: React.SyntheticEvent<HTMLImageElement>) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                {photoUrls.map((url, i) => (
+                  <ButtonBase
+                    key={url}
+                    onClick={() => setLightbox({ images: photoUrls, index: i })}
+                    aria-label={`Ver foto ${i + 1}`}
                     sx={{
-                      width: '100%', aspectRatio: '4/3', objectFit: 'cover',
-                      borderRadius: '12px',
-                      boxShadow: '0 4px 16px rgba(30,58,138,0.15)',
-                      border: '2px solid rgba(255,255,255,0.8)',
-                      transition: 'transform 0.25s ease, box-shadow 0.25s ease',
-                      '&:hover': { transform: 'scale(1.03)', boxShadow: '0 8px 28px rgba(30,58,138,0.25)' },
-                      cursor: 'pointer',
+                      borderRadius: '14px', overflow: 'hidden', bgcolor: '#E2E8F0',
+                      ...(i === 0 && photoUrls.length >= 3 && { gridColumn: 'span 2', gridRow: 'span 2' }),
+                      '&:hover img': { transform: 'scale(1.05)' },
                     }}
-                  />
+                  >
+                    <Box component="img" src={url} alt={`Foto ${i + 1}`} loading="lazy"
+                      onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.style.visibility = 'hidden'; }}
+                      sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.35s ease' }} />
+                  </ButtonBase>
                 ))}
               </Box>
             </Box>
           )}
         </Box>
-      )}
 
-      {/* ── CARTA DE ORACIÓN SECTION ──────────────────────────────────────── */}
-      {activeSection === 'carta' && (
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', pl: 3, pr: { xs: 3, md: '134px' }, py: 4 }}>
-          <Typography sx={{ color: '#1E3A8A', fontWeight: 800, fontSize: '1.3rem', mb: 3 }}>
-            Carta de Oración
-          </Typography>
-
-          {pdfUrl ? (
-            <Box sx={{ width: '100%', maxWidth: 700 }}>
-              <Box sx={{
-                bgcolor: '#fff', borderRadius: '16px', overflow: 'hidden',
-                boxShadow: '0 8px 40px rgba(30,58,138,0.15)',
-                border: '2px solid rgba(37,99,235,0.1)',
-              }}>
-                <Document
-                  file={pdfUrl}
-                  onLoadSuccess={({ numPages }) => { setNumPages(numPages); setPageNumber(1); }}
-                  loading={
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-                      <CircularProgress sx={{ color: '#2563EB' }} />
-                    </Box>
-                  }
-                >
-                  <Page
-                    pageNumber={pageNumber}
-                    renderAnnotationLayer={false}
-                    renderTextLayer={false}
-                    width={Math.min(660, window.innerWidth - (window.innerWidth < 768 ? 32 : 80))}
-                  />
-                </Document>
+        {/* ── SIDEBAR ───────────────────────────────────────────────────── */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+          {hasCoords && (
+            <Box id="ubicacion" sx={{ ...cardSx, p: 0, overflow: 'hidden' }}>
+              <Box sx={{ height: 240 }}>
+                <LocationGlobe latitude={m.location.latitude} longitude={m.location.longitude} />
               </Box>
-
-              {numPages > 1 && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2, mt: 2.5 }}>
-                  <Button
-                    onClick={() => setPageNumber(p => Math.max(p - 1, 1))}
-                    disabled={pageNumber <= 1}
-                    variant="outlined"
-                    sx={{ borderColor: '#2563EB', color: '#2563EB', minWidth: 40, '&:hover': { bgcolor: 'rgba(37,99,235,0.06)' } }}
-                  >
-                    ←
-                  </Button>
-                  <Typography sx={{ color: '#4B5563', fontWeight: 600 }}>
-                    {pageNumber} / {numPages}
+              <Box sx={{ p: { xs: 2.5, md: 3 }, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                <Box>
+                  <Typography sx={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', mb: 0.5 }}>
+                    Dónde sirven
                   </Typography>
-                  <Button
-                    onClick={() => setPageNumber(p => Math.min(p + 1, numPages))}
-                    disabled={pageNumber >= numPages}
-                    variant="outlined"
-                    sx={{ borderColor: '#2563EB', color: '#2563EB', minWidth: 40, '&:hover': { bgcolor: 'rgba(37,99,235,0.06)' } }}
-                  >
-                    →
-                  </Button>
+                  <Typography sx={{ color: '#0F172A', fontWeight: 800, fontSize: '1.2rem', lineHeight: 1.3 }}>{locationText}</Typography>
+                  {kmFromHouston > 50 && (
+                    <Typography sx={{ color: '#2563EB', fontWeight: 700, fontSize: '0.9rem', mt: 0.75, display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                      <FlightTakeoffIcon sx={{ fontSize: '1.1rem' }} />
+                      A {Math.round(kmFromHouston).toLocaleString('es-MX')} km de Houston
+                    </Typography>
+                  )}
                 </Box>
+                <Box sx={{ height: '1px', bgcolor: '#E2E8F0' }} />
+                <MissionaryLocalInfo latitude={m.location.latitude} longitude={m.location.longitude} />
+              </Box>
+            </Box>
+          )}
+
+          {/* On the kiosk the rail has these; phones get them here */}
+          {(pdfUrl || hasContactInfo) && (
+            <Box sx={{ ...cardSx, display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 1.25 }}>
+              {pdfUrl && (
+                <Button onClick={() => setLetterOpen(true)} startIcon={<ArticleOutlinedIcon />} fullWidth sx={{
+                  textTransform: 'none', fontWeight: 800, fontSize: '1rem', borderRadius: '14px', py: 1.4,
+                  color: '#fff', bgcolor: '#2563EB', '&:hover': { bgcolor: '#1D4ED8' },
+                }}>
+                  Leer carta de oración
+                </Button>
+              )}
+              {hasContactInfo && (
+                <Button onClick={() => setContactDialogOpen(true)} startIcon={<ContactMailOutlinedIcon />} fullWidth sx={{
+                  textTransform: 'none', fontWeight: 800, fontSize: '1rem', borderRadius: '14px', py: 1.4,
+                  color: '#1E3A8A', bgcolor: '#EFF6FF', '&:hover': { bgcolor: '#DBEAFE' },
+                }}>
+                  Contactar
+                </Button>
               )}
             </Box>
-          ) : (
-            <Box sx={{ textAlign: 'center', color: '#9CA3AF', py: 8 }}>
-              <Typography>No hay carta de oración disponible.</Typography>
-            </Box>
           )}
-        </Box>
-      )}
 
-      {/* ── BACK BUTTONS ──────────────────────────────────────────────────── */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4, gap: 2.5, pr: { xs: 0, md: '110px' } }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {continentRoute && (
-            <Button
-              onClick={() => navigate(continentRoute)}
-              variant="outlined"
-              startIcon={<ArrowBackIcon />}
-              sx={{
-                display: { xs: 'none', md: 'inline-flex' },
-                color: '#1E3A8A', borderColor: 'rgba(30,58,138,0.35)',
-                px: 3.5, py: 1.25, borderRadius: '28px',
-                fontSize: '0.95rem', fontWeight: 600,
-                '&:hover': { borderColor: '#1E3A8A', bgcolor: 'rgba(30,58,138,0.06)' },
-              }}
-            >
-              Volver al continente
+          {/* Take this page home — kiosk/desktop only */}
+          <Box sx={{ ...cardSx, display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 2, p: 2.5 }}>
+            <QRCodeSVG value={publicUrlFor(`/misionero/${m.id}`)} size={96} level="M" bgColor="#ffffff" fgColor="#1E3A8A" />
+            <Box>
+              <Typography sx={{ color: '#0F172A', fontWeight: 800, lineHeight: 1.3 }}>Llévelo en su teléfono</Typography>
+              <Typography sx={{ color: '#64748B', fontSize: '0.88rem', mt: 0.5, lineHeight: 1.4 }}>
+                Escanee el código para ver esta página y orar por ellos.
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* ── FOOTER ──────────────────────────────────────────────────────── */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2.5, pb: 5, pt: 1, pr: { md: '120px', xl: 0 } }}>
+        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', justifyContent: 'center' }}>
+          {continent && (
+            <Button onClick={goBack} variant="outlined" startIcon={<ArrowBackIcon />} sx={{
+              textTransform: 'none', fontWeight: 700, fontSize: '1rem', borderRadius: '999px', px: 3, py: 1.25,
+              color: '#1E3A8A', borderColor: 'rgba(30,58,138,0.3)', bgcolor: '#fff',
+            }}>
+              Más misioneros en {continent.name}
             </Button>
           )}
-          <Box
-            component="img"
-            src={returnToMap}
-            alt="Volver al mapa"
-            onClick={() => navigate('/region-selection')}
-            sx={{
-              height: 60, width: 'auto', cursor: 'pointer',
-              transition: 'transform 0.25s ease',
-              '&:hover': { transform: 'scale(1.06)' },
-            }}
-          />
+          <Button onClick={() => navigate('/region-selection')} variant="contained" startIcon={<PublicIcon />} sx={{
+            textTransform: 'none', fontWeight: 700, fontSize: '1rem', borderRadius: '999px', px: 3, py: 1.25,
+            bgcolor: '#1E3A8A', '&:hover': { bgcolor: '#2563EB' },
+          }}>
+            Volver al mapa
+          </Button>
         </Box>
-        <Box component="img" src={iblLogo} alt="IBL" sx={{ height: 44, width: 'auto', opacity: 0.55 }} />
+        <Box component="img" src={iblLogo} alt="IBL" sx={{ height: 40, width: 'auto', opacity: 0.5 }} />
       </Box>
 
-      {/* ── FLOATING SIDE NAV — desktop only ──────────────────────────────── */}
-      <Box sx={{
-        position: 'fixed', right: 0, top: '50%', transform: 'translateY(-50%)',
-        zIndex: 998, display: { xs: 'none', md: 'flex' }, flexDirection: 'column',
-        bgcolor: 'rgba(20,46,120,0.95)', backdropFilter: 'blur(10px)',
-        borderRadius: '18px 0 0 18px',
-        boxShadow: '-4px 0 32px rgba(0,0,0,0.28)',
-        overflow: 'hidden',
-      }}>
-        {(
-          [
-            {
-              label: 'Sobre el\nMisionero',
-              icon: <InfoOutlinedIcon sx={{ fontSize: '2.2rem' }} />,
-              active: activeSection === 'about',
-              onClick: () => setActiveSection('about'),
-            },
-            ...(hasMedia ? [{
-              label: mediaLabel,
-              icon: <PhotoLibraryOutlinedIcon sx={{ fontSize: '2.2rem' }} />,
-              active: false,
-              onClick: scrollToPhotos,
-            }] : []),
-            ...(hasPrayerLetter ? [{
-              label: 'Carta\nde Oración',
-              icon: <ArticleOutlinedIcon sx={{ fontSize: '2.2rem' }} />,
-              active: activeSection === 'carta',
-              onClick: () => { setActiveSection('carta'); setPageNumber(1); },
-            }] : []),
-            ...(hasContactInfo ? [{
-              label: 'Contactar',
-              icon: <ContactMailOutlinedIcon sx={{ fontSize: '2.2rem' }} />,
-              active: false,
-              onClick: () => setContactDialogOpen(true),
-            }] : []),
-          ] as { label: string; icon: React.ReactNode; active: boolean; onClick: () => void }[]
-        ).map((item, i, arr) => (
-          <Box
-            key={i}
-            onClick={item.onClick}
-            sx={{
-              display: 'flex',
-              flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              px: 2.5, py: 2.5, gap: 1, cursor: 'pointer', minWidth: 110,
-              bgcolor: item.active ? 'rgba(255,255,255,0.2)' : 'transparent',
-              borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.12)' : 'none',
-              transition: 'background-color 0.15s ease',
-              '&:hover': { bgcolor: item.active ? 'rgba(255,255,255,0.26)' : 'rgba(255,255,255,0.12)' },
-              '&:active': { bgcolor: 'rgba(255,255,255,0.35)' },
-            }}
-          >
-            <Box sx={{ color: item.active ? '#fff' : 'rgba(255,255,255,0.82)' }}>{item.icon}</Box>
-            <Typography sx={{
-              color: item.active ? '#fff' : 'rgba(255,255,255,0.75)',
-              fontSize: '0.72rem', fontWeight: item.active ? 700 : 600,
-              textAlign: 'center', lineHeight: 1.3, whiteSpace: 'pre-line',
-            }}>
-              {item.label}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
+      {/* ── KIOSK SIDE RAIL — big buttons within reach, lower half of the screen ── */}
+      <KioskRail floating label="Secciones" items={[
+        ...railItems.map((item) => ({ key: item.key, label: item.railLabel, icon: item.icon, onClick: item.onClick, active: item.section === activeSection })),
+        null,
+        { key: 'back', label: continent ? continent.name : 'Volver', icon: <ArrowBackIcon />, onClick: goBack, tone: 'soft' },
+        { key: 'map', label: 'Mapa', icon: <PublicIcon />, onClick: () => navigate('/region-selection'), tone: 'navy' },
+      ]} />
 
       <ContactDialog
         open={contactDialogOpen}
@@ -564,11 +463,17 @@ const Missionary: React.FC = () => {
         onClose={() => setContactDialogOpen(false)}
       />
 
-      {lightboxIndex !== null && (
+      {letterOpen && pdfUrl && (
+        <Suspense fallback={null}>
+          <PrayerLetterDialog url={pdfUrl} name={displayName} onClose={() => setLetterOpen(false)} />
+        </Suspense>
+      )}
+
+      {lightbox && (
         <ImageLightbox
-          images={resolvedMediaUrls}
-          initialIndex={lightboxIndex}
-          onClose={() => setLightboxIndex(null)}
+          images={lightbox.images}
+          initialIndex={lightbox.index}
+          onClose={() => setLightbox(null)}
         />
       )}
     </Box>

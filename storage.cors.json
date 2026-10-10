@@ -1,0 +1,14 @@
+[
+  {
+    "origin": ["*"],
+    "method": ["GET", "HEAD"],
+    "responseHeader": ["Content-Type", "Content-Length", "Content-Range", "Accept-Ranges", "Range"],
+    "maxAgeSeconds": 3600
+  },
+  {
+    "origin": ["https://misiones.iblibertad.org", "https://ibl-missions-display.web.app", "https://ibl-missions-display.firebaseapp.com"],
+    "method": ["GET", "HEAD", "PUT", "POST", "DELETE"],
+    "responseHeader": ["Content-Type", "Content-Length", "Content-Range", "Accept-Ranges", "Range", "Authorization", "X-Goog-Upload-Command", "X-Goog-Upload-Offset", "X-Goog-Upload-Protocol", "X-Goog-Upload-Status", "X-Goog-Upload-URL", "X-Goog-Upload-Header-Content-Type", "X-Goog-Upload-Header-Content-Length"],
+    "maxAgeSeconds": 3600
+  }
+]

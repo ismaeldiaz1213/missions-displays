@@ -19,6 +19,15 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Kiosk display settings (e.g. which conference stage the map shows): public read, admin write
+    match /settings/kiosk {
+      allow read: if true;
+      allow write: if isAdmin()
+        && request.resource.data.keys().hasOnly(['conferencePhase', 'updatedAt'])
+        && request.resource.data.conferencePhase in ['auto', 'upcoming', 'live', 'over']
+        && request.resource.data.updatedAt == request.time;
+    }
+
     // Unpublished missionary pages (created from approved requests)
     match /missionaryDrafts/{id} {
       allow read, write: if isAdmin();

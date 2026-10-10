@@ -1,0 +1,46 @@
+/* One 2.4 s cycle: the hand lifts, presses the button (which dips), and a ripple spreads out */
+.tap-prompt-hand {
+  animation: tap-prompt-hand 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  transform-origin: 40% 20%;
+}
+@keyframes tap-prompt-hand {
+  0%, 100% { transform: translate(10px, 16px) rotate(-8deg); opacity: 0.95; }
+  30%      { transform: translate(0, 0) rotate(0deg); }
+  38%      { transform: translate(0, 4px) scale(0.92); }
+  48%      { transform: translate(0, 0) scale(1); }
+  70%      { transform: translate(10px, 16px) rotate(-8deg); }
+}
+
+.tap-prompt-button {
+  animation: tap-prompt-button 2.4s ease-in-out infinite;
+}
+@keyframes tap-prompt-button {
+  0%, 34%, 52%, 100% { transform: scale(1); }
+  40%                { transform: scale(0.92); }
+}
+
+.tap-prompt-ripple {
+  position: absolute;
+  inset: 10px;
+  border-radius: 50%;
+  border: 3px solid rgba(37, 99, 235, 0.55);
+  opacity: 0;
+  animation: tap-prompt-ripple 2.4s ease-out infinite;
+}
+.tap-prompt-ripple--late { animation-delay: 0.25s; }
+@keyframes tap-prompt-ripple {
+  0%, 36% { transform: scale(1); opacity: 0; }
+  40%     { opacity: 0.9; }
+  100%    { transform: scale(2.1); opacity: 0; }
+}
+
+.tap-prompt {
+  animation: tap-prompt-in 0.6s ease-out both;
+}
+@keyframes tap-prompt-in {
+  from { opacity: 0; transform: translateY(12px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tap-prompt-hand, .tap-prompt-button, .tap-prompt-ripple, .tap-prompt { animation: none; }
+}

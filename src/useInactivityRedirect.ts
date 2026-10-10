@@ -4,6 +4,9 @@ import { useMediaQuery } from '@mui/material';
 
 const TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
 const SKIP_PATHS = ['/', '/admin'];
+/** Dispatch on window to count as activity (e.g. while a video plays). */
+export const ACTIVITY_EVENT = 'ibl-activity';
+
 const SKIP_PREFIXES = ['/conferencia', '/misioneros/solicitud'];
 
 export const useInactivityRedirect = () => {
@@ -22,7 +25,7 @@ export const useInactivityRedirect = () => {
       timer = setTimeout(() => navigate('/'), TIMEOUT_MS);
     };
 
-    const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'wheel'] as const;
+    const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'wheel', 'touchstart', ACTIVITY_EVENT] as const;
     events.forEach((e) => window.addEventListener(e, reset, { passive: true }));
     reset();
 

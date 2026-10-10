@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme, useMediaQuery, Modal, Button, Box, Typography } from '@mui/material';
+import { useTheme, useMediaQuery, Button, ButtonBase, Box, Typography } from '@mui/material';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import iblLogo from '../assets/ibl_logo.png';
 import mapTitle from '../assets/MapSelectionBanner.png';
 import misionerosPasadosButton from '../assets/missionerosPasadosButton.png';
 import naMobile from '../assets/na_mobile.png';
@@ -10,17 +13,25 @@ import eMobile from '../assets/e_mobile.png';
 import aMobile from '../assets/a_mobile.png';
 import asiaMobile from '../assets/asia_mobile.png';
 import oMobile from '../assets/o_mobile.png';
-import LeafletMapContainer from './LeafletMapContainer';
-import { MISSIONARY_REQUEST_PATH } from '../Home/Home';
+import WorldMap from './WorldMap';
+import ConferenceCard from './ConferenceCard';
+import { AboutPanel, ConferencePanel } from './InfoPanels';
+import { REGIONS, REGION_BY_ID, type RegionId } from '../map/regions';
+import { conferencePhase } from './kioskContent';
+import { useAllMissionaries, missionaryOfTheDay } from '../data/useMissionaries';
+import { useCachedLoad } from '../data/useCachedLoad';
+import { DEFAULT_KIOSK_SETTINGS, KIOSK_SETTINGS_CACHE_KEY, getKioskSettings, type KioskSettings } from '../data/settings';
+import MissionaryOfTheDay from '../ui/MissionaryOfTheDay';
+import { BRAND } from '../ui/brand';
 
 const continents = [
-  { name: 'Norte América',  route: '/norte-america',  colorA: '#1D6FA4', colorB: '#0D3F6B', mobileImg: naMobile },
-  { name: 'Centro América', route: '/centro-america', colorA: '#E07B1A', colorB: '#9A4E00', mobileImg: caMobile },
-  { name: 'Sur América',    route: '/sur-america',    colorA: '#1A8A4A', colorB: '#0D5A2E', mobileImg: saMobile },
-  { name: 'Europa',         route: '/europa',         colorA: '#0E7490', colorB: '#064E63', mobileImg: eMobile },
-  { name: 'África',         route: '/africa',         colorA: '#CA8A04', colorB: '#854D0E', mobileImg: aMobile },
-  { name: 'Asia',           route: '/asia',           colorA: '#DC2626', colorB: '#7F1D1D', mobileImg: asiaMobile },
-  { name: 'Oceanía',        route: '/oceania',        colorA: '#BE185D', colorB: '#6D0F38', mobileImg: oMobile },
+  { id: 'north-america' as RegionId, name: 'Norte América',  route: '/norte-america',  colorA: '#1D6FA4', colorB: '#0D3F6B', mobileImg: naMobile },
+  { id: 'central-america' as RegionId, name: 'Centro América', route: '/centro-america', colorA: '#E07B1A', colorB: '#9A4E00', mobileImg: caMobile },
+  { id: 'south-america' as RegionId, name: 'Sur América',    route: '/sur-america',    colorA: '#1A8A4A', colorB: '#0D5A2E', mobileImg: saMobile },
+  { id: 'europe' as RegionId, name: 'Europa',         route: '/europa',         colorA: '#0E7490', colorB: '#064E63', mobileImg: eMobile },
+  { id: 'africa' as RegionId, name: 'África',         route: '/africa',         colorA: '#CA8A04', colorB: '#854D0E', mobileImg: aMobile },
+  { id: 'asia' as RegionId, name: 'Asia',           route: '/asia',           colorA: '#DC2626', colorB: '#7F1D1D', mobileImg: asiaMobile },
+  { id: 'oceania' as RegionId, name: 'Oceanía',        route: '/oceania',        colorA: '#BE185D', colorB: '#6D0F38', mobileImg: oMobile },
 ];
 
 const hexToRgba = (hex: string, alpha: number) => {
@@ -34,7 +45,138 @@ const RegionSelection: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [modalOpen, setModalOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const [conferenceOpen, setConferenceOpen] = useState(false);
+  const [activeRegion, setActiveRegion] = useState<RegionId | null>(null);
+  const [flyTo, setFlyTo] = useState<RegionId | null>(null);
+  const leaving = useRef(false);
+
+  // One small request feeds the whole site; the saved copy shows instantly on bad Wi-Fi
+  const { missionaries } = useAllMissionaries();
+  const { data: settings } = useCachedLoad<KioskSettings>(KIOSK_SETTINGS_CACHE_KEY, getKioskSettings);
+  const phase = conferencePhase((settings ?? DEFAULT_KIOSK_SETTINGS).conferencePhase);
+  const today = useMemo(() => missionaryOfTheDay(missionaries), [missionaries]);
+
+  const counts = useMemo(() => {
+    const c: Partial<Record<RegionId, number>> = {};
+    for (const m of missionaries) c[m.continent as RegionId] = (c[m.continent as RegionId] ?? 0) + 1;
+    return c;
+  }, [missionaries]);
+  const countryCount = useMemo(
+    () => new Set(missionaries.map((m) => m.location?.country?.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')).filter(Boolean)).size,
+    [missionaries],
+  );
+  const countLabel = (n: number) => (n === 1 ? '1 misionero' : `${n} misioneros`);
+
+  // Zoom the map into the region, then open its page
+  const selectRegion = (id: RegionId) => {
+    if (leaving.current) return;
+    leaving.current = true;
+    setFlyTo(id);
+    window.setTimeout(() => navigate(REGION_BY_ID[id].route), 650);
+  };
+
+  const panels = (
+    <>
+      <AboutPanel open={aboutOpen} onClose={() => setAboutOpen(false)} />
+      <ConferencePanel open={conferenceOpen} onClose={() => setConferenceOpen(false)} phase={phase} />
+    </>
+  );
+
+  if (!isMobile) {
+    return (
+      <Box sx={{ height: '100vh', display: 'flex', overflow: 'hidden', bgcolor: '#F8FBFF' }}>
+        {/* ── Side panel: what to do ──────────────────────────────────── */}
+        <Box component="aside" sx={{
+          '& > *': { flexShrink: 0 },
+          width: { md: 320, xl: 380 }, flexShrink: 0, bgcolor: BRAND.white, display: 'flex', flexDirection: 'column',
+          px: { md: 2.5, xl: 3.5 }, py: { md: 2.5, xl: 3 }, borderRight: `1px solid ${BRAND.line}`,
+          boxShadow: '8px 0 30px rgba(30,58,138,0.08)', zIndex: 1, overflowY: 'auto',
+        }}>
+          <Box component="img" src={iblLogo} alt="Iglesia Bautista Libertad" sx={{ height: 44, width: 'auto', alignSelf: 'flex-start' }} />
+
+          {missionaries.length > 0 && (
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mt: 2.5 }}>
+              {([[missionaries.length, 'misioneros'], [countryCount, countryCount === 1 ? 'país' : 'países']] as [number, string][]).map(([n, label]) => (
+                <Box key={label} sx={{ p: 1.25, borderRadius: '14px', bgcolor: BRAND.blueSoft }}>
+                  <Typography sx={{ color: BRAND.navy, fontWeight: 800, fontSize: '1.6rem', lineHeight: 1 }}>{n}</Typography>
+                  <Typography sx={{ color: '#475569', fontWeight: 600, fontSize: '0.85rem', mt: 0.3 }}>{label}</Typography>
+                </Box>
+              ))}
+            </Box>
+          )}
+
+          <Box sx={{ mt: 2.5, mb: 1.25, display: 'flex', alignItems: 'center', gap: 1, color: '#475569' }}>
+            <Typography sx={{ fontSize: '1.4rem', lineHeight: 1 }}>👆</Typography>
+            <Typography sx={{ fontWeight: 700, fontSize: '1rem', lineHeight: 1.35 }}>
+              Toque un continente o la foto de un misionero
+            </Typography>
+          </Box>
+
+          <Box component="nav" sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+            {REGIONS.map((r) => {
+              const n = counts[r.id] ?? 0;
+              const active = activeRegion === r.id;
+              return (
+                <ButtonBase
+                  key={r.id}
+                  onClick={() => selectRegion(r.id)}
+                  onMouseEnter={() => setActiveRegion(r.id)}
+                  onMouseLeave={() => setActiveRegion(null)}
+                  onFocus={() => setActiveRegion(r.id)}
+                  onBlur={() => setActiveRegion(null)}
+                  sx={{
+                    display: 'flex', alignItems: 'center', gap: 1.5, px: 1.75, py: { md: 1.1, xl: 1.4 }, borderRadius: '14px',
+                    justifyContent: 'flex-start', textAlign: 'left', border: '1.5px solid',
+                    borderColor: active ? r.color : BRAND.line, bgcolor: active ? `${r.color}14` : BRAND.white,
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <Box sx={{ width: 14, height: 14, borderRadius: '50%', bgcolor: r.color, flexShrink: 0, boxShadow: `0 0 0 4px ${r.color}33` }} />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography sx={{ color: BRAND.ink, fontWeight: 800, fontSize: '1.05rem', lineHeight: 1.2 }}>{r.name}</Typography>
+                    <Typography sx={{ color: n ? BRAND.muted : BRAND.faint, fontSize: '0.82rem', fontWeight: 600 }}>
+                      {n ? countLabel(n) : 'Sin misioneros aún'}
+                    </Typography>
+                  </Box>
+                  <ChevronRightIcon sx={{ color: active ? r.color : '#CBD5E1' }} />
+                </ButtonBase>
+              );
+            })}
+          </Box>
+
+          <Box sx={{ flex: 1, minHeight: 16 }} />
+
+          <ConferenceCard phase={phase} onClick={() => setConferenceOpen(true)} />
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1.5, gap: 1 }}>
+            <Box component="img" src={misionerosPasadosButton} alt="Misioneros Pasados"
+              sx={{ height: 36, width: 'auto', opacity: 0.35, pointerEvents: 'none', userSelect: 'none' }} />
+            <Button size="small" startIcon={<InfoOutlinedIcon />} onClick={() => setAboutOpen(true)}
+              sx={{ color: BRAND.muted, textTransform: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
+              Acerca de este sitio
+            </Button>
+          </Box>
+        </Box>
+
+        {/* ── Map, with the title on top ───────────────────────────────── */}
+        <Box sx={{ flex: 1, minWidth: 0, position: 'relative' }}>
+          <WorldMap missionaries={missionaries} counts={counts} activeRegion={activeRegion}
+            onActiveRegionChange={setActiveRegion} onRegionSelect={selectRegion} flyTo={flyTo} topInset={0.13} />
+          <Box sx={{
+            position: 'absolute', top: 0, left: 0, right: 0, display: 'flex', justifyContent: 'center',
+            pt: { md: 2, xl: 3 }, pb: 4, px: 4, pointerEvents: 'none', zIndex: 6,
+            background: 'linear-gradient(180deg, rgba(248,251,255,0.95) 0%, rgba(248,251,255,0.7) 60%, rgba(248,251,255,0) 100%)',
+            opacity: flyTo ? 0 : 1, transition: 'opacity 0.4s ease',
+          }}>
+            <Box component="img" src={mapTitle} alt="Nuestros misioneros por continente — De Houston para todo el mundo"
+              sx={{ width: '100%', maxWidth: 1100, height: 'auto', maxHeight: '11vh', objectFit: 'contain' }} />
+          </Box>
+        </Box>
+
+        {panels}
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{
@@ -49,169 +191,100 @@ const RegionSelection: React.FC = () => {
         <img
           src={mapTitle}
           alt="Nuestros Misioneros por Continente"
-          style={{ maxHeight: isMobile ? '10vh' : '13vh', width: '100%', objectFit: 'contain' }}
+          style={{ maxHeight: '10vh', width: '100%', objectFit: 'contain' }}
         />
       </Box>
 
-      {/* Content: map on desktop, button grid on mobile */}
+      {/* Continent grid (desktop gets the world map above) */}
       <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        {isMobile ? (
-          <Box sx={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gridTemplateRows: 'repeat(4, 1fr)',
-            gap: 1.5,
-            p: 1.5,
-            height: '100%',
-            boxSizing: 'border-box',
-          }}>
-            {continents.map((c, i) => (
-              <Box
-                key={c.route}
-                onClick={() => navigate(c.route)}
-                sx={{
-                  ...(i === continents.length - 1 && continents.length % 2 === 1 && {
-                    gridColumn: '1 / -1',
-                    width: 'calc(50% - 6px)',
-                    mx: 'auto',
-                  }),
-                  background: c.mobileImg
-                    ? `linear-gradient(135deg, ${hexToRgba(c.colorA, 0.70)} 0%, ${hexToRgba(c.colorB, 0.82)} 100%), url(${c.mobileImg})`
-                    : `linear-gradient(135deg, ${c.colorA} 0%, ${c.colorB} 100%)`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  color: '#fff',
-                  borderRadius: '14px',
-                  textAlign: 'center',
-                  fontWeight: 800,
-                  fontSize: '1.35rem',
-                  textShadow: '0 1px 6px rgba(0,0,0,0.6)',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
-                  border: '1.5px solid rgba(255,255,255,0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
-                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                  WebkitTapHighlightColor: 'transparent',
-                  '&:active': { transform: 'scale(0.96)' },
-                }}
-              >
+        <Box sx={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gridTemplateRows: 'repeat(4, 1fr)',
+          gap: 1.5,
+          p: 1.5,
+          height: '100%',
+          boxSizing: 'border-box',
+        }}>
+          {continents.map((c, i) => (
+            <Box
+              key={c.route}
+              onClick={() => navigate(c.route)}
+              sx={{
+                ...(i === continents.length - 1 && continents.length % 2 === 1 && {
+                  gridColumn: '1 / -1',
+                  width: 'calc(50% - 6px)',
+                  mx: 'auto',
+                }),
+                background: c.mobileImg
+                  ? `linear-gradient(135deg, ${hexToRgba(c.colorA, 0.70)} 0%, ${hexToRgba(c.colorB, 0.82)} 100%), url(${c.mobileImg})`
+                  : `linear-gradient(135deg, ${c.colorA} 0%, ${c.colorB} 100%)`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                color: '#fff',
+                borderRadius: '14px',
+                textAlign: 'center',
+                fontWeight: 800,
+                fontSize: '1.35rem',
+                textShadow: '0 1px 6px rgba(0,0,0,0.6)',
+                cursor: 'pointer',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+                border: '1.5px solid rgba(255,255,255,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                WebkitTapHighlightColor: 'transparent',
+                '&:active': { transform: 'scale(0.96)' },
+              }}
+            >
+              <Box>
                 {c.name}
+                {!!counts[c.id] && (
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, opacity: 0.9 }}>{countLabel(counts[c.id]!)}</Typography>
+                )}
               </Box>
-            ))}
-          </Box>
-        ) : (
-          <LeafletMapContainer />
-        )}
+            </Box>
+          ))}
+        </Box>
       </Box>
 
-      {/* Bottom bar — column on mobile, row on desktop */}
-      {isMobile ? (
-        <Box sx={{
-          flexShrink: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 1,
-          px: 2,
-          pt: 1.25,
-          pb: 1.5,
-          bgcolor: '#fff',
-          borderTop: '1px solid #e2e8f0',
-        }}>
-          <Typography sx={{ color: '#475569', fontWeight: 700, fontSize: '1rem' }}>
-            👆 Toca un continente para explorar
-          </Typography>
-          <Box component="img"
-            src={misionerosPasadosButton}
-            alt="Misioneros Pasados"
-            sx={{ height: '44px', width: 'auto', opacity: 0.35, pointerEvents: 'none', userSelect: 'none' }}
-          />
-          <Box sx={{ display: 'flex', gap: 1, mt: -0.5 }}>
-            <Button size="small" onClick={() => navigate(MISSIONARY_REQUEST_PATH)}
-              sx={{ color: '#2563EB', textTransform: 'none', fontSize: '0.85rem', fontWeight: 700 }}>
-              ¿Es misionero? Envíe su información
-            </Button>
-            <Button
-              size="small"
-              onClick={() => setModalOpen(true)}
-              sx={{ color: '#475569', textTransform: 'none', fontSize: '0.85rem', fontWeight: 600 }}
-            >
-              Agradecimientos
-            </Button>
+      {/* Bottom bar */}
+      <Box sx={{
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 1,
+        px: 2,
+        pt: 1.25,
+        pb: 1.5,
+        bgcolor: '#fff',
+        borderTop: '1px solid #e2e8f0',
+      }}>
+        <Typography sx={{ color: '#475569', fontWeight: 700, fontSize: '1rem' }}>
+          👆 Toca un continente para explorar
+        </Typography>
+        {today && (
+          <Box sx={{ width: '100%', maxWidth: 420 }}>
+            <MissionaryOfTheDay missionary={today} />
           </Box>
+        )}
+        <Box sx={{ width: '100%', maxWidth: 420 }}>
+          <ConferenceCard phase={phase} onClick={() => setConferenceOpen(true)} compact />
         </Box>
-      ) : (
-        <Box sx={{
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-          px: 2,
-          py: 1,
-          bgcolor: '#fff',
-          borderTop: '1px solid #e2e8f0',
-          height: '76px',
-          gap: 2,
-        }}>
-          <img
-            src={misionerosPasadosButton}
-            alt="Misioneros Pasados"
-            style={{ height: '58px', width: 'auto', flexShrink: 0, opacity: 0.35, pointerEvents: 'none', userSelect: 'none' }}
-          />
-          <Box sx={{ flex: 1, textAlign: 'center' }}>
-            <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600, fontSize: '0.85rem' }}>
-              👆 Toca un continente para ver los misioneros
-            </Typography>
-          </Box>
-          <Button size="small" onClick={() => navigate(MISSIONARY_REQUEST_PATH)}
-            sx={{ color: '#2563EB', textTransform: 'none', fontSize: '0.8rem', fontWeight: 700, flexShrink: 0 }}>
-            ¿Es misionero? Envíe su información
-          </Button>
-          <Button
-            size="small"
-            onClick={() => setModalOpen(true)}
-            sx={{ color: '#475569', textTransform: 'none', fontSize: '0.75rem', fontWeight: 600, flexShrink: 0 }}
-          >
-            Agradecimientos
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: -0.25 }}>
+          <Box component="img" src={misionerosPasadosButton} alt="Misioneros Pasados"
+            sx={{ height: 30, width: 'auto', opacity: 0.35, pointerEvents: 'none', userSelect: 'none' }} />
+          <Button size="small" startIcon={<InfoOutlinedIcon />} onClick={() => setAboutOpen(true)}
+            sx={{ color: BRAND.muted, textTransform: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
+            Acerca de este sitio
           </Button>
         </Box>
-      )}
+      </Box>
 
-      {/* Acknowledgments modal */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)}>
-        <Box sx={{
-          position: 'absolute', top: '50%', left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: { xs: '90vw', sm: 420 },
-          bgcolor: 'background.paper',
-          borderRadius: 2, boxShadow: 24, p: 4,
-        }}>
-          <Typography variant="h6" fontWeight={700} gutterBottom>Agradecimientos</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Este proyecto fue posible gracias al esfuerzo y apoyo de:
-          </Typography>
-          <Box component="ul" sx={{ mt: 1, pl: 2.5 }}>
-            {[
-              'Nuestro Salvador — El Señor Jesucristo',
-              'El Pastor Roy Carrizales',
-              'Los miembros de la Iglesia Bautista Libertad',
-            ].map((item) => (
-              <Typography key={item} component="li" variant="body2" sx={{ mb: 0.5 }}>{item}</Typography>
-            ))}
-          </Box>
-          <Typography variant="caption" color="text.disabled" display="block" sx={{ mt: 2, borderTop: '1px solid #eee', pt: 1.5 }}>
-            Créditos de imágenes:{' '}
-            <Box component="a" href="https://www.flickr.com/photos/80497449@N04/8280699806" target="_blank" rel="noopener noreferrer"
-              sx={{ color: 'text.disabled', textDecoration: 'underline' }}>
-              North America map
-            </Box>
-            {' '}por Stasinho12, licencia Creative Commons.
-          </Typography>
-          <Button onClick={() => setModalOpen(false)} sx={{ mt: 1.5 }} variant="outlined" size="small">Cerrar</Button>
-        </Box>
-      </Modal>
+      {panels}
     </Box>
   );
 };

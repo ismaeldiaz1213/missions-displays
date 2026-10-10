@@ -1,0 +1,42 @@
+/* Shared by every custom-drawn map (world, continent) */
+.map-pin {
+  transition: transform 0.2s ease !important;
+  animation: map-pin-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+.map-pin:hover,
+.map-pin.is-open {
+  transform: scale(1.15);
+}
+/* Ripple around the pin whose card is open */
+.map-pin.is-open::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 3px solid var(--pin-color);
+  animation: map-pin-ripple 1.6s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes map-pin-in {
+  from { transform: scale(0); opacity: 0; }
+}
+@keyframes map-pin-ripple {
+  from { transform: scale(1); opacity: 0.8; }
+  to   { transform: scale(1.9); opacity: 0; }
+}
+
+.map-card {
+  animation: map-card-in 0.22s ease-out backwards;
+}
+@keyframes map-card-in {
+  from { transform: translateY(8px) scale(0.98); opacity: 0; }
+}
+
+.map-country {
+  cursor: pointer;
+  transition: fill-opacity 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-pin, .map-card, .map-pin.is-open::after { animation: none; }
+}

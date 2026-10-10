@@ -1,0 +1,14 @@
+/* Pulsing "they're here" dot on the location globe */
+.lg-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: lg-pulse 2s ease-out infinite;
+}
+@keyframes lg-pulse {
+  from { transform: scale(1); opacity: 0.6; }
+  to   { transform: scale(3.2); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-pulse { animation: none; opacity: 0; }
+}

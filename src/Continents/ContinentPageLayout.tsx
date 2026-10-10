@@ -1,207 +1,132 @@
-import { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme, useMediaQuery, Box, Paper, Typography, CircularProgress } from '@mui/material';
-import ActionAreaCard from './components/MissionaryPreviewCard';
-import LeafletRegionalMap from './components/LeafletRegionalMap';
-import ContinentHeader from './components/ContinentHeader';
-import backButton from '../assets/leftBackButton.png';
-import nextButton from '../assets/rightNextButton.png';
-import returnToMap from '../assets/backToMapButton.png';
+import { Box, Button, CircularProgress, Typography } from '@mui/material';
+import PublicIcon from '@mui/icons-material/Public';
 import iblLogo from '../assets/ibl_logo.png';
-import type { Missionary } from '../types';
-import { listMissionariesByContinent } from '../data/missionaries';
+import ContinentMap from './ContinentMap';
+import { REGIONS, REGION_BY_ID, type RegionId } from '../map/regions';
+import { useAllMissionaries } from '../data/useMissionaries';
+import KioskRail from '../ui/KioskRail';
+import MissionaryCard from '../ui/MissionaryCard';
+import { BRAND, pillSx } from '../ui/brand';
 
-interface Props {
-  title: string;
-  slug: string;
-  centerLat: number;
-  centerLon: number;
-}
+// Rail labels broken over two lines so the buttons stay narrow
+const SHORT: Record<RegionId, string> = {
+  'north-america': 'Norte\nAmérica', 'central-america': 'Centro\nAmérica', 'south-america': 'Sur\nAmérica',
+  europe: 'Europa', africa: 'África', asia: 'Asia', oceania: 'Oceanía',
+};
 
-const ContinentPageLayout: React.FC<Props> = ({ title, slug, centerLat, centerLon }) => {
+const Dot: React.FC<{ color: string }> = ({ color }) => (
+  <Box sx={{ width: 26, height: 26, borderRadius: '50%', bgcolor: color, border: '3px solid #fff', boxShadow: `0 0 0 2px ${color}` }} />
+);
+
+/**
+ * A continent's missionaries: photo cards on one side, the region's map on the other, and on
+ * the kiosk a rail (low on the right, within kids' reach) to jump to another continent or the map.
+ */
+const ContinentPageLayout: React.FC<{ slug: string }> = ({ slug }) => {
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const region = REGION_BY_ID[slug as RegionId];
+  const { missionaries: all, loading, error } = useAllMissionaries();
+  const missionaries = useMemo(() => all.filter((m) => m.continent === slug), [all, slug]);
+  const [highlighted, setHighlighted] = useState<string[]>([]);
 
-  const [currentPage, setCurrentPage] = useState(0);
-  const [selectedMissionaryId, setSelectedMissionaryId] = useState<string | null>(null);
-  const [missionaries, setMissionaries] = useState<Missionary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  useEffect(() => setHighlighted([]), [slug]);
 
-  useEffect(() => {
-    const fetchMissionaries = async () => {
-      try {
-        setMissionaries(await listMissionariesByContinent(slug));
-      } catch (err) {
-        setError(String(err));
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchMissionaries();
-  }, [slug]);
-
-  // Reset page when layout mode changes so we don't land on an out-of-range page
-  useEffect(() => { setCurrentPage(0); }, [isMobile]);
-
-  const perPage = isMobile ? 6 : 9;
-  const totalPages = Math.max(1, Math.ceil(missionaries.length / perPage));
-  const currentMissionaries = missionaries.slice(currentPage * perPage, (currentPage + 1) * perPage);
-
-  const handleNext = () => { if (currentPage < totalPages - 1) setCurrentPage(p => p + 1); };
-  const handlePrev = () => { if (currentPage > 0) setCurrentPage(p => p - 1); };
-
-  // Shared inline content for the cards+map area
-  const contentArea = () => {
-    if (loading) return (
-      <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <CircularProgress sx={{ color: '#2563EB' }} />
-      </Box>
-    );
-    if (error) return (
-      <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <Typography color="error">{error}</Typography>
-      </Box>
-    );
-    return null; // signals "render normally"
+  // Tapping a pin highlights its cards and brings the first into view
+  const onPinOpen = (ids: string[]) => {
+    setHighlighted(ids);
+    if (ids[0]) document.getElementById(`card-${ids[0]}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
-  // ── MOBILE LAYOUT ───────────────────────────────────────────────────────────
-  if (isMobile) {
-    return (
-      <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'linear-gradient(180deg, #F0F4F8 0%, #E8F1FC 100%)' }}>
-        <ContinentHeader title={title} count={loading ? undefined : missionaries.length} />
+  const count = missionaries.length;
+  const toMap = () => navigate('/region-selection');
 
-        <Box sx={{ flex: 1, px: 1.5, pt: 1.5, pb: 0, display: 'flex', flexDirection: 'column' }}>
-          {contentArea() ?? (missionaries.length === 0 ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 8, color: '#9CA3AF' }}>
-              <Typography variant="h6" sx={{ mb: 1 }}>Próximamente</Typography>
-              <Typography variant="body2" textAlign="center">Aún no hay misioneros registrados para esta región.</Typography>
-            </Box>
-          ) : (
-            <Box sx={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gridTemplateRows: 'repeat(3, 160px)',
-              gap: '10px',
-              mb: 2,
-            }}>
-              {currentMissionaries.map((m) => (
-                <ActionAreaCard key={m.id} missionary={m} isSelected={selectedMissionaryId === m.id} />
-              ))}
-            </Box>
-          ))}
+  const header = (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+      <Box sx={{ width: { xs: 18, md: 22 }, height: { xs: 18, md: 22 }, borderRadius: '50%', bgcolor: region.color, boxShadow: `0 0 0 6px ${region.color}33`, flexShrink: 0 }} />
+      <Typography component="h1" sx={{ color: BRAND.ink, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.05, fontSize: { xs: '2rem', md: '2.8rem' } }}>
+        {region.name}
+      </Typography>
+      {count > 0 && (
+        <Box sx={{ px: 1.5, py: 0.5, borderRadius: '999px', bgcolor: `${region.color}1F`, color: BRAND.ink, fontWeight: 800, fontSize: { xs: '0.9rem', md: '1rem' } }}>
+          {count === 1 ? '1 misionero' : `${count} misioneros`}
+        </Box>
+      )}
+    </Box>
+  );
 
-          {/* Map below cards on mobile */}
-          {!loading && !error && missionaries.length > 0 && (
-            <Paper sx={{
-              mb: 2, p: 1.25, height: 360,
-              background: 'linear-gradient(135deg, #FFFFFF 0%, #F0F4F8 100%)',
-              borderRadius: '12px',
-              border: '2px solid rgba(37,99,235,0.1)',
-              boxShadow: '0 8px 20px rgba(30,58,138,0.12)',
-              display: 'flex', flexDirection: 'column',
-            }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1E3A8A', mb: 1, fontSize: '0.9rem', flexShrink: 0 }}>
-                📍 Mapa Regional
-              </Typography>
-              <Box sx={{ flex: 1, minHeight: 0 }}>
-                <LeafletRegionalMap
-                  centerLat={centerLat}
-                  centerLong={centerLon}
-                  missionaries={currentMissionaries}
-                  selectedMissionaryId={selectedMissionaryId}
-                  onMissionarySelect={setSelectedMissionaryId}
-                />
-              </Box>
-            </Paper>
+  const body = loading ? (
+    <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}><CircularProgress sx={{ color: BRAND.blue }} /></Box>
+  ) : count === 0 ? (
+    <Box sx={{ textAlign: 'center', py: { xs: 6, md: 10 }, px: 3, color: BRAND.muted }}>
+      <Typography sx={{ fontSize: '3rem', lineHeight: 1 }}>🌍</Typography>
+      <Typography sx={{ color: BRAND.ink, fontWeight: 800, fontSize: '1.4rem', mt: 2 }}>
+        {error ? 'No pudimos cargar los misioneros. Revise la conexión a internet.' : `Aún no tenemos misioneros en ${region.name}`}
+      </Typography>
+      {!error && (
+        <Typography sx={{ fontSize: '1.05rem', mt: 1, lineHeight: 1.6 }}>
+          Oremos al Señor de la mies que envíe obreros a {region.name}.
+        </Typography>
+      )}
+      <Button onClick={toMap} startIcon={<PublicIcon />} sx={{ ...pillSx.navy, mt: 3, px: 3, py: 1.25, fontSize: '1rem' }}>
+        Volver al mapa
+      </Button>
+    </Box>
+  ) : (
+    <Box sx={{ display: 'grid', gap: { xs: 1.5, md: 2.5 }, gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' } }}>
+      {missionaries.map((m) => (
+        <MissionaryCard key={m.id} id={`card-${m.id}`} missionary={m} accent={region.color} highlighted={highlighted.includes(m.id)} />
+      ))}
+    </Box>
+  );
+
+  return (
+    <Box sx={{ minHeight: '100vh', height: { md: '100vh' }, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, bgcolor: BRAND.page, overflow: { md: 'hidden' } }}>
+
+      {/* ── Phone top bar ─────────────────────────────────────────────── */}
+      <Box sx={{
+        display: { xs: 'flex', md: 'none' }, position: 'sticky', top: 0, zIndex: 20, alignItems: 'center', px: 1.5, py: 1,
+        bgcolor: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(14px)', borderBottom: `1px solid ${BRAND.line}`,
+      }}>
+        <Button onClick={toMap} startIcon={<PublicIcon />} sx={{ ...pillSx.navy, px: 2, py: 1 }}>Mapa</Button>
+        <Box sx={{ flex: 1 }} />
+        <Box component="img" src={iblLogo} alt="IBL" sx={{ height: 30, width: 'auto', opacity: 0.7 }} />
+      </Box>
+
+      {/* ── Cards ─────────────────────────────────────────────────────── */}
+      <Box sx={{ flex: { md: '1 1 0' }, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <Box sx={{ px: { xs: 2, md: 4 }, pt: { xs: 2.5, md: 4 }, pb: { xs: 2, md: 2.5 } }}>
+          {header}
+          {count > 0 && (
+            <Typography sx={{ color: BRAND.muted, fontWeight: 700, fontSize: { xs: '0.95rem', md: '1.05rem' }, mt: 1.5 }}>
+              👆 Toque una foto para conocer a cada misionero
+            </Typography>
           )}
         </Box>
-
-        {/* Bottom bar */}
-        <Box sx={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1.5, bgcolor: 'transparent' }}>
-          <Box
-            component="img" src={backButton} alt="Atrás"
-            onClick={handlePrev}
-            sx={{ height: '44px', width: 'auto', cursor: currentPage > 0 ? 'pointer' : 'not-allowed', opacity: currentPage > 0 ? 1 : 0.4 }}
-          />
-          <Typography sx={{ color: '#4B5563', fontWeight: 700, fontSize: '0.95rem' }}>
-            {currentPage + 1} / {totalPages}
-          </Typography>
-          <Box
-            component="img" src={nextButton} alt="Siguiente"
-            onClick={handleNext}
-            sx={{ height: '44px', width: 'auto', cursor: currentPage < totalPages - 1 ? 'pointer' : 'not-allowed', opacity: currentPage < totalPages - 1 ? 1 : 0.4 }}
-          />
-        </Box>
-
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', pb: 2.5, gap: 2 }}>
-          <Box
-            component="img" src={returnToMap} alt="Volver al Mapa"
-            onClick={() => navigate('/region-selection')}
-            sx={{ height: '48px', width: 'auto', cursor: 'pointer', transition: 'transform 0.2s', '&:active': { transform: 'scale(0.96)' } }}
-          />
-          <Box component="img" src={iblLogo} alt="IBL" sx={{ height: 36, width: 'auto', opacity: 0.55 }} />
-        </Box>
-      </Box>
-    );
-  }
-
-  // ── DESKTOP LAYOUT ──────────────────────────────────────────────────────────
-  return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'linear-gradient(180deg, #F0F4F8 0%, #E8F1FC 100%)', overflow: 'hidden' }}>
-      <ContinentHeader title={title} count={loading ? undefined : missionaries.length} />
-
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex', gap: 2, px: 3, pt: 1.5, pb: 0 }}>
-        <Box sx={{ flex: 2, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          {contentArea() ?? (missionaries.length === 0 ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9CA3AF' }}>
-              <Typography variant="h6" sx={{ mb: 1 }}>Próximamente</Typography>
-              <Typography variant="body2">Aún no hay misioneros registrados para esta región.</Typography>
-            </Box>
-          ) : (
-            <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(3, 1fr)', gap: '10px' }}>
-              {currentMissionaries.map((m) => (
-                <ActionAreaCard key={m.id} missionary={m} isSelected={selectedMissionaryId === m.id} />
-              ))}
-            </Box>
-          ))}
-        </Box>
-
-        <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          <Paper sx={{ flex: 1, display: 'flex', flexDirection: 'column', p: 1.5, background: 'linear-gradient(135deg, #FFFFFF 0%, #F0F4F8 100%)', borderRadius: '12px', border: '2px solid rgba(37,99,235,0.1)', boxShadow: '0 15px 30px -5px rgba(30,58,138,0.15)' }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1E3A8A', mb: 1, fontSize: '1rem', flexShrink: 0 }}>📍 Mapa Regional</Typography>
-            <Box sx={{ flex: 1, minHeight: 0 }}>
-              <LeafletRegionalMap
-                centerLat={centerLat}
-                centerLong={centerLon}
-                missionaries={currentMissionaries}
-                selectedMissionaryId={selectedMissionaryId}
-                onMissionarySelect={setSelectedMissionaryId}
-              />
-            </Box>
-          </Paper>
+        <Box sx={{ flex: 1, minHeight: 0, overflowY: { md: 'auto' }, px: { xs: 2, md: 4 }, pb: { xs: 3, md: 4 } }}>
+          {body}
         </Box>
       </Box>
 
-      <Box sx={{ flexShrink: 0, display: 'flex', alignItems: 'center', px: 3, py: 1.25 }}>
-        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center' }}>
-          <Box component="img" src={iblLogo} alt="IBL" sx={{ height: 36, width: 'auto', opacity: 0.55 }} />
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Box component="img" src={backButton} alt="Atrás" onClick={handlePrev}
-            sx={{ height: '52px', width: 'auto', cursor: currentPage > 0 ? 'pointer' : 'not-allowed', opacity: currentPage > 0 ? 1 : 0.45, transition: 'all 0.25s ease', '&:hover': currentPage > 0 ? { transform: 'scale(1.08)' } : {} }} />
-          <Typography sx={{ color: '#4B5563', fontWeight: 700, fontSize: '1.1rem', minWidth: '110px', textAlign: 'center' }}>
-            Página {currentPage + 1} de {totalPages}
-          </Typography>
-          <Box component="img" src={nextButton} alt="Siguiente" onClick={handleNext}
-            sx={{ height: '52px', width: 'auto', cursor: currentPage < totalPages - 1 ? 'pointer' : 'not-allowed', opacity: currentPage < totalPages - 1 ? 1 : 0.45, transition: 'all 0.25s ease', '&:hover': currentPage < totalPages - 1 ? { transform: 'scale(1.08)' } : {} }} />
-        </Box>
-        <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-          <Box component="img" src={returnToMap} alt="Volver al Mapa" onClick={() => navigate('/region-selection')}
-            sx={{ height: '52px', width: 'auto', cursor: 'pointer', transition: 'all 0.25s ease', '&:hover': { transform: 'scale(1.06)' } }} />
-        </Box>
+      {/* ── Region map ────────────────────────────────────────────────── */}
+      <Box sx={{
+        flex: { md: '1.1 1 0' }, minWidth: 0, height: { xs: 340, md: 'auto' }, mx: { xs: 2, md: 0 }, my: { xs: 0, md: 2.5 }, mb: { xs: 3, md: 2.5 },
+        borderRadius: '24px', overflow: 'hidden', border: `1px solid ${BRAND.line}`, boxShadow: '0 10px 30px rgba(30,58,138,0.1)',
+      }}>
+        <ContinentMap region={region} missionaries={missionaries} onPinOpen={onPinOpen} />
+      </Box>
+
+      {/* ── Kiosk rail: other continents + map, within reach ──────────── */}
+      <Box sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', justifyContent: 'flex-end', p: 2, pl: 2 }}>
+        <KioskRail label="Continentes" items={[
+          ...REGIONS.map((r) => ({
+            key: r.id, label: SHORT[r.id], icon: <Dot color={r.color} />, active: r.id === region.id, color: r.color,
+            onClick: () => navigate(r.route),
+          })),
+          null,
+          { key: 'map', label: 'Mapa', icon: <PublicIcon />, onClick: toMap, tone: 'navy' as const },
+        ]} />
       </Box>
     </Box>
   );

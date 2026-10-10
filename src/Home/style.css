@@ -1,58 +1,42 @@
-.video {
-  position: relative;
+/* Each moment of the tour slides in */
+.home-stage {
+  animation: home-stage-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes home-stage-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.985); filter: blur(4px); }
+}
+
+/* Bar that fills over the length of a flight */
+.home-timer {
   width: 100%;
-  height: 100vh;
-  overflow: hidden;
-  cursor: pointer;
+  transform-origin: left;
+  animation-name: home-timer;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+@keyframes home-timer {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
 }
 
-video {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  margin: 0;
-  padding: 0;
+/* The little plane in the "En camino" label bobs as it flies */
+.home-plane-icon {
+  transform: rotate(45deg);
+  animation: home-plane 2.2s ease-in-out infinite;
+}
+@keyframes home-plane {
+  0%, 100% { transform: rotate(45deg) translate(0, 0); }
+  50%      { transform: rotate(45deg) translate(0, -3px); }
 }
 
-link {
-  z-index: 2;
+/* "How you can help" tiles arrive one after another */
+.home-help {
+  animation: home-help-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-/* "Touch the screen to continue" prompt on the video splash */
-.tap-hint {
-  position: absolute;
-  left: 50%;
-  bottom: 40px;
-  transform: translateX(-50%);
-  z-index: 2;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 26px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(6px);
-  color: #fff;
-  font: 700 1.15rem/1.2 inherit;
-  letter-spacing: 0.01em;
-  white-space: nowrap;
-  animation: tap-hint-pulse 2.4s ease-in-out infinite;
-  pointer-events: none;
-}
-
-.tap-hint-icon {
-  font-size: 1.3rem;
-}
-
-@keyframes tap-hint-pulse {
-  0%, 100% { opacity: 0.8; transform: translateX(-50%) translateY(0); }
-  50%      { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+@keyframes home-help-in {
+  from { opacity: 0; transform: translateY(14px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tap-hint { animation: none; }
+  .home-stage, .home-timer, .home-plane-icon, .home-help { animation: none; }
 }
