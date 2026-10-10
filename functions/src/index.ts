@@ -43,13 +43,14 @@ const OPTIONS = {
 };
 
 export const transcodeVideo = onObjectFinalized(OPTIONS, async (event) => {
-  const { name, bucket, contentType } = event.data;
+  const { name, bucket, contentType, generation } = event.data;
   const out = outputsFor(name);
   if (!out || !contentType?.startsWith('video/')) return;
 
+  // Already made from this exact upload (event re-delivered)? A replaced video gets a new generation.
   const files = getStorage().bucket(bucket);
-  const [exists] = await files.file(out.web).exists();
-  if (exists) return; // already done (event re-delivered)
+  const [meta] = await files.file(out.web).getMetadata().catch(() => [null]);
+  if (meta?.metadata?.sourceGeneration === String(generation)) return;
 
   const dir = await mkdtemp(join(tmpdir(), 'video-'));
   const input = join(dir, 'in');
@@ -73,9 +74,10 @@ export const transcodeVideo = onObjectFinalized(OPTIONS, async (event) => {
       .catch(() => ffmpeg(['-i', web, '-frames:v', '1', '-vf', "scale='min(1280,iw)':-2", '-q:v', '3', poster]));
 
     const cacheControl = 'public, max-age=31536000'; // upload names are unique, so these never change
+    const metadata = { sourceGeneration: String(generation) };
     await Promise.all([
-      files.upload(poster, { destination: out.poster, metadata: { contentType: 'image/jpeg', cacheControl } }),
-      files.upload(web, { destination: out.web, metadata: { contentType: 'video/mp4', cacheControl } }),
+      files.upload(poster, { destination: out.poster, metadata: { contentType: 'image/jpeg', cacheControl, metadata } }),
+      files.upload(web, { destination: out.web, metadata: { contentType: 'video/mp4', cacheControl, metadata } }),
     ]);
     logger.info('Transcoded video', { name, seconds: Math.round((Date.now() - started) / 1000) });
   } catch (err) {
@@ -90,5 +92,8 @@ export const cleanUpVideo = onObjectDeleted({ region: 'us-east1' }, async (event
   const out = outputsFor(event.data.name);
   if (!out) return;
   const files = getStorage().bucket(event.data.bucket);
+  // Replacing a file also reports the old version as deleted; keep the copies while the video still exists
+  const [stillThere] = await files.file(event.data.name).exists();
+  if (stillThere) return;
   await Promise.all([out.web, out.poster].map((p) => files.file(p).delete({ ignoreNotFound: true })));
 });
