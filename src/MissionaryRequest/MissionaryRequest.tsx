@@ -179,7 +179,8 @@ const MissionaryRequest: React.FC = () => {
   };
 
   const shell = (children: React.ReactNode) => (
-    <PageShell showDeadline={false} harvest={false} t={STRINGS[lang]} lang={lang} onLangChange={changeLang} title={t.pageTitle}>{children}</PageShell>
+    <PageShell showDeadline={false} harvest={false} t={STRINGS[lang]} lang={lang} onLangChange={changeLang} title={t.pageTitle}
+      backTo="/region-selection" backLabel={t.backHome}>{children}</PageShell>
   );
 
   if (phase === 'sending') {

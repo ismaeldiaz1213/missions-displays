@@ -117,81 +117,49 @@ const MissionaryLocalInfo: React.FC<Props> = ({ latitude, longitude }) => {
   const timeDiff = weather ? formatTimeDiff(weather.utcOffsetSeconds) : null;
 
   return (
-    <Box sx={{ mb: 4 }}>
-      <Typography sx={{ color: '#1E3A8A', fontWeight: 800, fontSize: '1.15rem', mb: 1.25 }}>
-        Hora y Clima Local
-      </Typography>
-
-      <Box sx={{
-        bgcolor: '#fff', borderRadius: '16px', p: { xs: 2.5, sm: 3 },
-        boxShadow: '0 4px 24px rgba(30,58,138,0.08)', border: '1px solid rgba(37,99,235,0.1)',
-        display: 'flex', flexDirection: { xs: 'column', sm: 'row' },
-        alignItems: { xs: 'flex-start', sm: 'stretch' }, gap: { xs: 2.5, sm: 0 },
-      }}>
-
-        {/* ── Time & date ──────────────────────────────────────────── */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <Typography sx={{ fontSize: { xs: '2.4rem', sm: '3rem' }, fontWeight: 800, color: '#1E3A8A', lineHeight: 1 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* ── Time & date ──────────────────────────────────────────── */}
+      <Box>
+        <Typography sx={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', mb: 0.5 }}>
+          Hora local
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.25, flexWrap: 'wrap' }}>
+          <Typography sx={{ fontSize: '2.1rem', fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>
             {localTime}
-          </Typography>
-          <Typography sx={{ color: '#4B5563', fontSize: { xs: '0.9rem', sm: '1rem' }, mt: 0.75 }}>
-            {localDate}
           </Typography>
           {timeDiff && (
             <Chip label={timeDiff} size="small" sx={{
-              mt: 1.25, alignSelf: 'flex-start',
-              bgcolor: 'rgba(37,99,235,0.08)', color: '#1E3A8A',
-              fontWeight: 600, fontSize: '0.78rem', border: '1px solid rgba(37,99,235,0.15)',
+              bgcolor: 'rgba(37,99,235,0.08)', color: '#1E3A8A', fontWeight: 600, fontSize: '0.75rem',
             }} />
           )}
         </Box>
-
-        {/* ── Dividers ─────────────────────────────────────────────── */}
-        <Box sx={{ display: { xs: 'none', sm: 'block' }, width: '1px', bgcolor: 'rgba(37,99,235,0.12)', mx: 3, flexShrink: 0 }} />
-        <Box sx={{ display: { xs: 'block', sm: 'none' }, height: '1px', width: '100%', bgcolor: 'rgba(37,99,235,0.12)' }} />
-
-        {/* ── Weather ──────────────────────────────────────────────── */}
-        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center' }}>
-          {weatherLoading ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, width: '100%', py: 1 }}>
-              <CircularProgress size={22} sx={{ color: '#2563EB' }} />
-              <Typography variant="caption" sx={{ color: '#9CA3AF', textAlign: 'center', lineHeight: 1.4 }}>
-                Cargando datos<br />del clima...
-              </Typography>
-            </Box>
-          ) : weather ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', justifyContent: { xs: 'space-between', sm: 'flex-start' } }}>
-
-              {/* Big emoji */}
-              <Typography sx={{ fontSize: '3.5rem', lineHeight: 1, flexShrink: 0 }}>
-                {getWeather(weather.weatherCode).emoji}
-              </Typography>
-
-              {/* Temp + condition */}
-              <Box sx={{ flexShrink: 0 }}>
-                <Typography sx={{ fontSize: '1.9rem', fontWeight: 800, color: '#1E3A8A', lineHeight: 1 }}>
-                  {toF(weather.temperatureC)}°F
-                </Typography>
-                <Typography sx={{ color: '#9CA3AF', fontSize: '0.75rem', mt: 0.25 }}>
-                  {weather.temperatureC}°C
-                </Typography>
-                <Typography sx={{ color: '#4B5563', fontSize: '0.82rem', mt: 0.3 }}>
-                  {getWeather(weather.weatherCode).label}
-                </Typography>
-              </Box>
-
-              {/* Stats column */}
-              <Box sx={{ ml: { xs: 0, sm: 'auto' }, display: 'flex', flexDirection: 'column', gap: 0.75, alignItems: 'flex-end' }}>
-                <StatRow icon="💧" text={`${weather.precipitationProbability}% lluvia`} />
-                <StatRow icon="💦" text={`${weather.humidity}% humedad`} />
-                <StatRow icon="🌡️" text={`↑ ${toF(weather.dailyHighC)}° / ↓ ${toF(weather.dailyLowC)}°F`} />
-              </Box>
-
-            </Box>
-          ) : null}
-        </Box>
-
+        <Typography sx={{ color: '#64748B', fontSize: '0.88rem', mt: 0.5 }}>{localDate}</Typography>
       </Box>
+
+      {/* ── Weather ──────────────────────────────────────────────── */}
+      {weatherLoading ? (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, color: '#94A3B8' }}>
+          <CircularProgress size={18} sx={{ color: '#2563EB' }} />
+          <Typography variant="caption">Cargando el clima…</Typography>
+        </Box>
+      ) : weather ? (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.75, p: 1.75, borderRadius: '14px', bgcolor: '#F1F5F9' }}>
+          <Typography sx={{ fontSize: '2.6rem', lineHeight: 1, flexShrink: 0 }}>
+            {getWeather(weather.weatherCode).emoji}
+          </Typography>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1 }}>
+              {toF(weather.temperatureC)}°F <Box component="span" sx={{ color: '#94A3B8', fontSize: '0.95rem', fontWeight: 600 }}>{weather.temperatureC}°C</Box>
+            </Typography>
+            <Typography sx={{ color: '#475569', fontSize: '0.85rem' }}>{getWeather(weather.weatherCode).label}</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'flex-end', flexShrink: 0 }}>
+            <StatRow icon="💧" text={`${weather.precipitationProbability}% lluvia`} />
+            <StatRow icon="💦" text={`${weather.humidity}% humedad`} />
+            <StatRow icon="🌡️" text={`${toF(weather.dailyHighC)}° / ${toF(weather.dailyLowC)}°F`} />
+          </Box>
+        </Box>
+      ) : null}
     </Box>
   );
 };

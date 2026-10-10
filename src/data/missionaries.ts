@@ -8,22 +8,33 @@ const draftsCol = collection(db, 'missionaryDrafts');
 
 const NETWORK_TIMEOUT_MS = 5000;
 
+const CACHE_PREFIX = 'ibl-cache:';
+
+/** Last good copy saved on this device, or null. */
+export const readCache = <T>(key: string): T | null => {
+  try {
+    const cached = localStorage.getItem(CACHE_PREFIX + key);
+    return cached ? (JSON.parse(cached) as T) : null;
+  } catch { return null; /* storage unavailable or corrupt */ }
+};
+
+const writeCache = (key: string, data: unknown) => {
+  try { localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(data)); } catch { /* storage full/unavailable */ }
+};
+
 // Kiosks sit on flaky church Wi-Fi: use the network when it answers within 5 s,
 // otherwise fall back to the last good copy saved on this device.
-const withOfflineCache = async <T>(key: string, load: () => Promise<T>): Promise<T> => {
-  const cacheKey = `ibl-cache:${key}`;
+export const withOfflineCache = async <T>(key: string, load: () => Promise<T>): Promise<T> => {
   try {
     const data = await Promise.race([
       load(),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), NETWORK_TIMEOUT_MS)),
     ]);
-    try { localStorage.setItem(cacheKey, JSON.stringify(data)); } catch { /* storage full/unavailable */ }
+    writeCache(key, data);
     return data;
   } catch (err) {
-    try {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) return JSON.parse(cached) as T;
-    } catch { /* storage unavailable */ }
+    const cached = readCache<T>(key);
+    if (cached) return cached;
     throw err;
   }
 };
@@ -34,6 +45,24 @@ export const listMissionariesByContinent = (continent: string) =>
   withOfflineCache(`continent:${continent}`, async () => {
     const snap = await getDocs(query(missionariesCol, where('continent', '==', continent)));
     return snap.docs.map((d) => toMissionary(d.id, d.data()));
+  });
+
+/**
+ * Every published missionary in one request (the collection is small). Also refreshes each
+ * continent's and each missionary's saved copy, so after the map loads once the whole site
+ * opens instantly and keeps working if the Wi-Fi drops.
+ */
+export const listMissionaries = () =>
+  withOfflineCache('all', async () => {
+    const snap = await getDocs(missionariesCol);
+    const all = snap.docs.map((d) => toMissionary(d.id, d.data()));
+    const byContinent: Record<string, Missionary[]> = {};
+    for (const m of all) {
+      writeCache(`missionary:${m.id}`, m);
+      (byContinent[m.continent] ??= []).push(m);
+    }
+    for (const [continent, list] of Object.entries(byContinent)) writeCache(`continent:${continent}`, list);
+    return all;
   });
 
 export const getMissionary = (id: string) =>
@@ -59,9 +88,3 @@ export const saveDraft = (m: Missionary) =>
   setDoc(doc(draftsCol, m.id), JSON.parse(JSON.stringify(m)));
 
 export const deleteDraft = (id: string) => deleteDoc(doc(draftsCol, id));
-
-/** Makes a draft public: writes it to missionaries/, then removes the draft. */
-export const publishDraft = async (m: Missionary) => {
-  await saveMissionary(m);
-  await deleteDraft(m.id);
-};

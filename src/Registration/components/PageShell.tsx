@@ -35,11 +35,12 @@ interface HeroProps {
   onLangChange: (l: Lang) => void;
   /** Replaces the conference name and hides the conference dates (used by non-conference pages). */
   title?: string;
-  /** Shows a "back to the conference page" link above the title. */
+  /** Shows a back link above the title (to the conference page unless `backLabel` says otherwise). */
   backTo?: string;
+  backLabel?: string;
 }
 
-const Hero: React.FC<HeroProps> = ({ showDeadline, t, lang, onLangChange, title, backTo }) => {
+const Hero: React.FC<HeroProps> = ({ showDeadline, t, lang, onLangChange, title, backTo, backLabel }) => {
   const days = daysUntilClose();
   const locale = LOCALES[lang];
   const pillSx = {
@@ -65,11 +66,13 @@ const Hero: React.FC<HeroProps> = ({ showDeadline, t, lang, onLangChange, title,
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: { xs: 1.5, md: 1 } }}>
           {backTo ? (
             <Box component={RouterLink} to={backTo} sx={{
-              display: 'inline-flex', alignItems: 'center', gap: 0.5, textDecoration: 'none',
-              color: 'rgba(255,255,255,0.8)', fontWeight: 600, fontSize: '0.85rem',
-              '&:hover': { color: 'var(--ibl-on-primary)' },
+              display: 'inline-flex', alignItems: 'center', gap: 0.75, textDecoration: 'none',
+              px: 1.75, py: 0.9, borderRadius: '999px',
+              bgcolor: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.25)',
+              color: 'var(--ibl-on-primary)', fontWeight: 700, fontSize: '0.92rem',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.24)', color: 'var(--ibl-on-primary)' },
             }}>
-              <ArrowBackIcon sx={{ fontSize: '1rem' }} />{t.backToConference}
+              <ArrowBackIcon sx={{ fontSize: '1.1rem' }} />{backLabel ?? t.backToConference}
             </Box>
           ) : <span />}
           <LanguageToggle lang={lang} onChange={onLangChange} label={t.language} />

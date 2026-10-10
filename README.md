@@ -67,6 +67,7 @@ Everything runs on **Google Cloud via Firebase** (project `ibl-missions-display`
 | Website hosting | Firebase Hosting | [Firebase console](https://console.firebase.google.com/project/ibl-missions-display) → Hosting |
 | Missionaries & conference registrations | Cloud Firestore | Firebase console → Firestore Database |
 | Photos, prayer letters, conference videos | Cloud Storage | Firebase console → Storage |
+| Missionary video conversion (`functions/`) | Cloud Functions | Firebase console → Functions |
 | Admin login (Google) | Firebase Authentication | Firebase console → Authentication |
 | Billing & budget alert | Google Cloud | [Google Cloud console](https://console.cloud.google.com) → Billing |
 
@@ -79,7 +80,9 @@ The local site uses the real Firebase project — changes made in `/admin` local
 
 ### Deploy
 - **Website:** push to `master`. GitHub Actions builds and deploys to Firebase Hosting (see the repo's **Actions** tab). Pull requests get a temporary preview link.
-- **Security rules** (`firestore.rules`, `storage.rules`): not deployed by GitHub. After changing them, run `npx firebase-tools login` once, then `npm run deploy:rules`.
+- **Security rules** (`firestore.rules`, `storage.rules`): not deployed by GitHub. After changing them, run `npx firebase-tools login` once, then `npx firebase-tools deploy --only firestore:rules,firestore:indexes,storage --project ibl-missions-display`.
+- **Video conversion function** (`functions/`): not deployed by GitHub. `npx firebase-tools deploy --only functions --project ibl-missions-display`. Phone videos uploaded to `videos/` are often HEVC, which most PCs can't play, so `transcodeVideo` writes an H.264 copy to `videos/web/` and a still frame to `videos/posters/`; the missionary page uses them when they exist.
+- **Storage CORS** (`storage.cors.json`): lets the kiosks (which run the site on `localhost`) read prayer letters and videos. Apply with `npm run cors:storage`.
 
 ### Who can do what
 - **Admins** (`/admin`): any Google account ending in `@iblibertad.org` or `@iblibertad.com`. Enforced in `firestore.rules` and `storage.rules`, not just in the UI.
@@ -88,14 +91,20 @@ The local site uses the real Firebase project — changes made in `/admin` local
 ### Key routes
 | Route | What it is |
 |---|---|
-| `/` | Kiosk home video |
+| `/` | Kiosk welcome screen — a live globe that flies to each missionary with Scripture along the way (phones skip to the map). Add `?rapido` to watch it at 4× speed |
 | `/region-selection`, `/norte-america`, … | Missionary map & continent pages |
 | `/misionero/:id` | Missionary mini-site |
-| `/admin` | Admin portal (missionaries, page requests, conference registrations with Excel/PDF export, and the pickup planner) |
+| `/admin` | Admin portal (missionaries, page requests, conference registrations with Excel/PDF export, the pickup planner, and **Pantallas**: the conference stage the kiosks show) |
 | `/conferencia` | Conference landing page — the link to give the church website. Poster, video, schedule, info and the registration button. `?lang=en` for English |
 | `/conferencia/registro` | Conference registration — unlisted, linked from the church website. `?lang=en` for English |
 | `/conferencia/subir/:registrationId` | Private MP4 upload link shown to missionaries and evangelists after registering |
 | `/misioneros/solicitud` | Public missionary page request form (linked from the home page). Admins approve requests in **Admin → Solicitudes**, which creates a hidden draft to review and publish |
+
+### Kiosk conference stage
+The map page's conference card follows **Admin → Pantallas**: *Automático* (by date), *Próximamente*, *En vivo* (shows the missionary QR code) or *Terminó* (shows the recap). Preview any stage without changing it with `/region-selection?conferencia=antes|en-vivo|despues`. The text lives in `src/RegionSelection/kioskContent.ts`.
+
+### Offline
+Kiosks remember the last missionary list, so they keep working when the Wi-Fi drops: every page shows the saved copy first and refreshes it in the background (`src/data/useCachedLoad.ts`). Photos, posters and prayer letters are cached by the service worker (`vite.config.ts`).
 
 ### Conference settings
 Dates, deadline, and hotel fee live in `src/Registration/conference.ts`. The deadline and fee are **also enforced** in `firestore.rules` / `storage.rules` — update both, then run `npm run deploy:rules`.
