@@ -62,9 +62,11 @@ const buildShots = (stops: Stop[]): Shot[] => {
  * missionary and lands with their photo, the globe turns slowly through each verse, the night
  * side glows with city lights, and the loop ends back at the church.
  */
-const AttractGlobe: React.FC<{ stops: Stop[]; onStage: (s: Stage) => void; /** Globe center as a share of the width */ centerX?: number }> = ({
-  stops, onStage, centerX = 0.5,
-}) => {
+const AttractGlobe: React.FC<{
+  stops: Stop[]; onStage: (s: Stage) => void;
+  /** A missionary pin on the globe was tapped */ onPick?: (stop: Stop) => void;
+  /** Globe center as a share of the width */ centerX?: number;
+}> = ({ stops, onStage, onPick, centerX = 0.5 }) => {
   const boxRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const size = useElementSize(boxRef);
@@ -73,6 +75,8 @@ const AttractGlobe: React.FC<{ stops: Stop[]; onStage: (s: Stage) => void; /** G
   const lights = useRef<Light[]>([]);
   const onStageRef = useRef(onStage);
   onStageRef.current = onStage;
+  // Where each pin was drawn on the last frame, for tap hit-testing
+  const targets = useRef<{ x: number; y: number; r: number; stop: Stop }[]>([]);
 
   useEffect(() => {
     Promise.all([loadWorldLowRes(), loadLandLowRes()]).then(([countries, land]) => setWorld({ countries, land })).catch(console.error);
@@ -335,10 +339,12 @@ const AttractGlobe: React.FC<{ stops: Stop[]; onStage: (s: Stage) => void; /** G
       }
 
       // Missionaries not yet visited: small dots; visited: little photos
+      const hits: typeof targets.current = [];
       for (const s of stops) {
         if (!visible(s.at) || (shot.kind === 'arrive' && shot.stop === s)) continue;
         const q = projection(s.at);
         if (!q) continue;
+        hits.push({ x: q[0], y: q[1], r: 30, stop: s }); // a fingertip, not the 5px dot
         if (visited.has(s.people[0].id)) {
           drawPhotoPin(photos.get(s.people[0].id), q[0], q[1], 11, BRAND.blue);
         } else {
@@ -369,10 +375,12 @@ const AttractGlobe: React.FC<{ stops: Stop[]; onStage: (s: Stage) => void; /** G
             ctx.strokeStyle = `rgba(37,99,235,${0.45 * (1 - r)})`; ctx.lineWidth = 2.5; ctx.stroke();
           }
           const pop = still ? 1 : easeOutBack(clamp01(t / 750));
+          hits.push({ x: q[0], y: q[1], r: 46, stop: shot.stop });
           drawPhotoPin(photos.get(shot.stop.people[0].id), q[0], q[1] - 4 * pop, 30 * pop, BRAND.blue);
         }
       }
 
+      targets.current = hits;
       if (plane) drawPlane(plane.at, plane.heading, plane.lift);
     };
 
@@ -383,7 +391,18 @@ const AttractGlobe: React.FC<{ stops: Stop[]; onStage: (s: Stage) => void; /** G
   }, [world, size, stops, graticule, photos, centerX]);
 
   return (
-    <Box ref={boxRef} sx={{ position: 'absolute', inset: 0 }}>
+    <Box ref={boxRef} sx={{ position: 'absolute', inset: 0 }} onClick={(e) => {
+      // A tap near a pin opens that missionary; anywhere else falls through to the page
+      if (!onPick || !boxRef.current) return;
+      const rect = boxRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left, y = e.clientY - rect.top;
+      let best: { d: number; stop: Stop } | null = null;
+      for (const t of targets.current) {
+        const d = Math.hypot(t.x - x, t.y - y);
+        if (d <= t.r && (!best || d < best.d)) best = { d, stop: t.stop };
+      }
+      if (best) { e.stopPropagation(); onPick(best.stop); }
+    }}>
       <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} aria-hidden />
     </Box>
   );

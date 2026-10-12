@@ -80,3 +80,17 @@ button:focus-visible {
     color: #747bff;
   }
 }
+
+/* Hallway touchscreens (see useKioskMode): no pinch or double-tap zoom, no text selection,
+   no long-press menus or image dragging. */
+html.kiosk {
+  touch-action: pan-x pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+html.kiosk img,
+html.kiosk svg {
+  -webkit-user-drag: none;
+}

@@ -10,6 +10,7 @@ import type { Missionary } from '../types';
 import { profilePhotoUrl } from '../storageUrl';
 import { HOUSTON_LAT, HOUSTON_LON, distanceKm } from '../constants';
 import { BRAND, glassSx } from '../ui/brand';
+import DistanceFromHouston from '../ui/DistanceFromHouston';
 import type { Stage } from './AttractGlobe';
 import type { Verse } from './verses';
 import { HOW_TO_HELP } from './verses';
@@ -46,7 +47,7 @@ const VerseBlock: React.FC<{ verse: Verse; size?: 'lg' | 'md' }> = ({ verse, siz
   </Box>
 );
 
-const PersonButton: React.FC<{ m: Missionary; big: boolean }> = ({ m, big }) => {
+const PersonButton: React.FC<{ m: Missionary }> = ({ m }) => {
   const navigate = useNavigate();
   return (
     <ButtonBase onClick={(e) => { e.stopPropagation(); navigate(`/misionero/${m.id}`); }} sx={{
@@ -56,7 +57,7 @@ const PersonButton: React.FC<{ m: Missionary; big: boolean }> = ({ m, big }) => 
       <Box component="img" src={profilePhotoUrl(m)} alt=""
         onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.src = '/default-missionary.svg'; }}
         sx={{
-          width: big ? 156 : 92, height: big ? 156 : 92, borderRadius: big ? '26px' : '20px', objectFit: 'cover', flexShrink: 0,
+          width: 156, height: 156, borderRadius: '26px', objectFit: 'cover', flexShrink: 0,
           border: '4px solid #fff', boxShadow: '0 12px 30px rgba(15,23,42,0.18)',
         }} />
       <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -65,13 +66,38 @@ const PersonButton: React.FC<{ m: Missionary; big: boolean }> = ({ m, big }) => 
             {m.missionType}
           </Typography>
         )}
-        <Typography sx={{ color: BRAND.ink, fontWeight: 800, fontSize: big ? '2.1rem' : '1.45rem', lineHeight: 1.12, letterSpacing: '-0.01em' }}>
+        <Typography sx={{ color: BRAND.ink, fontWeight: 800, fontSize: '2.1rem', lineHeight: 1.12, letterSpacing: '-0.01em' }}>
           {[m.name, m.lastName].filter(Boolean).join(' ')}
         </Typography>
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, mt: 1.25, px: 1.5, py: 0.6, borderRadius: '999px', bgcolor: BRAND.blue, color: '#fff' }}>
           <Typography sx={{ fontWeight: 800, fontSize: '0.92rem' }}>Conózcalos</Typography>
           <ArrowForwardRoundedIcon className="go" sx={{ fontSize: '1.1rem', transition: 'transform 0.2s' }} />
         </Box>
+      </Box>
+    </ButtonBase>
+  );
+};
+
+/** Several missionaries at one stop sit side by side (a list of three looked like it scrolled). */
+const PersonTile: React.FC<{ m: Missionary }> = ({ m }) => {
+  const navigate = useNavigate();
+  return (
+    <ButtonBase onClick={(e) => { e.stopPropagation(); navigate(`/misionero/${m.id}`); }} sx={{
+      minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.25, textAlign: 'center',
+      borderRadius: '22px', p: 1.25, '&:hover': { bgcolor: 'rgba(37,99,235,0.06)' },
+    }}>
+      <Box component="img" src={profilePhotoUrl(m)} alt=""
+        onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.src = '/default-missionary.svg'; }}
+        sx={{
+          width: '100%', maxWidth: 150, aspectRatio: '1', borderRadius: '22px', objectFit: 'cover',
+          border: '4px solid #fff', boxShadow: '0 12px 30px rgba(15,23,42,0.18)',
+        }} />
+      <Typography sx={{ color: BRAND.ink, fontWeight: 800, fontSize: '1.15rem', lineHeight: 1.15, overflowWrap: 'anywhere' }}>
+        {[m.name, m.lastName].filter(Boolean).join(' ')}
+      </Typography>
+      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 1.25, py: 0.5, borderRadius: '999px', bgcolor: BRAND.blue, color: '#fff' }}>
+        <Typography sx={{ fontWeight: 800, fontSize: '0.85rem' }}>Conózcalos</Typography>
+        <ArrowForwardRoundedIcon sx={{ fontSize: '1rem' }} />
       </Box>
     </ButtonBase>
   );
@@ -108,7 +134,7 @@ const HomeStage: React.FC<{ stage: Stage }> = ({ stage }) => {
         {km > 50 && (
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, mt: 2.5, color: BRAND.muted }}>
             <PlaceRoundedIcon sx={{ fontSize: '1.2rem', color: BRAND.amber }} />
-            <Typography sx={{ fontWeight: 700, fontSize: '1.05rem' }}>A {km.toLocaleString('es-MX')} km de Houston</Typography>
+            <Typography sx={{ fontWeight: 700, fontSize: '1.05rem' }}><DistanceFromHouston km={km} /></Typography>
           </Box>
         )}
         <Timer ms={stage.ms} />
@@ -121,9 +147,13 @@ const HomeStage: React.FC<{ stage: Stage }> = ({ stage }) => {
     return (
       <Box sx={{ ...glassSx, p: { md: 3.5, xl: 4.5 } }}>
         <Eyebrow icon={<PlaceRoundedIcon sx={{ fontSize: '1.15rem' }} />}>{people.length > 1 ? 'Aquí sirven' : 'Aquí sirve'}</Eyebrow>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {people.map((m) => <PersonButton key={m.id} m={m} big={people.length === 1} />)}
-        </Box>
+        {people.length === 1 ? (
+          <PersonButton m={people[0]} />
+        ) : (
+          <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(${people.length}, minmax(0, 1fr))`, gap: 1 }}>
+            {people.map((m) => <PersonTile key={m.id} m={m} />)}
+          </Box>
+        )}
         <Typography sx={{ color: BRAND.muted, fontWeight: 600, fontSize: '1.05rem', mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
           <PlaceRoundedIcon sx={{ fontSize: '1.15rem', color: BRAND.amber }} />
           {[placeOf(people[0]).city, placeOf(people[0]).country].filter(Boolean).join(', ')}

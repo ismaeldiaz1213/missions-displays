@@ -13,8 +13,6 @@ import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
-import TravelExploreIcon from '@mui/icons-material/TravelExplore';
-import { QRCodeSVG } from 'qrcode.react';
 import type { Missionary as MissionaryType } from '../types';
 import ContactDialog from './components/ContactDialog';
 import MissionaryLocalInfo from './components/MissionaryLocalInfo';
@@ -25,11 +23,13 @@ import iblLogo from '../assets/ibl_logo.png';
 import { isVideoPath, resolveUrl } from '../storageUrl';
 import { getMissionary } from '../data/missionaries';
 import { useCachedLoad } from '../data/useCachedLoad';
-import { publicUrlFor } from '../siteUrl';
 import { HOUSTON_LAT, HOUSTON_LON, distanceKm } from '../constants';
 import './missionaryStyle.css';
 import KioskRail from '../ui/KioskRail';
 import { cardSx } from '../ui/brand';
+import QrCard from '../ui/QrCard';
+import DistanceFromHouston from '../ui/DistanceFromHouston';
+import { usePageTitle } from '../usePageTitle';
 
 const PrayerLetterDialog = lazy(() => import('./components/PrayerLetterDialog'));
 
@@ -123,6 +123,8 @@ const Missionary: React.FC = () => {
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
 
   const m: MissionaryType = { ...DEFAULTS, ...data };
+  const pageName = [data?.name, data?.lastName].filter(Boolean).join(' ');
+  usePageTitle(pageName ? `${pageName}${data?.location?.country ? ` (${data.location.country.trim()})` : ''}` : 'Misionero');
 
   useEffect(() => {
     resolveUrl(m.profileImage, '').then(setProfileUrl);
@@ -154,11 +156,10 @@ const Missionary: React.FC = () => {
     ...(pdfUrl ? [{ key: 'carta', label: 'Carta de oración', railLabel: 'Carta de\noración', icon: <ArticleOutlinedIcon />, onClick: () => setLetterOpen(true) }] : []),
     ...(hasContactInfo ? [{ key: 'contacto', label: 'Contactar', railLabel: 'Contactar', icon: <ContactMailOutlinedIcon />, onClick: () => setContactDialogOpen(true) }] : []),
   ];
+  // Where they serve isn't here: it's always in view on the right
   const railItems: Action[] = [
     { key: 'top', section: 'top', label: 'Inicio', railLabel: hasAbout ? 'Sobre\nellos' : 'Inicio', icon: <InfoOutlinedIcon />, onClick: () => scrollToId('top') },
-    ...actions.slice(0, hasVideos && hasPhotos ? 2 : hasVideos || hasPhotos ? 1 : 0),
-    ...(hasCoords ? [{ key: 'ubicacion', section: 'ubicacion', label: 'Dónde sirven', railLabel: 'Dónde\nsirven', icon: <TravelExploreIcon />, onClick: () => scrollToId('ubicacion') }] : []),
-    ...actions.slice(hasVideos && hasPhotos ? 2 : hasVideos || hasPhotos ? 1 : 0),
+    ...actions,
   ];
   const activeSection = useActiveSection(railItems.filter((r) => r.section).map((r) => r.section!));
 
@@ -224,6 +225,7 @@ const Missionary: React.FC = () => {
 
         <Box sx={{
           position: 'relative', maxWidth: 1240, mx: 'auto', px: { xs: 2, md: 4 }, pr: { md: '150px', xl: 4 }, py: { xs: 3, md: 6 },
+          '@media (min-width: 900px) and (max-height: 900px)': { py: 4 },
           display: 'grid', gap: { xs: 3, md: 5 }, alignItems: 'center',
           gridTemplateColumns: { xs: '1fr', md: profileUrl ? 'minmax(0, 1fr) minmax(0, 1.05fr)' : '1fr' },
         }}>
@@ -242,6 +244,7 @@ const Missionary: React.FC = () => {
                 onError={() => setProfileUrl('')}
                 sx={{
                   display: 'block', maxWidth: '100%', maxHeight: { xs: 300, md: 440 }, width: 'auto', height: 'auto',
+                  '@media (min-width: 900px) and (max-height: 900px)': { maxHeight: 360 },
                   transition: 'transform 0.4s ease',
                 }} />
               <Box sx={{
@@ -290,6 +293,11 @@ const Missionary: React.FC = () => {
                 ))}
               </Box>
             )}
+
+            {/* Take this page home (kiosk only: on a phone you're already holding it) */}
+            <Box sx={{ display: { xs: 'none', md: 'flex' }, mt: 3.5, justifyContent: profileUrl ? 'flex-start' : 'center' }}>
+              <QrCard path={`/misionero/${m.id}`} size={104} title="Lleve esta página con usted" body="Para orar por ellos, leer sus cartas y ver sus fotos desde casa." />
+            </Box>
           </Box>
         </Box>
       </Box>
@@ -383,7 +391,7 @@ const Missionary: React.FC = () => {
                   {kmFromHouston > 50 && (
                     <Typography sx={{ color: '#2563EB', fontWeight: 700, fontSize: '0.9rem', mt: 0.75, display: 'flex', alignItems: 'center', gap: 0.75 }}>
                       <FlightTakeoffIcon sx={{ fontSize: '1.1rem' }} />
-                      A {Math.round(kmFromHouston).toLocaleString('es-MX')} km de Houston
+                      <DistanceFromHouston km={kmFromHouston} />
                     </Typography>
                   )}
                 </Box>
@@ -414,17 +422,6 @@ const Missionary: React.FC = () => {
               )}
             </Box>
           )}
-
-          {/* Take this page home — kiosk/desktop only */}
-          <Box sx={{ ...cardSx, display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 2, p: 2.5 }}>
-            <QRCodeSVG value={publicUrlFor(`/misionero/${m.id}`)} size={96} level="M" bgColor="#ffffff" fgColor="#1E3A8A" />
-            <Box>
-              <Typography sx={{ color: '#0F172A', fontWeight: 800, lineHeight: 1.3 }}>Llévelo en su teléfono</Typography>
-              <Typography sx={{ color: '#64748B', fontSize: '0.88rem', mt: 0.5, lineHeight: 1.4 }}>
-                Escanee el código para ver esta página y orar por ellos.
-              </Typography>
-            </Box>
-          </Box>
         </Box>
       </Box>
 

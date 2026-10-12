@@ -1,6 +1,8 @@
 import React from 'react';
+import { usePageTitle } from './usePageTitle';
 
 const NotFound: React.FC = () => {
+  usePageTitle('Página no encontrada');
   return (
     <div>
       <h1>Error 404 Page Not Found</h1>

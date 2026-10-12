@@ -31,10 +31,10 @@ const MissionaryCard: React.FC<{ missionary: Missionary; accent: string; highlig
             {m.missionType}
           </Typography>
         )}
-        <Typography sx={{ color: BRAND.ink, fontWeight: 800, fontSize: { xs: '1rem', md: '1.15rem' }, lineHeight: 1.2 }}>
+        <Typography sx={{ color: BRAND.ink, fontWeight: 800, fontSize: { xs: '1rem', md: '1.3rem' }, lineHeight: 1.2 }}>
           {[m.name, m.lastName].filter(Boolean).join(' ') || 'Misionero'}
         </Typography>
-        <Typography sx={{ color: BRAND.muted, fontSize: '0.88rem', mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Typography sx={{ color: BRAND.muted, fontSize: { xs: '0.88rem', md: '0.98rem' }, mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <PlaceOutlinedIcon sx={{ fontSize: '1rem', color: accent }} />
           <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {[m.location?.city, m.location?.country].filter(Boolean).join(', ') || '—'}

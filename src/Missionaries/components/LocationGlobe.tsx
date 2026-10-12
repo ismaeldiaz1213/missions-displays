@@ -11,12 +11,14 @@ const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 
 /**
  * A small globe that turns from Houston to where the missionary serves and draws the trip
  * between them. Zooms in automatically when they're close (e.g. Mexico) so the route reads.
+ * People on the kiosk tap it to see what it does, so a tap flies the trip again.
  */
 const LocationGlobe: React.FC<{ latitude: number; longitude: number }> = ({ latitude, longitude }) => {
   const boxRef = useRef<HTMLDivElement>(null);
   const size = useElementSize(boxRef);
   const [countries, setCountries] = useState<Countries | null>(null);
   const [t, setT] = useState(0); // intro progress 0 → 1
+  const [replays, setReplays] = useState(0);
 
   useEffect(() => { loadWorldLowRes().then(setCountries).catch(console.error); }, []);
 
@@ -32,7 +34,7 @@ const LocationGlobe: React.FC<{ latitude: number; longitude: number }> = ({ lati
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [countries, latitude, longitude]);
+  }, [countries, latitude, longitude, replays]);
 
   const houston: [number, number] = [HOUSTON_LON, HOUSTON_LAT];
   const place: [number, number] = [longitude, latitude];
@@ -61,7 +63,7 @@ const LocationGlobe: React.FC<{ latitude: number; longitude: number }> = ({ lati
   }, [countries, size, t, latitude, longitude]);
 
   return (
-    <Box ref={boxRef} sx={{ position: 'relative', width: '100%', height: '100%', background: 'linear-gradient(180deg, #F0F9FF 0%, #E0F2FE 100%)' }}>
+    <Box ref={boxRef} onClick={() => { if (t === 1) setReplays((n) => n + 1); }} sx={{ position: 'relative', width: '100%', height: '100%', cursor: 'pointer', background: 'linear-gradient(180deg, #F0F9FF 0%, #E0F2FE 100%)' }}>
       {shapes && (
         <svg width={size.w} height={size.h} style={{ display: 'block' }} role="img" aria-label="Mapa de la ruta desde Houston">
           <defs>

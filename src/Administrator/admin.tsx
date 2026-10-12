@@ -23,6 +23,7 @@ import PickupBoard from './pickups/PickupBoard';
 import KioskSettingsPanel from './kiosk/KioskSettingsPanel';
 import { listMissionaryRequests } from '../data/missionaryRequests';
 import { firebaseApp, isAdminEmail } from '../firebase';
+import { usePageTitle } from '../usePageTitle';
 
 const auth = getAuth(firebaseApp);
 
@@ -42,6 +43,7 @@ const adminTheme = createTheme({
 type AuthState = 'loading' | 'unauthenticated' | 'authenticated';
 
 const Admin: React.FC = () => {
+  usePageTitle('Administración');
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [authState, setAuthState] = useState<AuthState>('loading');

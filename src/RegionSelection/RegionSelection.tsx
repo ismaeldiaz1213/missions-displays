@@ -1,7 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme, useMediaQuery, Button, ButtonBase, Box, Typography } from '@mui/material';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { useTheme, useMediaQuery, Button, Box, Typography } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import iblLogo from '../assets/ibl_logo.png';
 import mapTitle from '../assets/MapSelectionBanner.png';
@@ -16,13 +15,15 @@ import oMobile from '../assets/o_mobile.png';
 import WorldMap from './WorldMap';
 import ConferenceCard from './ConferenceCard';
 import { AboutPanel, ConferencePanel } from './InfoPanels';
-import { REGIONS, REGION_BY_ID, type RegionId } from '../map/regions';
+import { REGION_BY_ID, type RegionId } from '../map/regions';
 import { conferencePhase } from './kioskContent';
 import { useAllMissionaries, missionaryOfTheDay } from '../data/useMissionaries';
 import { useCachedLoad } from '../data/useCachedLoad';
 import { DEFAULT_KIOSK_SETTINGS, KIOSK_SETTINGS_CACHE_KEY, getKioskSettings, type KioskSettings } from '../data/settings';
 import MissionaryOfTheDay from '../ui/MissionaryOfTheDay';
+import RegionNav from '../ui/RegionNav';
 import { BRAND } from '../ui/brand';
+import { usePageTitle } from '../usePageTitle';
 
 const continents = [
   { id: 'north-america' as RegionId, name: 'Norte América',  route: '/norte-america',  colorA: '#1D6FA4', colorB: '#0D3F6B', mobileImg: naMobile },
@@ -50,6 +51,7 @@ const RegionSelection: React.FC = () => {
   const [activeRegion, setActiveRegion] = useState<RegionId | null>(null);
   const [flyTo, setFlyTo] = useState<RegionId | null>(null);
   const leaving = useRef(false);
+  usePageTitle('Mapa de nuestros misioneros');
 
   // One small request feeds the whole site; the saved copy shows instantly on bad Wi-Fi
   const { missionaries } = useAllMissionaries();
@@ -96,7 +98,7 @@ const RegionSelection: React.FC = () => {
           <Box component="img" src={iblLogo} alt="Iglesia Bautista Libertad" sx={{ height: 44, width: 'auto', alignSelf: 'flex-start' }} />
 
           {missionaries.length > 0 && (
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mt: 2.5 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mt: 2.5, '@media (max-height: 900px)': { display: 'none' } }}>
               {([[missionaries.length, 'misioneros'], [countryCount, countryCount === 1 ? 'país' : 'países']] as [number, string][]).map(([n, label]) => (
                 <Box key={label} sx={{ p: 1.25, borderRadius: '14px', bgcolor: BRAND.blueSoft }}>
                   <Typography sx={{ color: BRAND.navy, fontWeight: 800, fontSize: '1.6rem', lineHeight: 1 }}>{n}</Typography>
@@ -106,44 +108,14 @@ const RegionSelection: React.FC = () => {
             </Box>
           )}
 
-          <Box sx={{ mt: 2.5, mb: 1.25, display: 'flex', alignItems: 'center', gap: 1, color: '#475569' }}>
+          <Box sx={{ mt: 2.5, mb: 1.25, display: 'flex', alignItems: 'center', gap: 1, color: '#475569', '@media (max-height: 900px)': { mt: 1.5 } }}>
             <Typography sx={{ fontSize: '1.4rem', lineHeight: 1 }}>👆</Typography>
             <Typography sx={{ fontWeight: 700, fontSize: '1rem', lineHeight: 1.35 }}>
               Toque un continente o la foto de un misionero
             </Typography>
           </Box>
 
-          <Box component="nav" sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-            {REGIONS.map((r) => {
-              const n = counts[r.id] ?? 0;
-              const active = activeRegion === r.id;
-              return (
-                <ButtonBase
-                  key={r.id}
-                  onClick={() => selectRegion(r.id)}
-                  onMouseEnter={() => setActiveRegion(r.id)}
-                  onMouseLeave={() => setActiveRegion(null)}
-                  onFocus={() => setActiveRegion(r.id)}
-                  onBlur={() => setActiveRegion(null)}
-                  sx={{
-                    display: 'flex', alignItems: 'center', gap: 1.5, px: 1.75, py: { md: 1.1, xl: 1.4 }, borderRadius: '14px',
-                    justifyContent: 'flex-start', textAlign: 'left', border: '1.5px solid',
-                    borderColor: active ? r.color : BRAND.line, bgcolor: active ? `${r.color}14` : BRAND.white,
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <Box sx={{ width: 14, height: 14, borderRadius: '50%', bgcolor: r.color, flexShrink: 0, boxShadow: `0 0 0 4px ${r.color}33` }} />
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography sx={{ color: BRAND.ink, fontWeight: 800, fontSize: '1.05rem', lineHeight: 1.2 }}>{r.name}</Typography>
-                    <Typography sx={{ color: n ? BRAND.muted : BRAND.faint, fontSize: '0.82rem', fontWeight: 600 }}>
-                      {n ? countLabel(n) : 'Sin misioneros aún'}
-                    </Typography>
-                  </Box>
-                  <ChevronRightIcon sx={{ color: active ? r.color : '#CBD5E1' }} />
-                </ButtonBase>
-              );
-            })}
-          </Box>
+          <RegionNav counts={counts} onSelect={selectRegion} active={activeRegion} onActiveChange={setActiveRegion} />
 
           <Box sx={{ flex: 1, minHeight: 16 }} />
 

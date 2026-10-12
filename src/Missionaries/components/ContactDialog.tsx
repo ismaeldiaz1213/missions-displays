@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Box, Button, Link, Typography } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Box, Button, Typography } from '@mui/material';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import FacebookIcon from '@mui/icons-material/Facebook';
@@ -56,55 +56,15 @@ const ContactDialog: React.FC<ContactDialogProps> = ({ open, missionary, onClose
                   background: 'linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%)',
                   borderRadius: '8px',
                   border: '1px solid #E5E7EB',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    borderColor: '#2563EB',
-                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.1)',
-                  },
                 }}
               >
                 <Box sx={{ color: '#2563EB', display: 'flex', alignItems: 'center' }}>
                   {getContactIcon(contact.type)}
                 </Box>
-                {contact.type === 'email' ? (
-                  <Link
-                    href={`mailto:${contact.value}`}
-                    sx={{
-                      color: '#2563EB',
-                      textDecoration: 'none',
-                      fontWeight: 500,
-                      '&:hover': { textDecoration: 'underline' },
-                    }}
-                  >
-                    {contact.value}
-                  </Link>
-                ) : contact.type === 'phone' ? (
-                  <Link
-                    href={`tel:${contact.value}`}
-                    sx={{
-                      color: '#2563EB',
-                      textDecoration: 'none',
-                      fontWeight: 500,
-                      '&:hover': { textDecoration: 'underline' },
-                    }}
-                  >
-                    {contact.value}
-                  </Link>
-                ) : (
-                  <Link
-                    href={contact.value}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    sx={{
-                      color: '#2563EB',
-                      textDecoration: 'none',
-                      fontWeight: 500,
-                      '&:hover': { textDecoration: 'underline' },
-                    }}
-                  >
-                    {contact.value}
-                  </Link>
-                )}
+                {/* Plain text on purpose: a link would take people off the kiosk (mail app, phone app, Facebook…) */}
+                <Typography sx={{ color: '#1F2937', fontWeight: 600, fontSize: '1.05rem', overflowWrap: 'anywhere' }}>
+                  {contact.value}
+                </Typography>
               </Box>
             ))}
           </Box>
@@ -117,12 +77,10 @@ const ContactDialog: React.FC<ContactDialogProps> = ({ open, missionary, onClose
       <DialogActions sx={{ p: 2 }}>
         <Button
           onClick={onClose}
+          fullWidth
           sx={{
-            color: '#2563EB',
-            fontWeight: 600,
-            '&:hover': {
-              background: 'rgba(37, 99, 235, 0.05)',
-            },
+            textTransform: 'none', fontWeight: 800, fontSize: '1.1rem', borderRadius: '999px', py: 1.5,
+            color: '#fff', bgcolor: '#1E3A8A', '&:hover': { bgcolor: '#2563EB' },
           }}
         >
           Cerrar

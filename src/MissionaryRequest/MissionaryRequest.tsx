@@ -23,10 +23,16 @@ import { REQUEST_PAGE_TITLES, REQUEST_STRINGS, type RequestStrings } from './req
 
 type FormState = Omit<MissionaryRequestInput, 'language' | 'continent'> & { continent: ContinentId | '' };
 
+// The kiosk's "no missionaries here yet" QR codes add ?continente=<id> to pick it in advance
+const continentFromUrl = (): ContinentId | '' => {
+  const c = new URLSearchParams(window.location.search).get('continente');
+  return (CONTINENT_IDS as readonly string[]).includes(c ?? '') ? (c as ContinentId) : '';
+};
+
 const initialForm = (): FormState => ({
   name: '', lastName: '', wifeName: '', email: '', phone: '',
   organization: '', sendingChurch: '', missionType: '', startYear: '',
-  continent: '', city: '', state: '', country: '',
+  continent: continentFromUrl(), city: '', state: '', country: '',
   description: '', prayerRequests: '',
   contact: { email: '', phone: '', website: '', facebook: '', instagram: '' },
 });

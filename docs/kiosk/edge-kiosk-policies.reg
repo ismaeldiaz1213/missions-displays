@@ -1,0 +1,13 @@
+Windows Registry Editor Version 5.00
+
+; Microsoft Edge settings for the hallway kiosk PCs (Misiones IBL).
+; Double-click this file on each kiosk mini PC (as an administrator), then restart Edge.
+; It only changes Edge on that PC. To undo, delete these values in regedit.
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge]
+; Never offer to translate the page (the site is in Spanish on purpose)
+"TranslateEnabled"=dword:00000000
+; Block every download (videos, photos, PDFs) - nothing can be saved or opened outside the site
+"DownloadRestrictions"=dword:00000003
+; No sidebar / Copilot button
+"HubsSidebarEnabled"=dword:00000000

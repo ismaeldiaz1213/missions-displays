@@ -70,6 +70,7 @@ const MissionaryLocalInfo: React.FC<Props> = ({ latitude, longitude }) => {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [now, setNow] = useState(new Date());
+  const [celsius, setCelsius] = useState(false); // °F unless someone taps the temperature
 
   useEffect(() => {
     const fetchData = async () => {
@@ -148,15 +149,15 @@ const MissionaryLocalInfo: React.FC<Props> = ({ latitude, longitude }) => {
             {getWeather(weather.weatherCode).emoji}
           </Typography>
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1 }}>
-              {toF(weather.temperatureC)}°F <Box component="span" sx={{ color: '#94A3B8', fontSize: '0.95rem', fontWeight: 600 }}>{weather.temperatureC}°C</Box>
+            <Typography onClick={() => setCelsius((c) => !c)} sx={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1 }}>
+              {celsius ? `${weather.temperatureC}°C` : `${toF(weather.temperatureC)}°F`}
             </Typography>
             <Typography sx={{ color: '#475569', fontSize: '0.85rem' }}>{getWeather(weather.weatherCode).label}</Typography>
           </Box>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'flex-end', flexShrink: 0 }}>
             <StatRow icon="💧" text={`${weather.precipitationProbability}% lluvia`} />
             <StatRow icon="💦" text={`${weather.humidity}% humedad`} />
-            <StatRow icon="🌡️" text={`${toF(weather.dailyHighC)}° / ${toF(weather.dailyLowC)}°F`} />
+            <StatRow icon="🌡️" text={celsius ? `${weather.dailyHighC}° / ${weather.dailyLowC}°C` : `${toF(weather.dailyHighC)}° / ${toF(weather.dailyLowC)}°F`} />
           </Box>
         </Box>
       ) : null}

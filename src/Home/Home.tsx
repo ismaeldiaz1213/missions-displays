@@ -4,13 +4,16 @@ import { Box, Typography } from '@mui/material';
 import iblLogo from '../assets/ibl_logo.png';
 import AttractGlobe, { type Stage } from './AttractGlobe';
 import HomeStage from './HomeStage';
-import { buildStops } from './stops';
+import { buildStops, type Stop } from './stops';
 import { OPENING_VERSE } from './verses';
 import { useAllMissionaries, missionaryOfTheDay } from '../data/useMissionaries';
 import MissionaryOfTheDay from '../ui/MissionaryOfTheDay';
 import TapPrompt from '../ui/TapPrompt';
+import QrCard from '../ui/QrCard';
+import { REGION_BY_ID, type RegionId } from '../map/regions';
 import { BRAND } from '../ui/brand';
 import './style.css';
+import { usePageTitle } from '../usePageTitle';
 
 export const MISSIONARY_REQUEST_PATH = '/misioneros/solicitud';
 
@@ -50,11 +53,13 @@ const TourProgress: React.FC<{ index: number; total: number }> = ({ index, total
 /**
  * Kiosk welcome screen, drawn live in the browser (it replaced a large looping video): a plane
  * flies from Houston to each of our missionaries with Scripture along the way, then comes home
- * with how we can help. Touch anywhere to start exploring.
+ * with how we can help. Tapping a missionary (a pin on the globe, the card, today's missionary)
+ * opens their page; a tap anywhere else opens the map.
  */
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const { missionaries } = useAllMissionaries();
+  usePageTitle();
   const today = useMemo(() => missionaryOfTheDay(missionaries), [missionaries]);
   // Only rebuild the tour when the people or places actually change (not on every refresh)
   const tourKey = missionaries.map((m) => `${m.id}:${m.location?.latitude}:${m.location?.longitude}:${m.profileImage}`).join('|');
@@ -71,6 +76,13 @@ const Home: React.FC = () => {
   const onStage = useCallback((s: Stage) => { setStage(s); setStageKey((k) => k + 1); }, []);
   const touring = stage.kind === 'fly' || stage.kind === 'arrive';
 
+  // One missionary → their page; several sharing a spot → their continent
+  const openStop = useCallback((stop: Stop) => {
+    const [first] = stop.people;
+    if (stop.people.length === 1) navigate(`/misionero/${first.id}`);
+    else navigate(REGION_BY_ID[first.continent as RegionId]?.route ?? '/region-selection');
+  }, [navigate]);
+
   return (
     <Box className="home" onClick={() => navigate('/region-selection')} sx={{
       position: 'fixed', inset: 0, overflow: 'hidden', cursor: 'pointer', userSelect: 'none',
@@ -84,11 +96,11 @@ const Home: React.FC = () => {
       }} />
 
       {/* Globe, right of center */}
-      <AttractGlobe stops={stops} onStage={onStage} centerX={0.68} />
+      <AttractGlobe stops={stops} onStage={onStage} onPick={openStop} centerX={0.68} />
 
       {/* Left column */}
       <Box sx={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '46%', display: 'flex', flexDirection: 'column', px: '3.5vw', py: '4.5vh' }}>
-        <Box onClick={(e) => e.stopPropagation()} sx={{ alignSelf: 'flex-start' }}>
+        <Box sx={{ alignSelf: 'flex-start' }}>
           <BrandLockup />
         </Box>
 
@@ -100,15 +112,21 @@ const Home: React.FC = () => {
         </Box>
 
         {today && (
+          // Its own tap opens today's missionary; don't let it also reach the page's "open the map"
           <Box onClick={(e) => e.stopPropagation()} sx={{ maxWidth: 540 }}>
             <MissionaryOfTheDay missionary={today} variant="card" />
           </Box>
         )}
       </Box>
 
+      {/* The website, for people walking by */}
+      <Box sx={{ position: 'absolute', top: '4.5vh', right: '3.5vw' }}>
+        <QrCard path="/" size={104} title="Lleve el mapa en su teléfono" body="Conozca a nuestros misioneros y ore por ellos desde casa." />
+      </Box>
+
       {/* Invitation to touch */}
       <Box sx={{ position: 'absolute', right: '3.5vw', bottom: '5vh' }}>
-        <TapPrompt title="Toque la pantalla" subtitle="para conocer a nuestros misioneros" />
+        <TapPrompt size="lg" title="Toque la pantalla" subtitle="para explorar el mapa de misioneros" />
       </Box>
     </Box>
   );

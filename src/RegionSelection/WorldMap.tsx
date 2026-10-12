@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, ButtonBase } from '@mui/material';
+import { Box, ButtonBase, Typography } from '@mui/material';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import RemoveRoundedIcon from '@mui/icons-material/RemoveRounded';
+import ZoomOutMapRoundedIcon from '@mui/icons-material/ZoomOutMapRounded';
 import { geoCircle, geoGraticule10, geoNaturalEarth1, geoPath } from 'd3-geo';
 import type { Missionary } from '../types';
 import { HOUSTON_LAT, HOUSTON_LON } from '../constants';
@@ -16,6 +19,11 @@ import './worldMap.css';
 const IDLE_MS = 25_000; // no touches for this long → start the tour
 const TOUR_MS = 6_000; // time on each stop of the tour
 const ZOOM = 2.6; // how far the map zooms into a region before opening it
+const MAX_ZOOM = 6; // pinch-zoom limit
+
+/** The visitor's pinch/drag zoom: map point (x, y) shows at (x·k + tx, y·k + ty). */
+interface View { k: number; tx: number; ty: number }
+const WHOLE: View = { k: 1, tx: 0, ty: 0 };
 
 interface Props {
   missionaries: Missionary[];
@@ -31,8 +39,9 @@ interface Props {
 
 /**
  * Custom-drawn world map for the kiosk: countries colored by region, live day/night shading,
- * flight paths from Houston, and missionary photos as pins. When nobody has touched it for a
- * while it tours the missionaries one by one to invite people over.
+ * flight paths from Houston, and missionary photos as pins. Pinch or the +/− buttons zoom in
+ * (pins that shared a spot split apart). When nobody has touched it for a while it zooms back
+ * out and tours the missionaries one by one to invite people over.
  */
 const WorldMap: React.FC<Props> = ({ missionaries, counts, activeRegion, onActiveRegionChange, onRegionSelect, flyTo, topInset = 0 }) => {
   const navigate = useNavigate();
@@ -42,6 +51,8 @@ const WorldMap: React.FC<Props> = ({ missionaries, counts, activeRegion, onActiv
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [touring, setTouring] = useState(false);
   const [now, setNow] = useState(() => new Date());
+  const [view, setView] = useState<View>(WHOLE);
+  const [gesturing, setGesturing] = useState(false);
 
   useEffect(() => { loadCountries().then(setCountries).catch(console.error); }, []);
   useEffect(() => {
@@ -77,11 +88,15 @@ const WorldMap: React.FC<Props> = ({ missionaries, counts, activeRegion, onActiv
 
   const houston = projection?.([HOUSTON_LON, HOUSTON_LAT]) ?? null;
 
-  // Nearby missionaries share one pin so faces never stack on top of each other
+  // Nearby missionaries share one pin so faces never stack on top of each other; zooming in
+  // splits them (steps of ½ so a pinch doesn't regroup the pins on every frame)
+  const clusterK = Math.floor(view.k * 2) / 2;
   const clusters = useMemo(
-    () => (projection ? clusterMissionaries(missionaries, (p) => projection(p)) : []),
-    [projection, missionaries],
+    () => (projection ? clusterMissionaries(missionaries, (p) => projection(p), 34 / clusterK) : []),
+    [projection, missionaries, clusterK],
   );
+  useEffect(() => setOpenIdx(null), [clusterK]);
+  const toScreen = (x: number, y: number): [number, number] => [x * view.k + view.tx, y * view.k + view.ty];
 
   const arcs = useMemo(() => {
     if (!houston) return [];
@@ -105,7 +120,7 @@ const WorldMap: React.FC<Props> = ({ missionaries, counts, activeRegion, onActiv
     const reset = () => {
       window.clearTimeout(timer);
       setTouring(false);
-      timer = window.setTimeout(() => setTouring(true), IDLE_MS);
+      timer = window.setTimeout(() => { setView(WHOLE); setTouring(true); }, IDLE_MS);
     };
     const events = ['pointerdown', 'pointermove', 'keydown'] as const;
     events.forEach((e) => window.addEventListener(e, reset, { passive: true }));
@@ -125,23 +140,104 @@ const WorldMap: React.FC<Props> = ({ missionaries, counts, activeRegion, onActiv
     return () => clearInterval(id);
   }, [touring, clusters.length]);
 
+  // ── Zoom: pinch with two fingers, drag with one once zoomed in, +/− buttons, mouse wheel ──
+  const clampView = (v: View): View => {
+    const k = Math.min(MAX_ZOOM, Math.max(1, v.k));
+    return { k, tx: Math.min(0, Math.max(w - w * k, v.tx)), ty: Math.min(0, Math.max(h - h * k, v.ty)) };
+  };
+  /** Zoom to `k` keeping the map point under screen point (sx, sy) where it is. */
+  const zoomAround = (v: View, k: number, sx: number, sy: number) =>
+    clampView({ k, tx: sx - ((sx - v.tx) / v.k) * k, ty: sy - ((sy - v.ty) / v.k) * k });
+  const zoomBy = (factor: number) => setView((v) => zoomAround(v, v.k * factor, w / 2, h / 2));
+
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const gesture = useRef<{ view: View; dist: number; mid: { x: number; y: number }; pan: { x: number; y: number } } | null>(null);
+  const viewRef = useRef(view);
+  viewRef.current = view;
+
+  const local = (e: { clientX: number; clientY: number }) => {
+    const r = boxRef.current!.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+  const startGesture = () => {
+    const pts = [...pointers.current.values()];
+    const [a, b] = pts;
+    gesture.current = {
+      view: viewRef.current,
+      dist: b ? Math.hypot(a.x - b.x, a.y - b.y) : 0,
+      mid: b ? { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } : a,
+      pan: a,
+    };
+  };
+
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      if (!pointers.current.has(e.pointerId) || !gesture.current) return;
+      pointers.current.set(e.pointerId, local(e));
+      const g = gesture.current;
+      const [a, b] = [...pointers.current.values()];
+      if (b && g.dist) {
+        const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        const k = g.view.k * (Math.hypot(a.x - b.x, a.y - b.y) / g.dist);
+        // The map point that was under the fingers stays under them
+        const k2 = Math.min(MAX_ZOOM, Math.max(1, k));
+        setView(clampView({ k: k2, tx: mid.x - ((g.mid.x - g.view.tx) / g.view.k) * k2, ty: mid.y - ((g.mid.y - g.view.ty) / g.view.k) * k2 }));
+        setGesturing(true);
+      } else if (g.view.k > 1) {
+        setView(clampView({ ...g.view, tx: g.view.tx + a.x - g.pan.x, ty: g.view.ty + a.y - g.pan.y }));
+        if (Math.hypot(a.x - g.pan.x, a.y - g.pan.y) > 4) setGesturing(true);
+      }
+    };
+    const up = (e: PointerEvent) => {
+      if (!pointers.current.delete(e.pointerId)) return;
+      if (pointers.current.size) startGesture(); // one finger left: carry on dragging from here
+      else { gesture.current = null; setGesturing(false); }
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [w, h]);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (flyTo || pointers.current.size >= 2) return;
+    pointers.current.set(e.pointerId, local(e));
+    startGesture();
+  };
+  const onWheel = (e: React.WheelEvent) => {
+    if (flyTo || e.ctrlKey) return;
+    const p = local(e);
+    setView((v) => zoomAround(v, v.k * (e.deltaY < 0 ? 1.25 : 0.8), p.x, p.y));
+  };
+
+  const zoomed = view.k > 1.01;
   const openCluster = openIdx !== null ? clusters[openIdx] ?? null : null;
   const dimmed = (id: RegionId) => activeRegion !== null && activeRegion !== id;
 
   // Zoom toward the chosen region's label while the page changes
-  const flyPoint = flyTo && projection ? projection(REGION_BY_ID[flyTo].label) : null;
+  const flyMapPoint = flyTo && projection ? projection(REGION_BY_ID[flyTo].label) : null;
+  const flyPoint = flyMapPoint ? toScreen(flyMapPoint[0], flyMapPoint[1]) : null;
   const zoomTransform = flyPoint ? `translate(${w / 2 - ZOOM * flyPoint[0]}px, ${h / 2 - ZOOM * flyPoint[1]}px) scale(${ZOOM})` : 'none';
 
   return (
-    <Box ref={boxRef} className="world-map" onClick={() => setOpenIdx(null)}
-      sx={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+    <Box ref={boxRef} className="world-map" onClick={() => setOpenIdx(null)} onPointerDown={onPointerDown} onWheel={onWheel}
+      sx={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', touchAction: 'none' }}>
       <Box sx={{
         position: 'absolute', inset: 0, transformOrigin: '0 0', transform: zoomTransform,
         transition: 'transform 0.7s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.7s ease',
         opacity: flyTo ? 0.85 : 1,
       }}>
         {shapes && (
-          <svg width={w} height={h} style={{ position: 'absolute', inset: 0, display: 'block' }} aria-hidden>
+          <svg width={w} height={h} aria-hidden style={{
+            position: 'absolute', inset: 0, display: 'block', transformOrigin: '0 0',
+            transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.k})`,
+            transition: gesturing ? 'none' : 'transform 0.35s ease',
+          }}>
             <defs>
               <radialGradient id="wm-ocean" cx="50%" cy="40%" r="70%">
                 <stop offset="0%" stopColor="#EFF8FF" />
@@ -162,6 +258,7 @@ const WorldMap: React.FC<Props> = ({ missionaries, counts, activeRegion, onActiv
                   fillOpacity={activeRegion === c.region ? 1 : dimmed(c.region) ? 0.3 : 0.72}
                   stroke="#FFFFFF"
                   strokeWidth={0.6}
+                  vectorEffect="non-scaling-stroke"
                   onMouseEnter={() => onActiveRegionChange(c.region)}
                   onMouseLeave={() => onActiveRegionChange(null)}
                   onClick={(e) => { e.stopPropagation(); onRegionSelect(c.region); }}
@@ -181,8 +278,8 @@ const WorldMap: React.FC<Props> = ({ missionaries, counts, activeRegion, onActiv
             <g pointerEvents="none">
               {arcs.map((a, i) => (
                 <g key={a.key}>
-                  <path d={a.d} fill="none" stroke={a.color} strokeOpacity={0.55} strokeWidth={2.5} />
-                  <path d={a.d} fill="none" stroke="#B45309" strokeWidth={3.5} strokeLinecap="round"
+                  <path d={a.d} fill="none" stroke={a.color} strokeOpacity={0.55} strokeWidth={2.5} vectorEffect="non-scaling-stroke" />
+                  <path d={a.d} fill="none" stroke="#B45309" strokeWidth={3.5} strokeLinecap="round" vectorEffect="non-scaling-stroke"
                     className="wm-arc-flow" style={{ animationDelay: `${(i * 0.37) % 3}s` }} />
                 </g>
               ))}
@@ -190,8 +287,8 @@ const WorldMap: React.FC<Props> = ({ missionaries, counts, activeRegion, onActiv
 
             {houston && (
               <g transform={`translate(${houston[0]},${houston[1]})`} pointerEvents="none">
-                <circle r={7} fill="#F59E0B" className="wm-beacon-ring" />
-                <circle r={7} fill="#F59E0B" stroke="#fff" strokeWidth={2.5} />
+                <circle r={7 / view.k} fill="#F59E0B" className="wm-beacon-ring" />
+                <circle r={7 / view.k} fill="#F59E0B" stroke="#fff" strokeWidth={2.5 / view.k} />
               </g>
             )}
           </svg>
@@ -200,7 +297,7 @@ const WorldMap: React.FC<Props> = ({ missionaries, counts, activeRegion, onActiv
         {/* Houston tag */}
         {houston && (
           <Box sx={{
-            position: 'absolute', left: houston[0] - 10, top: houston[1] - 10, transform: 'translate(-100%, -100%)',
+            position: 'absolute', left: toScreen(houston[0], houston[1])[0] - 10, top: toScreen(houston[0], houston[1])[1] - 10, transform: 'translate(-100%, -100%)',
             px: 1.25, py: 0.4, borderRadius: '8px', bgcolor: '#F59E0B', color: '#fff',
             fontWeight: 800, fontSize: '0.8rem', whiteSpace: 'nowrap', pointerEvents: 'none',
             boxShadow: '0 4px 12px rgba(180,83,9,0.3)',
@@ -211,8 +308,9 @@ const WorldMap: React.FC<Props> = ({ missionaries, counts, activeRegion, onActiv
 
         {/* Region labels */}
         {projection && REGIONS.map((r) => {
-          const p = projection(r.label);
-          if (!p) return null;
+          const at = projection(r.label);
+          if (!at) return null;
+          const p = toScreen(at[0], at[1]);
           const n = counts[r.id] ?? 0;
           const active = activeRegion === r.id;
           return (
@@ -248,7 +346,7 @@ const WorldMap: React.FC<Props> = ({ missionaries, counts, activeRegion, onActiv
         {clusters.map((c, i) => {
           const isOpen = openIdx === i;
           return (
-            <MissionaryPin key={`${c.x},${c.y}`} cluster={c} color={REGION_BY_ID[c.region]?.color ?? '#2563EB'} open={isOpen}
+            <MissionaryPin key={`${c.x},${c.y}`} cluster={{ ...c, x: toScreen(c.x, c.y)[0], y: toScreen(c.x, c.y)[1] }} color={REGION_BY_ID[c.region]?.color ?? '#2563EB'} open={isOpen}
               onClick={(e) => {
                 e.stopPropagation();
                 if (c.people.length === 1 && isOpen) navigate(`/misionero/${c.people[0].id}`);
@@ -260,7 +358,7 @@ const WorldMap: React.FC<Props> = ({ missionaries, counts, activeRegion, onActiv
 
       {/* Who's here card (outside the zoom layer so it stays crisp) */}
       {openCluster && !flyTo && (
-        <PinCard key={openIdx} cluster={openCluster} mapWidth={w} mapHeight={h}
+        <PinCard key={openIdx} cluster={{ ...openCluster, x: toScreen(openCluster.x, openCluster.y)[0], y: toScreen(openCluster.x, openCluster.y)[1] }} mapWidth={w} mapHeight={h}
           color={REGION_BY_ID[openCluster.region]?.color ?? '#E2E8F0'}
           title={touring ? 'Conozca a nuestros misioneros' : openCluster.people.length > 1 ? `${openCluster.people.length} misioneros aquí` : 'Conozca a'}
           onClose={() => setOpenIdx(null)} />
@@ -270,6 +368,34 @@ const WorldMap: React.FC<Props> = ({ missionaries, counts, activeRegion, onActiv
       {touring && (
         <Box sx={{ position: 'absolute', right: 28, bottom: 24, zIndex: 11 }}>
           <TapPrompt title="Toque la pantalla" subtitle="para explorar el mapa" />
+        </Box>
+      )}
+
+      {/* Zoom controls */}
+      {!touring && !flyTo && (
+        <Box onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} sx={{
+          position: 'absolute', right: 20, bottom: 18, zIndex: 8, display: 'flex', alignItems: 'center', gap: 1,
+        }}>
+          {zoomed && (
+            <ButtonBase onClick={() => setView(WHOLE)} sx={{
+              gap: 1, px: 2, height: 56, borderRadius: '999px', bgcolor: '#1E3A8A', color: '#fff',
+              boxShadow: '0 8px 22px rgba(30,58,138,0.3)',
+            }}>
+              <ZoomOutMapRoundedIcon />
+              <Typography sx={{ fontWeight: 800 }}>Ver el mundo entero</Typography>
+            </ButtonBase>
+          )}
+          <Box sx={{ display: 'flex', flexDirection: 'column', borderRadius: '18px', overflow: 'hidden', bgcolor: '#fff', boxShadow: '0 8px 22px rgba(15,23,42,0.16)', border: '1px solid #E2E8F0' }}>
+            <ButtonBase aria-label="Acercar" onClick={() => zoomBy(1.6)} disabled={view.k >= MAX_ZOOM}
+              sx={{ width: 56, height: 52, color: '#1E3A8A', '&.Mui-disabled': { color: '#CBD5E1' } }}>
+              <AddRoundedIcon sx={{ fontSize: '2rem' }} />
+            </ButtonBase>
+            <Box sx={{ height: '1px', bgcolor: '#E2E8F0' }} />
+            <ButtonBase aria-label="Alejar" onClick={() => zoomBy(1 / 1.6)} disabled={!zoomed}
+              sx={{ width: 56, height: 52, color: '#1E3A8A', '&.Mui-disabled': { color: '#CBD5E1' } }}>
+              <RemoveRoundedIcon sx={{ fontSize: '2rem' }} />
+            </ButtonBase>
+          </Box>
         </Box>
       )}
 

@@ -4,6 +4,7 @@ import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
 import HourglassTopRoundedIcon from '@mui/icons-material/HourglassTopRounded';
 import { isS3Key, storageUrl, videoPosterPath, webVideoPath } from '../../storageUrl';
 import { ACTIVITY_EVENT } from '../../useInactivityRedirect';
+import { useIsKiosk, videoLockProps } from '../../kioskMode';
 
 /** Picks the transcoded copy when it exists (a 1-byte range request), else the original upload. */
 const useVideoSource = (path: string, stored: boolean) => {
@@ -31,6 +32,7 @@ const VideoPlayer: React.FC<{ path: string; title?: string }> = ({ path, title }
   const [started, setStarted] = useState(false);
   const [failed, setFailed] = useState(false);
   const [posterOk, setPosterOk] = useState(true);
+  const kiosk = useIsKiosk();
 
   const stored = isS3Key(path) && path.startsWith('videos/');
   const src = useVideoSource(path, stored);
@@ -68,6 +70,7 @@ const VideoPlayer: React.FC<{ path: string; title?: string }> = ({ path, title }
           component="video"
           ref={videoRef}
           controls={started}
+          {...videoLockProps(kiosk)}
           playsInline
           preload="metadata"
           poster={poster}

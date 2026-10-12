@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import type { VideoSource } from '../conferenceContent';
+import { useIsKiosk, videoLockProps } from '../../kioskMode';
 
 const frameSx = {
   position: 'relative' as const, borderRadius: '2px', overflow: 'hidden',
@@ -45,6 +46,7 @@ const coverButtonSx = {
  */
 export const YouTubeBlock: React.FC<{ id: string; title: string; playLabel: string }> = ({ id, title, playLabel }) => {
   const [playing, setPlaying] = useState(false);
+  const kiosk = useIsKiosk();
   // Not every video has a maxres thumbnail; hqdefault always exists.
   const [thumb, setThumb] = useState(`https://i.ytimg.com/vi/${id}/maxresdefault.jpg`);
 
@@ -52,8 +54,9 @@ export const YouTubeBlock: React.FC<{ id: string; title: string; playLabel: stri
     <Box sx={{ ...frameSx, aspectRatio: '16 / 9' }}>
       {playing ? (
         <Box component="iframe"
-          src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`}
-          title={title} allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowFullScreen
+          // On the kiosk: no full screen and no keyboard shortcuts
+          src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0${kiosk ? '&fs=0&disablekb=1' : ''}`}
+          title={title} allow={kiosk ? 'autoplay; encrypted-media' : 'accelerometer; autoplay; encrypted-media; picture-in-picture'} allowFullScreen={!kiosk}
           sx={{ width: '100%', height: '100%', border: 0, display: 'block' }} />
       ) : (
         <Box component="button" type="button" onClick={() => setPlaying(true)} aria-label={`${playLabel}: ${title}`} sx={coverButtonSx}>
@@ -74,6 +77,7 @@ export const YouTubeBlock: React.FC<{ id: string; title: string; playLabel: stri
 export const FileVideoBlock: React.FC<{ src: string; poster: string; portrait?: boolean; title: string; playLabel: string }> =
   ({ src, poster, portrait, title, playLabel }) => {
     const [playing, setPlaying] = useState(false);
+    const kiosk = useIsKiosk();
     const ratio = portrait ? '9 / 16' : '16 / 9';
 
     return (
@@ -85,7 +89,7 @@ export const FileVideoBlock: React.FC<{ src: string; poster: string; portrait?: 
         maxWidth: '100%',
       }}>
         {playing ? (
-          <Box component="video" src={src} poster={poster} controls autoPlay playsInline title={title}
+          <Box component="video" src={src} poster={poster} controls autoPlay playsInline title={title} {...videoLockProps(kiosk)}
             sx={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain', bgcolor: '#000' }} />
         ) : (
           <Box component="button" type="button" onClick={() => setPlaying(true)} aria-label={`${playLabel}: ${title}`} sx={coverButtonSx}>
