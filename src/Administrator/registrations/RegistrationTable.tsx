@@ -9,6 +9,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import TableViewIcon from '@mui/icons-material/TableView';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
@@ -20,6 +21,7 @@ import {
 } from '../../data/registrations';
 import { listFiles, listFolders, type StoredFile } from '../../data/storageFiles';
 import { DetailGroup, StoredFileList } from '../shared';
+import RegistrationEditDialog from './RegistrationEditDialog';
 import {
   CATEGORY_LABELS, REGISTRATION_LAST_DAY, canUploadMedia, formatAddress, formatConferenceDay,
   isFreeCategory, isRegistrationOpen, type Category, type Registration,
@@ -106,7 +108,7 @@ const MediaSection: React.FC<{ registrationId: string }> = ({ registrationId }) 
   );
 };
 
-const RegistrationDetail: React.FC<{ r: Registration; onClose: () => void; fullScreen: boolean }> = ({ r, onClose, fullScreen }) => (
+const RegistrationDetail: React.FC<{ r: Registration; onEdit: () => void; onClose: () => void; fullScreen: boolean }> = ({ r, onEdit, onClose, fullScreen }) => (
   <Dialog open onClose={onClose} fullScreen={fullScreen} maxWidth="md" fullWidth>
     <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
       <Box component="span" sx={{ fontWeight: 800 }}>{fullName(r.registrant)}</Box>
@@ -160,6 +162,7 @@ const RegistrationDetail: React.FC<{ r: Registration; onClose: () => void; fullS
       {canUploadMedia(r.category) && <MediaSection registrationId={r.id} />}
     </DialogContent>
     <DialogActions>
+      <Button startIcon={<EditIcon />} onClick={onEdit} sx={{ textTransform: 'none', mr: 'auto' }}>Editar</Button>
       <Button onClick={onClose} sx={{ textTransform: 'none' }}>Cerrar</Button>
     </DialogActions>
   </Dialog>
@@ -176,6 +179,7 @@ const RegistrationTable: React.FC = () => {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<Category | 'all'>('all');
   const [viewing, setViewing] = useState<Registration | null>(null);
+  const [editing, setEditing] = useState<Registration | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Registration | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState<'excel' | 'pdf' | null>(null);
@@ -236,6 +240,12 @@ const RegistrationTable: React.FC = () => {
     } finally {
       setDeleting(false);
     }
+  };
+
+  const handleSaved = (updated: Registration) => {
+    setRegistrations((rs) => rs.map((r) => (r.id === updated.id ? updated : r)));
+    setViewing((v) => (v?.id === updated.id ? updated : v));
+    setEditing(null);
   };
 
   const headerSx = { color: 'text.secondary', fontWeight: 600, whiteSpace: 'nowrap' };
@@ -351,6 +361,9 @@ const RegistrationTable: React.FC = () => {
                 </Box>
               </CardActionArea>
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 1, pb: 1 }}>
+                <Button size="small" startIcon={<EditIcon />} onClick={() => setEditing(r)} sx={{ textTransform: 'none' }}>
+                  Editar
+                </Button>
                 <Button size="small" startIcon={<DeleteIcon />} onClick={() => setDeleteTarget(r)} sx={{ color: 'error.main', textTransform: 'none' }}>
                   Eliminar
                 </Button>
@@ -371,7 +384,7 @@ const RegistrationTable: React.FC = () => {
                 <TableCell sx={headerSx}>Días</TableCell>
                 <TableCell sx={headerSx}>Llegada</TableCell>
                 <TableCell sx={headerSx} align="right">Hotel</TableCell>
-                <TableCell sx={{ ...headerSx, width: 96 }} />
+                <TableCell sx={{ ...headerSx, width: 132 }} />
               </TableRow>
             </TableHead>
             <TableBody>
@@ -411,6 +424,9 @@ const RegistrationTable: React.FC = () => {
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()} sx={{ whiteSpace: 'nowrap' }}>
                     <IconButton size="small" onClick={() => setViewing(r)} sx={{ color: 'var(--ibl-primary)' }}><VisibilityIcon fontSize="small" /></IconButton>
+                    <Tooltip title="Editar">
+                      <IconButton size="small" onClick={() => setEditing(r)} sx={{ color: 'var(--ibl-primary)' }}><EditIcon fontSize="small" /></IconButton>
+                    </Tooltip>
                     <IconButton size="small" onClick={() => setDeleteTarget(r)} sx={{ color: 'error.main' }}><DeleteIcon fontSize="small" /></IconButton>
                   </TableCell>
                 </TableRow>
@@ -420,7 +436,8 @@ const RegistrationTable: React.FC = () => {
         </TableContainer>
       )}
 
-      {viewing && <RegistrationDetail r={viewing} onClose={() => setViewing(null)} fullScreen={isMobile} />}
+      {viewing && <RegistrationDetail r={viewing} onEdit={() => setEditing(viewing)} onClose={() => setViewing(null)} fullScreen={isMobile} />}
+      {editing && <RegistrationEditDialog registration={editing} fullScreen={isMobile} onSaved={handleSaved} onClose={() => setEditing(null)} />}
 
       <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
         <DialogTitle>Confirmar eliminación</DialogTitle>

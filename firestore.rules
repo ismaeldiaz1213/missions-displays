@@ -137,12 +137,16 @@ service cloud.firestore {
         ? 0 : rate * d.attendanceDays.size() * int(math.ceil(occupants(d) / 4.0));
     }
 
+    function registrationKeys() {
+      return ['language', 'category', 'registrant', 'homeChurch', 'homeChurchCity',
+              'missionaryBoard', 'sendingChurch', 'bringingWife', 'wife',
+              'bringingChildren', 'children', 'attendanceDays', 'needsLodging', 'travel',
+              'heardAbout', 'heardAboutOther', 'specialNeeds', 'hotelFee', 'createdAt'];
+    }
+
+    // The fields themselves; create and update add their own key and timestamp checks.
     function validRegistration(d) {
-      return d.keys().hasOnly(['language', 'category', 'registrant', 'homeChurch', 'homeChurchCity',
-                               'missionaryBoard', 'sendingChurch', 'bringingWife', 'wife',
-                               'bringingChildren', 'children', 'attendanceDays', 'needsLodging', 'travel',
-                               'heardAbout', 'heardAboutOther', 'specialNeeds', 'hotelFee', 'createdAt'])
-        && d.language in ['es', 'en']
+      return d.language in ['es', 'en']
         && d.category in ['missionary', 'evangelist', 'pastor', 'layman']
         && validRegistrant(d.registrant)
         && reqStr(d.homeChurch, 200) && reqStr(d.homeChurchCity, 200)
@@ -159,14 +163,22 @@ service cloud.firestore {
         && d.heardAbout in ['pastor', 'missionary', 'friend', 'social', 'website', 'attended', 'other']
         && str(d.heardAboutOther, 200) && (d.heardAbout != 'other' || d.heardAboutOther.size() > 0)
         && str(d.specialNeeds, 2000)
-        && d.hotelFee == hotelFee(d, 40)
-        && d.createdAt == request.time;
+        && d.hotelFee == hotelFee(d, 40);
     }
 
     match /registrations/{id} {
-      allow create: if registrationOpen() && validRegistration(request.resource.data);
+      allow create: if registrationOpen()
+        && request.resource.data.keys().hasOnly(registrationKeys())
+        && validRegistration(request.resource.data)
+        && request.resource.data.createdAt == request.time;
       allow read, delete: if isAdmin();
-      allow update: if false;
+      // Admins can correct a registration at any time, even after the deadline. The fields are
+      // checked as on create; createdAt can't change and updatedAt records the edit.
+      allow update: if isAdmin()
+        && request.resource.data.keys().hasOnly(registrationKeys().concat(['updatedAt']))
+        && validRegistration(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
     }
   }
 }
