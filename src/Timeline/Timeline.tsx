@@ -2,8 +2,10 @@ import { Box } from '@mui/material';
 import React from 'react';
 // @ts-expect-error -- react-chrono has no type declarations
 import { Chrono } from 'react-chrono';
+import { usePageTitle } from '../usePageTitle';
 
-const Timeline: React.FC = () => { 
+const Timeline: React.FC = () => {
+    usePageTitle('Línea de tiempo');
     const items = [
     {
       title: 'Febrero 8, 1950',
