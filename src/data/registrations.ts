@@ -1,5 +1,5 @@
 import {
-  Timestamp, collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc,
+  Timestamp, collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc, updateDoc,
 } from 'firebase/firestore/lite';
 import { db } from '../firebase';
 import { calculateHotelFee, type Registration, type RegistrationInput } from '../Registration/conference';
@@ -28,6 +28,15 @@ export const listRegistrations = async (): Promise<Registration[]> => {
     return { ...data, id: d.id, createdAt } as Registration;
   });
 };
+
+// Admin-only (enforced by firestore.rules, which apply the same checks as createRegistration).
+// createdAt is left alone; the fee is recomputed at the current rate.
+export const updateRegistration = (id: string, input: RegistrationInput) =>
+  updateDoc(doc(registrationsCol, id), {
+    ...input,
+    hotelFee: calculateHotelFee(input),
+    updatedAt: serverTimestamp(),
+  });
 
 export const deleteRegistration = (id: string) => deleteDoc(doc(registrationsCol, id));
 
