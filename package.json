@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes,storage",
-    "test:rules": "firebase emulators:exec --only firestore --project demo-ibl-rules \"node tests/rules/fee.test.mjs && node tests/rules/edit.test.mjs\"",
+    "test:rules": "firebase emulators:exec --only firestore,storage --project demo-ibl-rules \"node tests/rules/fee.test.mjs && node tests/rules/edit.test.mjs && node tests/rules/missionaryEdits.test.mjs\"",
     "test:rules:transition": "firebase emulators:exec --only firestore --project demo-ibl-rules \"node tests/rules/fee.test.mjs --transition\"",
     "deploy:rules:transition": "node scripts/deploy-transition-rules.mjs",
     "cors:storage": "gcloud storage buckets update gs://ibl-missions-display.firebasestorage.app --cors-file=storage.cors.json --project ibl-missions-display --billing-project ibl-missions-display"

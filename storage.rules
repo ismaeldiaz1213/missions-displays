@@ -64,6 +64,35 @@ service firebase.storage {
         );
     }
 
+    // ── Files a missionary uploads through their private edit link ───────────
+    // The token in the path is the missionaryEdits/{token} id. Uploads are allowed only while that
+    // edit exists, isn't revoked and isn't approved; admins copy them into images/ pdfs/ videos/
+    // on approval. Same limits as missionary-requests/ (REQUEST_LIMITS).
+    function editDoc(token) {
+      return firestore.get(/databases/(default)/documents/missionaryEdits/$(token));
+    }
+
+    function editOpen(token) {
+      return firestore.exists(/databases/(default)/documents/missionaryEdits/$(token))
+        && editDoc(token).data.revoked == false
+        && editDoc(token).data.status != 'approved';
+    }
+
+    match /missionary-edits/{token}/{kind}/{file} {
+      allow list: if isAdmin();
+      allow get, delete: if isAdmin() || editOpen(token);
+      allow update: if false;
+      allow create: if resource == null
+        && (isAdmin() || editOpen(token))
+        && (
+          (kind == 'profile' && isImage(20))
+          || (kind == 'prayer-letter' && request.resource.contentType == 'application/pdf'
+              && request.resource.size < 50 * 1024 * 1024)
+          || (kind == 'gallery' && (isImage(20)
+              || (request.resource.contentType.matches('video/.*') && request.resource.size < 1024 * 1024 * 1024)))
+        );
+    }
+
     // ── Conference videos uploaded by registered missionaries & evangelists ──
     // Keep in sync with MEDIA_UPLOADS_CLOSE_AT in src/Registration/conference.ts.
     // 1793599200000 = 2026-11-02 00:00 CST (conference start)
