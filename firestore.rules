@@ -33,6 +33,66 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // ── Missionary self-edits (private edit link sent to the missionary) ─────
+    // The document id is the secret token in the link: anyone holding it may read that one
+    // document (never list them) and save or submit their proposed page. Only admins create
+    // links, review, approve or reject. See src/data/missionaryEdits.ts.
+    function validLocation(l) {
+      return l is map
+        && l.keys().hasOnly(['city', 'state', 'country', 'latitude', 'longitude'])
+        && reqStr(l.city, 200) && str(l.get('state', ''), 200) && reqStr(l.country, 200)
+        && l.latitude is number && l.latitude >= -90 && l.latitude <= 90
+        && l.longitude is number && l.longitude >= -180 && l.longitude <= 180;
+    }
+
+    // A stored file: empty, already public, or uploaded with this edit link.
+    function editFile(path, token, kind, publicFolder) {
+      return str(path, 500)
+        && (path == '' || path.matches('^' + publicFolder + '/[^/]+$')
+            || path.matches('^missionary-edits/' + token + '/' + kind + '/[^/]+$'));
+    }
+
+    // The Missionary fields (src/types.ts) minus id, which is the edit's missionaryId.
+    function validProposed(p, token) {
+      return p is map
+        && p.keys().hasOnly(['name', 'lastName', 'organization', 'continent', 'location', 'profileImage',
+                             'description', 'prayerLetter', 'media', 'contactInfo', 'specialNotes',
+                             'startDate', 'missionType'])
+        && reqStr(p.name, 200) && reqStr(p.lastName, 100) && str(p.organization, 200)
+        && p.continent in ['north-america', 'central-america', 'south-america', 'europe', 'africa', 'asia', 'oceania']
+        && validLocation(p.location)
+        && editFile(p.get('profileImage', ''), token, 'profile', 'images')
+        && editFile(p.get('prayerLetter', ''), token, 'prayer-letter', 'pdfs')
+        && reqStr(p.description, 5000)
+        && p.media is list && p.media.size() <= 50
+        && p.contactInfo is list && p.contactInfo.size() <= 10
+        && str(p.get('specialNotes', ''), 3000) && str(p.get('startDate', ''), 10)
+        && str(p.missionType, 200);
+    }
+
+    function editable(e) { return e.revoked == false && e.status != 'approved'; }
+
+    match /missionaryEdits/{token} {
+      allow get: if isAdmin() || editable(resource.data);
+      allow list, create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        editable(resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['proposed', 'status', 'updatedAt', 'submittedAt'])
+        && request.resource.data.status in ['draft', 'submitted']
+        && validProposed(request.resource.data.proposed, token)
+        && request.resource.data.updatedAt == request.time
+        // Submitting stamps submittedAt; it never changes otherwise.
+        && (request.resource.data.status == 'submitted' && resource.data.status != 'submitted'
+            ? request.resource.data.submittedAt == request.time
+            : !request.resource.data.diff(resource.data).affectedKeys().hasAny(['submittedAt']))
+      );
+    }
+
+    // Snapshots of a published page taken before each approved edit, so it can be reverted.
+    match /missionaryHistory/{missionaryId}/versions/{versionId} {
+      allow read, write: if isAdmin();
+    }
+
     // ── Missionary page requests (public form on the home page) ──────────────
     function validPublicContact(c) {
       return c is map
