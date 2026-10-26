@@ -78,6 +78,14 @@ npm run dev          # http://localhost:5173
 ```
 The local site uses the real Firebase project — changes made in `/admin` locally are real.
 
+### Test the security rules
+The tests in `tests/rules/` check that `firestore.rules` accepts valid writes and refuses bad ones — including that the hotel fee matches the formula below.
+```bash
+npx -p firebase-tools npm run test:rules              # the rules as they are
+npx -p firebase-tools npm run test:rules:transition   # also accepts the old fees (legacy-fee window)
+```
+They need **Java** (for the Firestore emulator). `firebase-tools` runs through npx, so no global install is needed. They're safe to run anytime: they use the local emulator with a `demo-` project and never touch the real Firebase project.
+
 ### Deploy
 - **Website:** push to `master`. GitHub Actions builds and deploys to Firebase Hosting (see the repo's **Actions** tab). Pull requests get a temporary preview link.
 - **Security rules** (`firestore.rules`, `storage.rules`): not deployed by GitHub. After changing them, run `npx firebase-tools login` once, then `npx firebase-tools deploy --only firestore:rules,firestore:indexes,storage --project ibl-missions-display`.
