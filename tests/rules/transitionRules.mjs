@@ -7,8 +7,9 @@
  */
 export const withLegacyFees = (rules) => {
   const patched = rules.replace(
-    '&& d.hotelFee == hotelFee(d, 40)',
-    '&& (d.hotelFee == hotelFee(d, 40) || d.hotelFee == legacyPerAdultFee(d, 40) || d.hotelFee == legacyPerAdultFee(d, 50))',
+    '&& d.hotelFee == hotelFee(d, hotelRate(d))',
+    // hotelFee(d, 40): laymen before they were charged the $80 rate
+    '&& (d.hotelFee == hotelFee(d, hotelRate(d)) || d.hotelFee == hotelFee(d, 40) || d.hotelFee == legacyPerAdultFee(d, 40) || d.hotelFee == legacyPerAdultFee(d, 50))',
   );
   if (patched === rules) throw new Error('fee comparison not found in firestore.rules — update transitionRules.mjs');
 

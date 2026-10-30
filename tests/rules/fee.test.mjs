@@ -1,6 +1,6 @@
 /**
  * Checks that firestore.rules charges the hotel fee the way calculateHotelFee does:
- * $40 per ROOM per day, a room sleeping up to four, infants not counted.
+ * $40 per ROOM per day ($80 for laymen), a room sleeping up to four, infants not counted.
  *
  * Run it with:  npm run test:rules
  * (that starts the Firestore emulator; it never touches the real project)
@@ -62,7 +62,9 @@ await check('wife + 3 children → 2 rooms ($320)', assertSucceeds(put({ ...wife
 await check('wife + 6 children → 2 rooms ($320)', assertSucceeds(put({ ...wife, ...kids(6), hotelFee: 320 })));
 await check('wife + 7 children → 3 rooms ($480)', assertSucceeds(put({ ...wife, ...kids(7), hotelFee: 480 })));
 await check('alone + 4 children → 2 rooms ($320)', assertSucceeds(put({ ...kids(4), hotelFee: 320 })));
-await check('layman with wife → 1 room', assertSucceeds(put({ category: 'layman', ...wife })));
+await check('layman with wife → 1 room at $80/day ($320)', assertSucceeds(put({ category: 'layman', ...wife, hotelFee: 320 })));
+await check('layman, 2 days, 2 rooms → $320', assertSucceeds(put({ category: 'layman', ...wife, ...kids(3), attendanceDays: DAYS.slice(0, 2), hotelFee: 320 })));
+await check('layman with own lodging → $0', assertSucceeds(put({ category: 'layman', needsLodging: false, hotelFee: 0 })));
 await check('2 days only → $80', assertSucceeds(put({ ...wife, attendanceDays: DAYS.slice(0, 2), hotelFee: 80 })));
 
 // Still free for the people who never pay
@@ -74,6 +76,7 @@ await check('own lodging → $0', assertSucceeds(put({ ...wife, needsLodging: fa
 await check('needs lodging but $0 rejected', assertFails(put({ ...wife, hotelFee: 0 })));
 await check('own lodging but charged rejected', assertFails(put({ ...wife, needsLodging: false })));
 await check('arbitrary amount rejected', assertFails(put({ hotelFee: 55 })));
+await check('pastor charged the layman rate rejected', assertFails(put({ hotelFee: 320 })));
 
 // These amounts are exactly what the old per-adult formula produced, so they are only
 // refused once the transition window is over and the strict rules are deployed.
@@ -81,11 +84,13 @@ if (!LEGACY_RATES) {
   await check('charging per person instead of per room rejected', assertFails(put({ ...wife, hotelFee: 320 })));
   await check('charging for an infant rejected', assertFails(put({ ...wife, ...kids(3, 1), hotelFee: 320 })));
   await check('too few rooms for a big family rejected', assertFails(put({ ...wife, ...kids(7), hotelFee: 320 })));
+  await check('layman at the discounted rate rejected', assertFails(put({ category: 'layman', hotelFee: 160 })));
 }
 
 if (LEGACY_RATES) {
   await check('old $40-per-adult amount still accepted', assertSucceeds(put({ ...wife, hotelFee: 320 })));
   await check('old $50-per-adult amount still accepted', assertSucceeds(put({ ...wife, hotelFee: 400 })));
+  await check('layman at the old $40 rate still accepted', assertSucceeds(put({ category: 'layman', hotelFee: 160 })));
 }
 
 console.log(`${pass} passed, ${fail} failed`);

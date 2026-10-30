@@ -5,7 +5,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { Link as RouterLink } from 'react-router-dom';
 import HourglassBottomIcon from '@mui/icons-material/HourglassBottom';
 import iblLogo from '../../assets/ibl_logo.png';
-import { closeDateLabel, conferenceRangeLabel, daysUntilClose } from '../conference';
+import { closeDateLabel, closeTimeLabel, conferenceRangeLabel, daysUntilClose } from '../conference';
 import { LOCALES, type Lang, type Strings } from '../i18n';
 import '../registration.css';
 import '../../Conference/conference.css';
@@ -95,7 +95,7 @@ const Hero: React.FC<HeroProps> = ({ showDeadline, t, lang, onLangChange, title,
               {showDeadline && (
                 <Box sx={pillSx}>
                   <HourglassBottomIcon sx={{ fontSize: '1.05rem' }} />
-                  {t.registerUntil(closeDateLabel(locale))}{days <= 14 && ` · ${days === 0 ? t.lastDay : t.daysLeft(days)}`}
+                  {t.registerUntil(closeDateLabel(locale), closeTimeLabel(locale))}{days <= 14 && ` · ${days === 0 ? t.lastDay : t.daysLeft(days)}`}
                 </Box>
               )}
             </Box>

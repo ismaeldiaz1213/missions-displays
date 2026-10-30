@@ -6,14 +6,19 @@ export const CONFERENCE_NAME = 'Conferencia y Escuela de Misiones 2026';
 // Conference days (YYYY-MM-DD). The hotel fee is charged per day selected.
 export const CONFERENCE_DAYS = ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05'] as const;
 
-// Last day to register. Registration stays open through 11:59 PM of this day.
+// Last day to register. Online registration closes at 5:00 PM Central that day.
 export const REGISTRATION_LAST_DAY = '2026-10-30';
-// UTC offset for the deadline (-05:00 = US Central Daylight Time). Change if the church is elsewhere.
-export const REGISTRATION_UTC_OFFSET = '-05:00';
+// -05:00 = US Central Daylight Time (DST ends Nov 1). Change if the church is elsewhere.
+export const REGISTRATION_CLOSES_AT = `${REGISTRATION_LAST_DAY}T17:00:00-05:00`;
 
-export const registrationClosesAt = () => new Date(`${REGISTRATION_LAST_DAY}T23:59:59.999${REGISTRATION_UTC_OFFSET}`);
+export const registrationClosesAt = () => new Date(REGISTRATION_CLOSES_AT);
 
+/** The discounted rate everyone gets, except laymen who pay LAYMAN_HOTEL_FEE_PER_DAY. */
 export const HOTEL_FEE_PER_DAY = 40;
+export const LAYMAN_HOTEL_FEE_PER_DAY = 80;
+
+/** Per room, per day. */
+export const hotelRateFor = (category: string) => (category === 'layman' ? LAYMAN_HOTEL_FEE_PER_DAY : HOTEL_FEE_PER_DAY);
 
 // Missionaries and evangelists can upload MP4 videos until the conference starts (Nov 2, 00:00 Central).
 export const MEDIA_UPLOADS_CLOSE_AT = '2026-11-02T00:00:00-06:00';
@@ -24,7 +29,7 @@ export const isMediaUploadOpen = (now: Date = new Date()) =>
   now.getTime() < new Date(MEDIA_UPLOADS_CLOSE_AT).getTime();
 
 export const isRegistrationOpen = (now: Date = new Date()) =>
-  now.getTime() <= registrationClosesAt().getTime();
+  now.getTime() < registrationClosesAt().getTime();
 
 // Display order on the form
 export const CATEGORIES = ['missionary', 'evangelist', 'pastor', 'layman'] as const;
@@ -158,11 +163,12 @@ export const roomCount = (r: Parameters<typeof occupantCount>[0]) =>
 /**
  * The fee is per ROOM per day, not per person: a man and his wife share one room.
  * Missionaries and evangelists don't pay, and neither does anyone with their own lodging.
+ * Laymen pay the full rate; everyone else gets the discount.
  */
 export const calculateHotelFee = (r: {
   category: string; attendanceDays: readonly string[]; needsLodging: boolean;
 } & Parameters<typeof occupantCount>[0]) =>
-  (isFreeCategory(r.category) || !r.needsLodging ? 0 : HOTEL_FEE_PER_DAY * r.attendanceDays.length * roomCount(r));
+  (isFreeCategory(r.category) || !r.needsLodging ? 0 : hotelRateFor(r.category) * r.attendanceDays.length * roomCount(r));
 
 export const formatConferenceDay = (
   iso: string,
@@ -181,6 +187,12 @@ export const daysUntilClose = () =>
   Math.max(0, Math.floor((registrationClosesAt().getTime() - Date.now()) / 86_400_000));
 
 export const closeDateLabel = (locale: string) => formatConferenceDay(REGISTRATION_LAST_DAY, { day: 'numeric', month: 'long' }, locale);
+
+// "5:00 p. m. (hora del centro)" / "5:00 PM Central Time"
+export const closeTimeLabel = (locale: string) => {
+  const time = registrationClosesAt().toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Chicago' });
+  return locale.startsWith('es') ? `${time} (hora del centro)` : `${time} Central Time`;
+};
 
 // "2–5 de noviembre de 2026" / "November 2 – 5, 2026"
 export const conferenceRangeLabel = (locale: string) => {

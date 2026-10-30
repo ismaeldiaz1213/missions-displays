@@ -65,6 +65,7 @@ await check('admin adds a wife (fee unchanged, same room)', assertSucceeds(updat
   bringingWife: true, wife: { firstName: 'Ana', lastName: 'Pérez', email: '', phone: '' },
 })));
 await check('admin drops two days → fee recomputed to $80', assertSucceeds(update(admin, { attendanceDays: DAYS.slice(0, 2), hotelFee: 80 })));
+await check('admin switches to layman → $80/day ($320)', assertSucceeds(update(admin, { category: 'layman', hotelFee: 320 })));
 await check('admin switches to missionary → $0', assertSucceeds(update(admin, {
   category: 'missionary', missionaryBoard: 'BIMI', sendingChurch: 'IBL', hotelFee: 0,
 })));

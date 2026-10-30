@@ -65,7 +65,8 @@ export const formatSubmitted = (iso: string) => {
 
 /**
  * Estimated hotel cost at the current rate. We recompute instead of trusting the stored
- * hotelFee because the rate changed from $50 to $40 while registration was already open.
+ * hotelFee because the rate changed from $50 to $40 while registration was already open,
+ * and laymen moved to $80 after some had registered at $40.
  * Registrations saved before we asked about lodging were all quoted a room, so a missing
  * needsLodging counts as "yes".
  */

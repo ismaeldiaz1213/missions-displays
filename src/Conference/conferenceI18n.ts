@@ -12,7 +12,8 @@ const es = {
   register: 'Regístrese',
   registerLong: 'Regístrese en línea',
   seeSchedule: 'Ver el horario',
-  daysLeft: (n: number) => (n === 1 ? 'Último día para registrarse' : `Faltan ${n} días para cerrar el registro`),
+  daysLeft: (n: number) => (n === 0 ? 'Hoy es el último día: el registro en línea cierra a las 5 PM (hora del centro)'
+    : n === 1 ? 'Último día para registrarse' : `Faltan ${n} días para cerrar el registro`),
   closed: 'El registro en línea ya cerró',
 
   verse: 'Rogad, pues, al Señor de la mies, que envíe obreros a su mies.',
@@ -85,7 +86,8 @@ const en: ConferenceStrings = {
   register: 'Register',
   registerLong: 'Register online',
   seeSchedule: 'See the schedule',
-  daysLeft: (n) => (n === 1 ? 'Last day to register' : `${n} days left to register`),
+  daysLeft: (n) => (n === 0 ? 'Today is the last day: online registration closes at 5 PM Central'
+    : n === 1 ? 'Last day to register' : `${n} days left to register`),
   closed: 'Online registration has closed',
 
   verse: 'Pray ye therefore the Lord of the harvest, that he will send forth labourers into his harvest.',

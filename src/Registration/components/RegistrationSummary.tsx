@@ -2,11 +2,11 @@ import React from 'react';
 import { Box, Divider, Typography } from '@mui/material';
 import type { Strings } from '../i18n';
 import {
-  HOTEL_FEE_PER_DAY,
   adultCount,
   calculateHotelFee,
   roomCount,
   formatConferenceDay,
+  hotelRateFor,
   isFreeCategory,
   type Category,
 } from '../conference';
@@ -73,7 +73,7 @@ const RegistrationSummary: React.FC<{ form: SummaryInput; t: Strings; locale: st
               ${fee.toLocaleString('en-US')}
             </Typography>
             <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.82rem' }}>
-              {needsLodging ? t.feeFormula(HOTEL_FEE_PER_DAY, days, rooms) : t.noLodgingNote}
+              {needsLodging ? t.feeFormula(hotelRateFor(form.category), days, rooms) : t.noLodgingNote}
             </Typography>
             {needsLodging && (
               <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.78rem', mt: 0.5 }}>

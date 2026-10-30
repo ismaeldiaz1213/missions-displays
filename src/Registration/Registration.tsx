@@ -28,12 +28,13 @@ import {
   CATEGORIES,
   CONFERENCE_DAYS,
   HEARD_ABOUT,
-  HOTEL_FEE_PER_DAY,
   PICKUP_TRANSPORTS,
   calculateHotelFee,
   canUploadMedia,
   closeDateLabel,
+  closeTimeLabel,
   formatConferenceDay,
+  hotelRateFor,
   isFreeCategory,
   isMediaUploadOpen,
   isRegistrationOpen,
@@ -275,8 +276,16 @@ const Registration: React.FC = () => {
           {t.closedTitle}
         </Typography>
         <Typography sx={{ color: 'var(--ibl-text-body)', lineHeight: 1.7 }}>
-          {t.closedBody(closeDateLabel(locale))}
+          {t.closedBody(closeDateLabel(locale), closeTimeLabel(locale))}
         </Typography>
+        <Typography sx={{
+          color: 'var(--ibl-text)', fontWeight: 700, lineHeight: 1.6, mt: 2, p: 1.5, borderRadius: '10px',
+          bgcolor: 'color-mix(in srgb, var(--ibl-accent) 14%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--ibl-accent) 40%, transparent)',
+        }}>
+          {t.closedHotelWarning}
+        </Typography>
+        <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.9rem', mt: 2 }}>{t.closedContact}</Typography>
       </CenterCard>,
     );
   }
@@ -459,7 +468,7 @@ const Registration: React.FC = () => {
           </Collapse>
         </FormSection>
 
-        <FormSection step={++step} title={t.daysTitle} subtitle={isFreeCategory(form.category) ? t.daysSubFree : t.daysSub(HOTEL_FEE_PER_DAY)}>
+        <FormSection step={++step} title={t.daysTitle} subtitle={isFreeCategory(form.category) ? t.daysSubFree : t.daysSub(hotelRateFor(form.category))}>
           <Box id="reg-attendanceDays" sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(4, minmax(0, 1fr))' }, gap: 1.5 }}>
             {CONFERENCE_DAYS.map((d) => (
               <ChoiceCard key={d} role="checkbox" selected={form.attendanceDays.includes(d)} onClick={() => toggleDay(d)}

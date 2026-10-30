@@ -1,4 +1,6 @@
 // Excel & PDF exports. Libraries are imported lazily so they only load when an admin exports.
+// Rows keep the order they're passed in — the admin table's order (newest registration first).
+import type { Hotel } from '../../data/hotels';
 import { CATEGORY_LABELS, CONFERENCE_NAME, formatConferenceDay, isFreeCategory, type Category, type Registration } from '../../Registration/conference';
 import {
   REGISTRATION_COLUMNS, byArrival, childCount, formatArrival, formatDays, fullName,
@@ -21,6 +23,16 @@ const palette = () => ({
 });
 
 const stamp = () => new Date().toISOString().slice(0, 10);
+
+export interface HotelInfo {
+  hotels: Hotel[];
+  hotelOf: (r: Registration) => Hotel | undefined;
+  /** Set when exporting a single hotel's group; shown in the title and file name. */
+  title?: string;
+}
+
+const fileSuffix = (title?: string) =>
+  title ? `-${title.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase()}` : '';
 const generatedLabel = () => new Date().toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' });
 
 const download = (blob: Blob, filename: string) => {
@@ -34,7 +46,7 @@ const download = (blob: Blob, filename: string) => {
 
 // ── Excel ────────────────────────────────────────────────────────────────────
 
-export const exportRegistrationsExcel = async (regs: Registration[]) => {
+export const exportRegistrationsExcel = async (regs: Registration[], hotel: HotelInfo) => {
   const ExcelJS = (await import('exceljs')).default;
   const c = palette();
   const argb = (hex: string) => `FF${hex.slice(1)}`;
@@ -94,9 +106,13 @@ export const exportRegistrationsExcel = async (regs: Registration[]) => {
   };
 
   // Sheet 1 — every field
-  const cols = REGISTRATION_COLUMNS;
-  const ws1 = addSheet('Registros', `${CONFERENCE_NAME} — Registros`, cols);
-  const sorted = [...regs].sort((a, b) => a.registrant.lastName.localeCompare(b.registrant.lastName));
+  const cols = [
+    ...REGISTRATION_COLUMNS.slice(0, -1),
+    { header: 'Hotel asignado', width: 18, value: (r: Registration) => hotel.hotelOf(r)?.name ?? '' },
+    ...REGISTRATION_COLUMNS.slice(-1),
+  ];
+  const ws1 = addSheet('Registros', `${CONFERENCE_NAME} — Registros${hotel.title ? ` · ${hotel.title}` : ''}`, cols);
+  const sorted = regs;
   addRows(ws1, sorted.map((r) => cols.map((col) => col.value(r))), cols.flatMap((col, i) => (col.money ? [i] : [])));
   ws1.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4 + sorted.length, column: cols.length } };
   if (sorted.length > 0) {
@@ -148,12 +164,12 @@ export const exportRegistrationsExcel = async (regs: Registration[]) => {
   ws3.getColumn(1).eachCell((cell, n) => { if (n > 4) cell.font = { bold: true, color: { argb: argb(c.text) } }; });
 
   const buffer = await wb.xlsx.writeBuffer();
-  download(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `registros-conferencia-${stamp()}.xlsx`);
+  download(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `registros-conferencia${fileSuffix(hotel.title)}-${stamp()}.xlsx`);
 };
 
 // ── PDF ──────────────────────────────────────────────────────────────────────
 
-export const exportRegistrationsPdf = async (regs: Registration[]) => {
+export const exportRegistrationsPdf = async (regs: Registration[], hotel: HotelInfo) => {
   const [{ jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
   const c = palette();
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
@@ -175,8 +191,10 @@ export const exportRegistrationsPdf = async (regs: Registration[]) => {
     doc.text(`Generado el ${generatedLabel()}`, pageW - margin, 45, { align: 'right' });
   };
 
+  const title = hotel.title ? `Registros · ${hotel.title}` : 'Registros';
+
   // Stat tiles
-  banner('Registros');
+  banner(title);
   const tiles: [string, string][] = [
     ['Registros', String(s.registrations)],
     ['Personas', `${s.people}`],
@@ -206,6 +224,20 @@ export const exportRegistrationsPdf = async (regs: Registration[]) => {
   doc.setFontSize(9);
   doc.text(categoryLine, margin, 134);
 
+  // Hotel legend, right-aligned on the same line: ● Hotel 1 (12)   ● Hotel 2 (8)
+  const legend = hotel.hotels
+    .map((h) => ({ h, n: regs.filter((r) => hotel.hotelOf(r)?.id === h.id).length }))
+    .filter(({ n }) => n > 0);
+  let lx = pageW - margin;
+  [...legend].reverse().forEach(({ h, n }) => {
+    const label = `${h.name} (${n})`;
+    lx -= doc.getTextWidth(label);
+    doc.text(label, lx, 134);
+    doc.setFillColor(...hexToRgb(h.color));
+    doc.circle(lx - 7, 131, 3.5, 'F');
+    lx -= 22;
+  });
+
   const headStyles = { fillColor: hexToRgb(c.primary), textColor: 255, fontStyle: 'bold' as const, fontSize: 8.5 };
   const common = {
     margin: { left: margin, right: margin, top: 72, bottom: 36 },
@@ -214,11 +246,12 @@ export const exportRegistrationsPdf = async (regs: Registration[]) => {
     alternateRowStyles: { fillColor: [243, 246, 251] as [number, number, number] },
   };
 
-  const sorted = [...regs].sort((a, b) => a.registrant.lastName.localeCompare(b.registrant.lastName));
+  const sorted = regs;
+  const HOTEL_COL = 1;
   autoTable(doc, {
     ...common,
     startY: 144,
-    head: [['#', 'Nombre', 'Categoría', 'Iglesia', 'Contacto', 'Familia', 'Días', 'Llegada', 'Hotel']],
+    head: [['#', '', 'Nombre', 'Categoría', 'Iglesia', 'Contacto', 'Familia', 'Días', 'Llegada', 'Hotel']],
     body: sorted.map((r, i) => {
       const family = [
         r.bringingWife ? `Esposa: ${fullName(r.wife)}` : 'Sin esposa',
@@ -231,28 +264,37 @@ export const exportRegistrationsPdf = async (regs: Registration[]) => {
       ].filter(Boolean).join('\n');
       const org = [homeChurchLabel(r), r.missionaryBoard && `Junta: ${r.missionaryBoard}`, r.sendingChurch && `Enviado por: ${r.sendingChurch}`].filter(Boolean).join('\n');
       return [
-        String(i + 1), fullName(r.registrant), CATEGORY_LABELS[r.category] ?? r.category, org,
+        String(i + 1), '', fullName(r.registrant), CATEGORY_LABELS[r.category] ?? r.category, org,
         [r.registrant.phone, r.registrant.email].filter(Boolean).join('\n'),
         family, formatDays(r.attendanceDays), arrival, isFreeCategory(r.category) ? 'Sin costo' : money(hotelFeeOf(r)),
       ];
     }),
     columnStyles: {
       0: { cellWidth: 22, halign: 'right', textColor: hexToRgb(c.muted) },
-      1: { cellWidth: 100, fontStyle: 'bold' },
-      2: { cellWidth: 62 },
-      3: { cellWidth: 118 },
-      4: { cellWidth: 120 },
-      5: { cellWidth: 100 },
-      6: { cellWidth: 58 },
-      7: { cellWidth: 'auto' },
-      8: { cellWidth: 50, halign: 'right' },
+      [HOTEL_COL]: { cellWidth: 14 },
+      2: { cellWidth: 100, fontStyle: 'bold' },
+      3: { cellWidth: 62 },
+      4: { cellWidth: 118 },
+      5: { cellWidth: 120 },
+      6: { cellWidth: 100 },
+      7: { cellWidth: 58 },
+      8: { cellWidth: 'auto' },
+      9: { cellWidth: 50, halign: 'right' },
     },
     didParseCell: (data) => {
-      if (data.section === 'body' && data.column.index === 7 && String(data.cell.raw).includes('NECESITA RECOGIDA')) {
+      if (data.section === 'body' && data.column.index === 8 && String(data.cell.raw).includes('NECESITA RECOGIDA')) {
         data.cell.styles.textColor = hexToRgb(c.primary);
       }
     },
-    didDrawPage: (data) => { if (data.pageNumber > 1) banner('Registros (continuación)'); },
+    // The hotel column is just a colored dot; the legend above says which is which.
+    didDrawCell: (data) => {
+      if (data.section !== 'body' || data.column.index !== HOTEL_COL) return;
+      const h = hotel.hotelOf(sorted[data.row.index]);
+      if (!h) return;
+      doc.setFillColor(...hexToRgb(h.color));
+      doc.circle(data.cell.x + data.cell.width / 2, data.cell.y + 9, 3.5, 'F');
+    },
+    didDrawPage: (data) => { if (data.pageNumber > 1) banner(`${title} (continuación)`); },
   });
 
   // Arrivals page
@@ -288,5 +330,5 @@ export const exportRegistrationsPdf = async (regs: Registration[]) => {
     doc.text(`Página ${i} de ${pages}`, pageW - margin, pageH - 16, { align: 'right' });
   }
 
-  doc.save(`registros-conferencia-${stamp()}.pdf`);
+  doc.save(`registros-conferencia${fileSuffix(hotel.title)}-${stamp()}.pdf`);
 };

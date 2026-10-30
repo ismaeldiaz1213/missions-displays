@@ -12,12 +12,15 @@ const es = {
   churchName: 'Iglesia Bautista Libertad',
   conferenceName: 'Conferencia y Escuela de Misiones 2026',
   backToConference: 'Página de la conferencia',
-  registerUntil: (date: string) => `Registro hasta el ${date}`,
+  registerUntil: (date: string, time: string) => `Registro en línea hasta el ${date}, ${time}`,
   lastDay: 'último día',
   daysLeft: (n: number) => `quedan ${plural(n, 'día', 'días')}`,
 
-  closedTitle: 'El registro está cerrado',
-  closedBody: (date: string) => `La fecha límite para registrarse fue el ${date}. Si tiene preguntas, comuníquese con la oficina de la iglesia.`,
+  closedTitle: 'El registro en línea está cerrado',
+  closedBody: (date: string, time: string) =>
+    `El registro en línea cerró el ${date} a las ${time}. Todavía puede registrarse en persona en la iglesia el lunes de 12 PM a 6 PM.`,
+  closedHotelWarning: 'Si se registra en persona, NO podemos garantizarle una habitación de hotel.',
+  closedContact: 'Si tiene preguntas, comuníquese con la oficina de la iglesia.',
 
   // Conference information shown above the form. Days/dates are filled in from CONFERENCE_DAYS.
   infoTitle: 'Información importante',
@@ -200,12 +203,14 @@ const en: Strings = {
   churchName: 'Iglesia Bautista Libertad',
   conferenceName: 'Missions Conference & School 2026',
   backToConference: 'Conference page',
-  registerUntil: (date) => `Register by ${date}`,
+  registerUntil: (date, time) => `Register online by ${date}, ${time}`,
   lastDay: 'last day',
   daysLeft: (n) => `${plural(n, 'day', 'days')} left`,
 
-  closedTitle: 'Registration is closed',
-  closedBody: (date) => `The registration deadline was ${date}. If you have questions, please contact the church office.`,
+  closedTitle: 'Online registration is closed',
+  closedBody: (date, time) => `Online registration closed on ${date} at ${time}. You can still register in person at the church on Monday from 12 PM to 6 PM.`,
+  closedHotelWarning: 'If you register in person, a hotel room is NOT guaranteed.',
+  closedContact: 'If you have questions, please contact the church office.',
 
   infoTitle: 'Important information',
   infoItems: (firstDay, lastDay) => [

@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Box, Button, Card, CardActionArea, Chip, CircularProgress, Dialog, DialogActions,
+  Box, Button, Card, CardActionArea, Checkbox, Chip, CircularProgress, Dialog, DialogActions,
   DialogContent, DialogTitle, FormControl, IconButton, InputAdornment, InputLabel,
   MenuItem, Paper, Select, Table, TableBody, TableCell, TableContainer, TableHead,
-  TableRow, TextField, Tooltip, Typography, useMediaQuery, useTheme,
+  Menu, TableRow, TextField, Tooltip, Typography, useMediaQuery, useTheme,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -16,14 +16,19 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import MovieOutlinedIcon from '@mui/icons-material/MovieOutlined';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import HotelIcon from '@mui/icons-material/Hotel';
+import FolderZipOutlinedIcon from '@mui/icons-material/FolderZipOutlined';
 import {
   CONFERENCE_MEDIA_PREFIX, deleteRegistration, listRegistrations, mediaUploadPath,
 } from '../../data/registrations';
 import { listFiles, listFolders, type StoredFile } from '../../data/storageFiles';
+import { DEFAULT_HOTELS, assignHotel, getHotelSettings, type Hotel, type HotelSettings } from '../../data/hotels';
 import { DetailGroup, StoredFileList } from '../shared';
 import RegistrationEditDialog from './RegistrationEditDialog';
+import HotelsDialog from './HotelsDialog';
+import MediaDownloadDialog from './MediaDownloadDialog';
 import {
-  CATEGORY_LABELS, REGISTRATION_LAST_DAY, canUploadMedia, formatAddress, formatConferenceDay,
+  CATEGORY_LABELS, REGISTRATION_LAST_DAY, canUploadMedia, closeTimeLabel, formatAddress, formatConferenceDay,
   isFreeCategory, isRegistrationOpen, type Category, type Registration,
 } from '../../Registration/conference';
 import {
@@ -61,6 +66,16 @@ const MediaChip: React.FC = () => (
     color: 'var(--ibl-primary)', bgcolor: 'color-mix(in srgb, var(--ibl-primary) 14%, transparent)',
     '& .MuiChip-icon': { color: 'var(--ibl-primary)', fontSize: '0.95rem' },
   }} />
+);
+
+/** A colored dot, plus the hotel's name unless `dotOnly`. */
+const HotelTag: React.FC<{ hotel?: Hotel; dotOnly?: boolean }> = ({ hotel, dotOnly }) => (
+  hotel ? (
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+      <Box component="span" sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: hotel.color, flexShrink: 0 }} />
+      {!dotOnly && hotel.name}
+    </Box>
+  ) : <Box component="span" sx={{ color: 'text.disabled', fontSize: '0.8rem' }}>—</Box>
 );
 
 const Stat: React.FC<{ label: string; value: React.ReactNode; hint?: string }> = ({ label, value, hint }) => (
@@ -108,7 +123,7 @@ const MediaSection: React.FC<{ registrationId: string }> = ({ registrationId }) 
   );
 };
 
-const RegistrationDetail: React.FC<{ r: Registration; onEdit: () => void; onClose: () => void; fullScreen: boolean }> = ({ r, onEdit, onClose, fullScreen }) => (
+const RegistrationDetail: React.FC<{ r: Registration; hotel?: Hotel; onEdit: () => void; onClose: () => void; fullScreen: boolean }> = ({ r, hotel, onEdit, onClose, fullScreen }) => (
   <Dialog open onClose={onClose} fullScreen={fullScreen} maxWidth="md" fullWidth>
     <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
       <Box component="span" sx={{ fontWeight: 800 }}>{fullName(r.registrant)}</Box>
@@ -145,6 +160,7 @@ const RegistrationDetail: React.FC<{ r: Registration; onEdit: () => void; onClos
         ['Personas', `${peopleCount(r)} (${r.bringingWife ? 2 : 1} adulto${r.bringingWife ? 's' : ''}, ${childCount(r)} niño${childCount(r) === 1 ? '' : 's'})`],
         ['Hospedaje', lodgingLabel(r)],
         ['Habitaciones', r.needsLodging === false ? '—' : `${roomsOf(r)} (hasta 4 personas por habitación)`],
+        ['Hotel asignado', hotel ? <HotelTag hotel={hotel} /> : 'Sin asignar'],
         ['Hotel estimado', isFreeCategory(r.category) ? `Sin costo (${CATEGORY_LABELS[r.category].toLowerCase()})`
           : r.needsLodging === false ? 'Sin costo (alojamiento propio)' : money(hotelFeeOf(r))],
       ]} />
@@ -184,6 +200,13 @@ const RegistrationTable: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState<'excel' | 'pdf' | null>(null);
   const [withMedia, setWithMedia] = useState<Set<string>>(new Set());
+  const [hotelSettings, setHotelSettings] = useState<HotelSettings>({ hotels: DEFAULT_HOTELS, assignments: {} });
+  const [hotelFilter, setHotelFilter] = useState<string>('all'); // 'all' | 'none' | hotel id
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [assignMenu, setAssignMenu] = useState<HTMLElement | null>(null);
+  const [assigning, setAssigning] = useState(false);
+  const [editingHotels, setEditingHotels] = useState(false);
+  const [downloadingMedia, setDownloadingMedia] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -193,6 +216,7 @@ const RegistrationTable: React.FC = () => {
       setRegistrations(data.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
       // Which registrations have uploaded media (one folder per registration id)
       listFolders(CONFERENCE_MEDIA_PREFIX).then((ids) => setWithMedia(new Set(ids))).catch(console.error);
+      getHotelSettings().then(setHotelSettings).catch(console.error);
     } catch (err) {
       setApiError(String(err));
     } finally {
@@ -202,24 +226,32 @@ const RegistrationTable: React.FC = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  const hotelOf = useCallback((id: string) => {
+    const hotelId = hotelSettings.assignments[id];
+    return hotelSettings.hotels.find((h) => h.id === hotelId);
+  }, [hotelSettings]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return registrations.filter((r) =>
       (category === 'all' || r.category === category) &&
+      (hotelFilter === 'all' || (hotelFilter === 'none' ? !hotelOf(r.id) : hotelOf(r.id)?.id === hotelFilter)) &&
       (!q || [fullName(r.registrant), fullName(r.wife), r.registrant.email, r.registrant.phone, r.homeChurch, r.homeChurchCity, r.missionaryBoard, r.sendingChurch, r.travel.flightNumber]
         .some((f) => f?.toLowerCase().includes(q))),
     );
-  }, [registrations, search, category]);
+  }, [registrations, search, category, hotelFilter, hotelOf]);
 
   const stats = useMemo(() => summarize(filtered), [filtered]);
   const open = isRegistrationOpen();
-  const isFiltered = category !== 'all' || !!search.trim();
+  const isFiltered = category !== 'all' || hotelFilter !== 'all' || !!search.trim();
+  const filteredHotel = hotelSettings.hotels.find((h) => h.id === hotelFilter);
 
   const runExport = async (kind: 'excel' | 'pdf') => {
     setExporting(kind);
     try {
       const mod = await import('./exportRegistrations');
-      await (kind === 'excel' ? mod.exportRegistrationsExcel : mod.exportRegistrationsPdf)(filtered);
+      const hotels = { hotelOf: (r: Registration) => hotelOf(r.id), hotels: hotelSettings.hotels, title: filteredHotel?.name };
+      await (kind === 'excel' ? mod.exportRegistrationsExcel : mod.exportRegistrationsPdf)(filtered, hotels);
     } catch (err) {
       console.error(err);
       setApiError(`Error al exportar: ${String(err)}`);
@@ -248,6 +280,36 @@ const RegistrationTable: React.FC = () => {
     setEditing(null);
   };
 
+  const toggleSelected = (id: string) => setSelected((s) => {
+    const next = new Set(s);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  // Only rows the current filters show count, so a hidden selection never gets a hotel by surprise.
+  const selectedIds = filtered.filter((r) => selected.has(r.id)).map((r) => r.id);
+  const allSelected = filtered.length > 0 && selectedIds.length === filtered.length;
+  const someSelected = selectedIds.length > 0;
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(filtered.map((r) => r.id)));
+
+  const handleAssign = async (hotelId: string | null) => {
+    setAssignMenu(null);
+    const ids = selectedIds;
+    setAssigning(true);
+    try {
+      await assignHotel(ids, hotelId, hotelSettings);
+      setHotelSettings((hs) => {
+        const assignments = { ...hs.assignments };
+        ids.forEach((id) => { if (hotelId) assignments[id] = hotelId; else delete assignments[id]; });
+        return { ...hs, assignments };
+      });
+      setSelected(new Set());
+    } catch (err) {
+      setApiError(`Error al asignar hotel: ${String(err)}`);
+    } finally {
+      setAssigning(false);
+    }
+  };
+
   const headerSx = { color: 'text.secondary', fontWeight: 600, whiteSpace: 'nowrap' };
   const exportLabel = isFiltered ? ` (${filtered.length})` : '';
 
@@ -265,7 +327,7 @@ const RegistrationTable: React.FC = () => {
             }} />
           </Box>
           <Typography variant="body2" color="text.secondary">
-            Fecha límite: {formatConferenceDay(REGISTRATION_LAST_DAY, { day: 'numeric', month: 'long', year: 'numeric' })} ·{' '}
+            Fecha límite: {formatConferenceDay(REGISTRATION_LAST_DAY, { day: 'numeric', month: 'long', year: 'numeric' })}, {closeTimeLabel('es-ES')} ·{' '}
             <Box component="a" href={REGISTRATION_PATH} target="_blank" rel="noopener noreferrer"
               sx={{ color: 'var(--ibl-primary)', display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
               {REGISTRATION_PATH}<OpenInNewIcon sx={{ fontSize: '0.9rem' }} />
@@ -277,6 +339,14 @@ const RegistrationTable: React.FC = () => {
             <IconButton onClick={load} disabled={loading}><RefreshIcon /></IconButton>
           </span>
         </Tooltip>
+        <Button variant="outlined" onClick={() => setEditingHotels(true)} startIcon={<HotelIcon />}
+          sx={{ textTransform: 'none', fontWeight: 600 }}>
+          Hoteles
+        </Button>
+        <Button variant="outlined" onClick={() => setDownloadingMedia(true)} startIcon={<FolderZipOutlinedIcon />}
+          disabled={withMedia.size === 0} sx={{ textTransform: 'none', fontWeight: 600 }}>
+          Videos (ZIP)
+        </Button>
         <Button variant="outlined" onClick={() => runExport('excel')} disabled={!!exporting || filtered.length === 0}
           startIcon={exporting === 'excel' ? <CircularProgress size={16} /> : <TableViewIcon />}
           sx={{ textTransform: 'none', fontWeight: 600 }}>
@@ -285,7 +355,7 @@ const RegistrationTable: React.FC = () => {
         <Button variant="outlined" onClick={() => runExport('pdf')} disabled={!!exporting || filtered.length === 0}
           startIcon={exporting === 'pdf' ? <CircularProgress size={16} /> : <PictureAsPdfIcon />}
           sx={{ textTransform: 'none', fontWeight: 600 }}>
-          PDF{exportLabel}
+          PDF{filteredHotel ? ` · ${filteredHotel.name}` : ''}{exportLabel}
         </Button>
       </Box>
 
@@ -325,7 +395,34 @@ const RegistrationTable: React.FC = () => {
             {(Object.keys(CATEGORY_LABELS) as Category[]).map((k) => <MenuItem key={k} value={k}>{CATEGORY_LABELS[k]}</MenuItem>)}
           </Select>
         </FormControl>
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>Hotel</InputLabel>
+          <Select value={hotelFilter} label="Hotel" onChange={(e) => setHotelFilter(e.target.value)}>
+            <MenuItem value="all">Todos</MenuItem>
+            {hotelSettings.hotels.map((h) => <MenuItem key={h.id} value={h.id}><HotelTag hotel={h} /></MenuItem>)}
+            <MenuItem value="none">Sin hotel</MenuItem>
+          </Select>
+        </FormControl>
       </Box>
+
+      {/* Selection → hotel */}
+      {someSelected && (
+        <Paper elevation={0} sx={{
+          display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', p: 1.25, mb: 2, borderRadius: 2,
+          bgcolor: 'color-mix(in srgb, var(--ibl-primary) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--ibl-primary) 30%, transparent)',
+        }}>
+          <Typography sx={{ fontWeight: 700, flex: 1 }}>{selectedIds.length} seleccionado{selectedIds.length === 1 ? '' : 's'}</Typography>
+          <Button variant="contained" startIcon={assigning ? <CircularProgress size={16} color="inherit" /> : <HotelIcon />}
+            disabled={assigning} onClick={(e) => setAssignMenu(e.currentTarget)} sx={{ textTransform: 'none', fontWeight: 600 }}>
+            Asignar hotel
+          </Button>
+          <Button onClick={() => setSelected(new Set())} sx={{ textTransform: 'none' }}>Quitar selección</Button>
+          <Menu anchorEl={assignMenu} open={!!assignMenu} onClose={() => setAssignMenu(null)}>
+            {hotelSettings.hotels.map((h) => <MenuItem key={h.id} onClick={() => handleAssign(h.id)}><HotelTag hotel={h} /></MenuItem>)}
+            <MenuItem onClick={() => handleAssign(null)} sx={{ color: 'text.secondary' }}>Sin hotel</MenuItem>
+          </Menu>
+        </Paper>
+      )}
 
       {apiError && (
         <Box sx={{ bgcolor: 'color-mix(in srgb, var(--ibl-danger) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--ibl-danger) 35%, transparent)', borderRadius: 1, p: 2, mb: 2 }}>
@@ -348,6 +445,7 @@ const RegistrationTable: React.FC = () => {
               <CardActionArea onClick={() => setViewing(r)} sx={{ p: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 0.5 }}>
                   <Typography sx={{ fontWeight: 700, flex: 1 }}>{fullName(r.registrant)}</Typography>
+                  {hotelOf(r.id) && <HotelTag hotel={hotelOf(r.id)} />}
                   {withMedia.has(r.id) && <MediaChip />}
                   <CategoryChip category={r.category} />
                 </Box>
@@ -360,7 +458,9 @@ const RegistrationTable: React.FC = () => {
                   {r.travel.needsPickup && <PickupChip />}
                 </Box>
               </CardActionArea>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 1, pb: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', px: 1, pb: 1 }}>
+                <Checkbox size="small" checked={selected.has(r.id)} onChange={() => toggleSelected(r.id)} sx={{ mr: 'auto' }}
+                  inputProps={{ 'aria-label': `Seleccionar ${fullName(r.registrant)}` }} />
                 <Button size="small" startIcon={<EditIcon />} onClick={() => setEditing(r)} sx={{ textTransform: 'none' }}>
                   Editar
                 </Button>
@@ -376,6 +476,10 @@ const RegistrationTable: React.FC = () => {
           <Table size="small">
             <TableHead>
               <TableRow>
+                <TableCell padding="checkbox">
+                  <Checkbox size="small" checked={allSelected} indeterminate={someSelected && !allSelected} onChange={toggleAll}
+                    inputProps={{ 'aria-label': 'Seleccionar todos' }} />
+                </TableCell>
                 <TableCell sx={headerSx}>Nombre</TableCell>
                 <TableCell sx={headerSx}>Categoría</TableCell>
                 <TableCell sx={headerSx}>Iglesia</TableCell>
@@ -383,13 +487,18 @@ const RegistrationTable: React.FC = () => {
                 <TableCell sx={headerSx} align="center">Personas</TableCell>
                 <TableCell sx={headerSx}>Días</TableCell>
                 <TableCell sx={headerSx}>Llegada</TableCell>
-                <TableCell sx={headerSx} align="right">Hotel</TableCell>
+                <TableCell sx={headerSx}>Hotel</TableCell>
+                <TableCell sx={headerSx} align="right">Costo</TableCell>
                 <TableCell sx={{ ...headerSx, width: 132 }} />
               </TableRow>
             </TableHead>
             <TableBody>
               {filtered.map((r) => (
-                <TableRow key={r.id} hover onClick={() => setViewing(r)} sx={{ cursor: 'pointer' }}>
+                <TableRow key={r.id} hover selected={selected.has(r.id)} onClick={() => setViewing(r)} sx={{ cursor: 'pointer' }}>
+                  <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox size="small" checked={selected.has(r.id)} onChange={() => toggleSelected(r.id)}
+                      inputProps={{ 'aria-label': `Seleccionar ${fullName(r.registrant)}` }} />
+                  </TableCell>
                   <TableCell>
                     <Typography sx={{ fontWeight: 600, fontSize: '0.9rem' }}>{fullName(r.registrant)}</Typography>
                     {r.bringingWife && <Typography sx={{ color: 'text.secondary', fontSize: '0.78rem' }}>+ {fullName(r.wife)}</Typography>}
@@ -419,6 +528,7 @@ const RegistrationTable: React.FC = () => {
                       {r.travel.needsPickup && <PickupChip />}
                     </Box>
                   </TableCell>
+                  <TableCell><HotelTag hotel={hotelOf(r.id)} /></TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
                     {isFreeCategory(r.category) ? <Typography sx={{ color: 'var(--ibl-success)', fontSize: '0.85rem' }}>Sin costo</Typography> : money(hotelFeeOf(r))}
                   </TableCell>
@@ -436,8 +546,17 @@ const RegistrationTable: React.FC = () => {
         </TableContainer>
       )}
 
-      {viewing && <RegistrationDetail r={viewing} onEdit={() => setEditing(viewing)} onClose={() => setViewing(null)} fullScreen={isMobile} />}
+      {viewing && <RegistrationDetail r={viewing} hotel={hotelOf(viewing.id)} onEdit={() => setEditing(viewing)} onClose={() => setViewing(null)} fullScreen={isMobile} />}
       {editing && <RegistrationEditDialog registration={editing} fullScreen={isMobile} onSaved={handleSaved} onClose={() => setEditing(null)} />}
+      {editingHotels && (
+        <HotelsDialog settings={hotelSettings} onClose={() => setEditingHotels(false)}
+          onSaved={(hs) => {
+            setHotelSettings(hs);
+            setEditingHotels(false);
+            if (hotelFilter !== 'all' && hotelFilter !== 'none' && !hs.hotels.some((h) => h.id === hotelFilter)) setHotelFilter('all');
+          }} />
+      )}
+      {downloadingMedia && <MediaDownloadDialog registrations={registrations} onClose={() => setDownloadingMedia(false)} />}
 
       <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
         <DialogTitle>Confirmar eliminación</DialogTitle>
