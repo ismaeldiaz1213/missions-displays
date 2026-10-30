@@ -58,6 +58,10 @@ export const listFiles = async (prefix: string): Promise<StoredFile[]> => {
   }));
 };
 
+/** Whether anything is stored directly under a prefix. */
+export const hasFiles = async (prefix: string): Promise<boolean> =>
+  (await listAll(ref(storage, prefix))).items.length > 0;
+
 /** Sub-folder names directly under a prefix (e.g. registration ids under conference-media/). */
 export const listFolders = async (prefix: string): Promise<string[]> => {
   const { prefixes } = await listAll(ref(storage, prefix));

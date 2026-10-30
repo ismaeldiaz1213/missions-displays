@@ -21,7 +21,7 @@ import FolderZipOutlinedIcon from '@mui/icons-material/FolderZipOutlined';
 import {
   CONFERENCE_MEDIA_PREFIX, deleteRegistration, listRegistrations, mediaUploadPath,
 } from '../../data/registrations';
-import { listFiles, listFolders, type StoredFile } from '../../data/storageFiles';
+import { hasFiles, listFiles, type StoredFile } from '../../data/storageFiles';
 import { DEFAULT_HOTELS, assignHotel, getHotelSettings, type Hotel, type HotelSettings } from '../../data/hotels';
 import { DetailGroup, StoredFileList } from '../shared';
 import RegistrationEditDialog from './RegistrationEditDialog';
@@ -214,8 +214,11 @@ const RegistrationTable: React.FC = () => {
     try {
       const data = await listRegistrations();
       setRegistrations(data.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
-      // Which registrations have uploaded media (one folder per registration id)
-      listFolders(CONFERENCE_MEDIA_PREFIX).then((ids) => setWithMedia(new Set(ids))).catch(console.error);
+      // Which registrations have uploaded media. storage.rules only allow listing inside one
+      // registration's folder, not conference-media/ itself, so check each one.
+      Promise.all(data.map(async (r) =>
+        ((await hasFiles(`${CONFERENCE_MEDIA_PREFIX}/${r.id}`)) ? [r.id] : [])))
+        .then((ids) => setWithMedia(new Set(ids.flat()))).catch(console.error);
       getHotelSettings().then(setHotelSettings).catch(console.error);
     } catch (err) {
       setApiError(String(err));
@@ -556,7 +559,7 @@ const RegistrationTable: React.FC = () => {
             if (hotelFilter !== 'all' && hotelFilter !== 'none' && !hs.hotels.some((h) => h.id === hotelFilter)) setHotelFilter('all');
           }} />
       )}
-      {downloadingMedia && <MediaDownloadDialog registrations={registrations} onClose={() => setDownloadingMedia(false)} />}
+      {downloadingMedia && <MediaDownloadDialog registrations={registrations.filter((r) => withMedia.has(r.id))} onClose={() => setDownloadingMedia(false)} />}
 
       <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
         <DialogTitle>Confirmar eliminación</DialogTitle>

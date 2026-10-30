@@ -248,10 +248,13 @@ export const exportRegistrationsPdf = async (regs: Registration[], hotel: HotelI
 
   const sorted = regs;
   const HOTEL_COL = 1;
+  // Hotel per body row, looked up from the row itself: autoTable's row.index doesn't line up
+  // with this list once rows split across pages.
+  const rowHotel = new WeakMap<object, Hotel>();
   autoTable(doc, {
     ...common,
     startY: 144,
-    head: [['#', '', 'Nombre', 'Categoría', 'Iglesia', 'Contacto', 'Familia', 'Días', 'Llegada', 'Hotel']],
+    head: [['#', '', 'Nombre', 'Categoría', 'Iglesia', 'Contacto', 'Familia', 'Días', 'Llegada', 'Costo']],
     body: sorted.map((r, i) => {
       const family = [
         r.bringingWife ? `Esposa: ${fullName(r.wife)}` : 'Sin esposa',
@@ -263,11 +266,14 @@ export const exportRegistrationsPdf = async (regs: Registration[], hotel: HotelI
         r.travel.needsPickup ? 'NECESITA RECOGIDA' : '',
       ].filter(Boolean).join('\n');
       const org = [homeChurchLabel(r), r.missionaryBoard && `Junta: ${r.missionaryBoard}`, r.sendingChurch && `Enviado por: ${r.sendingChurch}`].filter(Boolean).join('\n');
-      return [
+      const row = [
         String(i + 1), '', fullName(r.registrant), CATEGORY_LABELS[r.category] ?? r.category, org,
         [r.registrant.phone, r.registrant.email].filter(Boolean).join('\n'),
         family, formatDays(r.attendanceDays), arrival, isFreeCategory(r.category) ? 'Sin costo' : money(hotelFeeOf(r)),
       ];
+      const h = hotel.hotelOf(r);
+      if (h) rowHotel.set(row, h);
+      return row;
     }),
     columnStyles: {
       0: { cellWidth: 22, halign: 'right', textColor: hexToRgb(c.muted) },
@@ -289,7 +295,7 @@ export const exportRegistrationsPdf = async (regs: Registration[], hotel: HotelI
     // The hotel column is just a colored dot; the legend above says which is which.
     didDrawCell: (data) => {
       if (data.section !== 'body' || data.column.index !== HOTEL_COL) return;
-      const h = hotel.hotelOf(sorted[data.row.index]);
+      const h = rowHotel.get(data.row.raw as object);
       if (!h) return;
       doc.setFillColor(...hexToRgb(h.color));
       doc.circle(data.cell.x + data.cell.width / 2, data.cell.y + 9, 3.5, 'F');

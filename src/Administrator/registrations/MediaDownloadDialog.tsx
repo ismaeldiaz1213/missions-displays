@@ -4,7 +4,7 @@ import {
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import { CONFERENCE_MEDIA_PREFIX } from '../../data/registrations';
-import { listFiles, listFolders, type StoredFile } from '../../data/storageFiles';
+import { listFiles, type StoredFile } from '../../data/storageFiles';
 import type { Registration } from '../../Registration/conference';
 import { formatBytes } from '../formatBytes';
 
@@ -15,13 +15,10 @@ const safe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' '
 
 /** One folder per person ("Pérez, Juan"), keeping each file's original name. */
 const zipEntries = async (registrations: Registration[]): Promise<ZipEntry[]> => {
-  const byId = new Map(registrations.map((r) => [r.id, r]));
-  const ids = await listFolders(CONFERENCE_MEDIA_PREFIX);
-  const folders = await Promise.all(ids.map(async (id) => {
-    const r = byId.get(id);
-    const folder = safe(r ? `${r.registrant.lastName}, ${r.registrant.firstName}` : '') || id;
-    return { folder, files: await listFiles(`${CONFERENCE_MEDIA_PREFIX}/${id}`) };
-  }));
+  const folders = await Promise.all(registrations.map(async (r) => ({
+    folder: safe(`${r.registrant.lastName}, ${r.registrant.firstName}`) || r.id,
+    files: await listFiles(`${CONFERENCE_MEDIA_PREFIX}/${r.id}`),
+  })));
   const used = new Set<string>();
   const unique = (name: string) => {
     const dot = name.lastIndexOf('.');
