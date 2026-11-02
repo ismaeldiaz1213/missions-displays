@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, ButtonBase, Typography } from '@mui/material';
+import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import { POSTER_SRC_SMALL } from '../Conference/conferenceContent';
 import { CONFERENCE, RECAP, daysUntilConference, type ConferencePhase } from './kioskContent';
 
@@ -20,12 +21,26 @@ const ConferenceCard: React.FC<{ phase: ConferencePhase; onClick: () => void; co
       boxShadow: live ? '0 8px 24px rgba(192,138,46,0.35)' : '0 4px 14px rgba(192,138,46,0.15)',
       animation: live ? 'conf-glow 2.4s ease-in-out infinite' : undefined,
       '@keyframes conf-glow': { '0%, 100%': { boxShadow: '0 8px 24px rgba(192,138,46,0.3)' }, '50%': { boxShadow: '0 8px 34px rgba(192,138,46,0.6)' } },
+      transition: 'transform 0.15s ease', '&:active': { transform: 'scale(0.98)' },
+      '&:hover .conf-go': { transform: 'translateX(3px)' },
     }}>
-      {!compact && <Box component="img" src={POSTER_SRC_SMALL} alt="" sx={{ width: 84, objectFit: 'cover', objectPosition: 'left', flexShrink: 0 }} />}
+      {/* The thumbnail only fits when the screen is tall; the kiosks are ~864px */}
+      {!compact && <Box component="img" src={POSTER_SRC_SMALL} alt="" sx={{
+        width: 84, objectFit: 'cover', objectPosition: 'left', flexShrink: 0, '@media (max-height: 900px)': { display: 'none' },
+      }} />}
       <Box sx={{ px: 1.5, py: 1.1, flex: 1, minWidth: 0 }}>
         <Typography sx={{ color: '#8C2436', fontWeight: 800, fontSize: '0.72rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{eyebrow}</Typography>
         <Typography sx={{ color: '#2E1D12', fontWeight: 800, fontSize: '1rem', lineHeight: 1.2, mt: 0.25 }}>{title}</Typography>
         <Typography sx={{ color: '#7C6650', fontSize: '0.82rem', fontWeight: 600, mt: 0.25 }}>{sub}</Typography>
+      </Box>
+      {/* Reads as "open this" at a glance */}
+      <Box sx={{ display: 'flex', alignItems: 'center', pr: 1.25, flexShrink: 0 }}>
+        <Box className="conf-go" sx={{
+          width: 36, height: 36, borderRadius: '50%', bgcolor: '#8C2436', color: '#fff', display: 'grid', placeItems: 'center',
+          boxShadow: '0 3px 10px rgba(140,36,54,0.35)', transition: 'transform 0.2s ease',
+        }}>
+          <ChevronRightRoundedIcon sx={{ fontSize: '1.6rem' }} />
+        </Box>
       </Box>
     </ButtonBase>
   );

@@ -15,7 +15,6 @@ import Asia from './Continents/Asia'
 import Oceania from './Continents/Oceania'
 import Missionary from './Missionaries/Missionary'
 import Admin from './Administrator/admin'
-import MisionerosPasados from './MisionerosPasados/MisionerosPasados'
 import Timeline from './Timeline/Timeline'
 import ConferenceLanding from './Conference/ConferenceLanding'
 import Registration from './Registration/Registration'
@@ -42,7 +41,6 @@ const App:React.FC = () => {
         <Route path="/oceania" element={<Oceania />} />
         <Route path="/misionero/:missionary" element={<Missionary/>} /> 
         <Route path="/admin" element={<Admin/>} />
-        <Route path="/misioneros-pasados" element={<MisionerosPasados/>} /> 
         <Route path="/timeline" element={<Timeline/>} /> 
         {/* Unlisted — reached only via direct link from the church website */}
         <Route path="/conferencia" element={<ConferenceLanding/>} />

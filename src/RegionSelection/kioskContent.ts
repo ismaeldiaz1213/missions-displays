@@ -61,14 +61,39 @@ export const RECAP = {
     'Sigamos orando al Señor de la mies por nuestros misioneros.',
 };
 
+/** Shown on the map so nobody thinks the map is the full list. Update the number as it changes. */
+export const COVERAGE = {
+  title: 'Apoyamos a más de 110 misioneros',
+  body: 'Estamos agregando sus páginas poco a poco. Le invitamos a visitar el mapa nuevamente durante la conferencia y en los próximos días.',
+  short: 'Apoyamos a más de 110 misioneros. Estamos agregando sus páginas poco a poco.',
+};
+
+const CONTACT_EMAIL = 'diazismael@iblibertad.com';
+
 export const ABOUT = {
   title: 'Acerca de este sitio',
   body: [
-    'Este mapa muestra a los misioneros que la Iglesia Bautista Libertad sostiene alrededor del mundo, ' +
-      'para que nuestra congregación pueda conocerlos mejor, orar por ellos y apoyarlos.',
-    'Toque un continente para ver a los misioneros que sirven allí, o toque la foto de un misionero para conocer ' +
-      'a su familia, ver fotos y videos, leer su carta de oración y saber qué hora es donde viven.',
-    'En la página de cada misionero hay un código QR para llevarla en su teléfono.',
+    'Este sitio presenta a los misioneros que la Iglesia Bautista Libertad apoya alrededor del mundo. ' +
+      'Su propósito es que nuestra congregación los conozca, ore por ellos y los apoye en la obra que el Señor les ha encomendado.',
+    'Actualmente apoyamos a más de 110 misioneros. Estamos agregando sus páginas poco a poco, por lo que algunos ' +
+      'todavía no aparecen en el mapa. Le invitamos a visitarlo nuevamente en las próximas semanas.',
+    'Toque un continente para ver a los misioneros que sirven allí, o la foto de un misionero para conocer su ministerio, ' +
+      'ver fotografías y videos, y leer su carta de oración más reciente. También puede consultar este sitio desde su ' +
+      'teléfono en misiones.iblibertad.org.',
+  ],
+  sections: [
+    {
+      title: 'Versión de prueba',
+      body:
+        'Este sitio se encuentra en fase de prueba, por lo que es posible que encuentre algunos errores. Agradecemos su paciencia. ' +
+        `Si tiene comentarios o sugerencias, puede escribir a ${CONTACT_EMAIL}.`,
+    },
+    {
+      title: '¿Le interesa para su iglesia?',
+      body:
+        'Este sitio es un proyecto de servicio desarrollado con dedicación para nuestra iglesia. Si desea algo similar para su ' +
+        `congregación, escriba a ${CONTACT_EMAIL} y con gusto conversaremos los detalles.`,
+    },
   ],
   thanksTitle: 'Agradecimientos',
   thanks: [

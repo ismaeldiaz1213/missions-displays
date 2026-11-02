@@ -167,6 +167,13 @@ export const AboutPanel: React.FC<{ open: boolean; onClose: () => void }> = ({ o
           ))}
         </Box>
 
+        {ABOUT.sections.map((s) => (
+          <Box key={s.title}>
+            <Typography sx={titleSx}>{s.title}</Typography>
+            <Typography sx={{ color: '#334155', fontSize: '1.1rem', lineHeight: 1.7 }}>{s.body}</Typography>
+          </Box>
+        ))}
+
         <Box>
           <Typography sx={titleSx}>{ABOUT.thanksTitle}</Typography>
           <Box component="ul" sx={{ m: 0, pl: 3 }}>

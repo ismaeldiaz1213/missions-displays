@@ -1,10 +1,10 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme, useMediaQuery, Button, Box, Typography } from '@mui/material';
+import { useTheme, useMediaQuery, ButtonBase, Box, Typography } from '@mui/material';
+import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import iblLogo from '../assets/ibl_logo.png';
 import mapTitle from '../assets/MapSelectionBanner.png';
-import misionerosPasadosButton from '../assets/missionerosPasadosButton.png';
 import naMobile from '../assets/na_mobile.png';
 import caMobile from '../assets/ca_mobile.png';
 import saMobile from '../assets/sa_mobile.png';
@@ -16,7 +16,7 @@ import WorldMap from './WorldMap';
 import ConferenceCard from './ConferenceCard';
 import { AboutPanel, ConferencePanel } from './InfoPanels';
 import { REGION_BY_ID, type RegionId } from '../map/regions';
-import { conferencePhase } from './kioskContent';
+import { COVERAGE, conferencePhase } from './kioskContent';
 import { useAllMissionaries, missionaryOfTheDay } from '../data/useMissionaries';
 import { useCachedLoad } from '../data/useCachedLoad';
 import { DEFAULT_KIOSK_SETTINGS, KIOSK_SETTINGS_CACHE_KEY, getKioskSettings, type KioskSettings } from '../data/settings';
@@ -41,6 +41,20 @@ const hexToRgba = (hex: string, alpha: number) => {
   const b = parseInt(hex.slice(5, 7), 16);
   return `rgba(${r},${g},${b},${alpha})`;
 };
+
+/** Full-width outlined button so "Acerca de este sitio" clearly reads as something to tap. */
+const AboutButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+  <ButtonBase onClick={onClick} sx={{
+    width: '100%', flexShrink: 0, mt: 1.25, minHeight: 48, '@media (max-height: 900px)': { minHeight: 42, mt: 1 }, px: 1.75, gap: 1.25, justifyContent: 'flex-start',
+    borderRadius: '14px', border: `1.5px solid ${BRAND.blueLine}`, bgcolor: BRAND.blueSoft, color: BRAND.navy,
+    transition: 'transform 0.15s ease, background-color 0.2s ease',
+    '&:hover': { bgcolor: '#E0ECFF' }, '&:active': { transform: 'scale(0.98)' },
+  }}>
+    <InfoOutlinedIcon sx={{ fontSize: '1.35rem' }} />
+    <Typography sx={{ flex: 1, textAlign: 'left', fontWeight: 700, fontSize: '0.98rem' }}>Acerca de este sitio</Typography>
+    <ChevronRightRoundedIcon sx={{ fontSize: '1.5rem', color: BRAND.blue }} />
+  </ButtonBase>
+);
 
 const RegionSelection: React.FC = () => {
   const navigate = useNavigate();
@@ -99,7 +113,7 @@ const RegionSelection: React.FC = () => {
 
           {missionaries.length > 0 && (
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mt: 2.5, '@media (max-height: 900px)': { display: 'none' } }}>
-              {([[missionaries.length, 'misioneros'], [countryCount, countryCount === 1 ? 'país' : 'países']] as [number, string][]).map(([n, label]) => (
+              {([[missionaries.length, missionaries.length === 1 ? 'misionero en el mapa' : 'misioneros en el mapa'], [countryCount, countryCount === 1 ? 'país' : 'países']] as [number, string][]).map(([n, label]) => (
                 <Box key={label} sx={{ p: 1.25, borderRadius: '14px', bgcolor: BRAND.blueSoft }}>
                   <Typography sx={{ color: BRAND.navy, fontWeight: 800, fontSize: '1.6rem', lineHeight: 1 }}>{n}</Typography>
                   <Typography sx={{ color: '#475569', fontWeight: 600, fontSize: '0.85rem', mt: 0.3 }}>{label}</Typography>
@@ -120,14 +134,7 @@ const RegionSelection: React.FC = () => {
           <Box sx={{ flex: 1, minHeight: 16 }} />
 
           <ConferenceCard phase={phase} onClick={() => setConferenceOpen(true)} />
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1.5, gap: 1 }}>
-            <Box component="img" src={misionerosPasadosButton} alt="Misioneros Pasados"
-              sx={{ height: 36, width: 'auto', opacity: 0.35, pointerEvents: 'none', userSelect: 'none' }} />
-            <Button size="small" startIcon={<InfoOutlinedIcon />} onClick={() => setAboutOpen(true)}
-              sx={{ color: BRAND.muted, textTransform: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
-              Acerca de este sitio
-            </Button>
-          </Box>
+          <AboutButton onClick={() => setAboutOpen(true)} />
         </Box>
 
         {/* ── Map, with the title on top ───────────────────────────────── */}
@@ -142,6 +149,20 @@ const RegionSelection: React.FC = () => {
           }}>
             <Box component="img" src={mapTitle} alt="Nuestros misioneros por continente — De Houston para todo el mundo"
               sx={{ width: '100%', maxWidth: 1100, height: 'auto', maxHeight: '11vh', objectFit: 'contain' }} />
+          </Box>
+
+          {/* The map isn't the full list yet — say so */}
+          <Box sx={{
+            position: 'absolute', right: 100, bottom: 18, zIndex: 5, maxWidth: 520, display: 'flex', gap: 1.5, alignItems: 'flex-start',
+            px: 2.25, py: 1.5, borderRadius: '18px', bgcolor: 'rgba(255,255,255,0.94)', border: `1px solid ${BRAND.line}`,
+            boxShadow: '0 8px 22px rgba(15,23,42,0.12)', pointerEvents: 'none',
+            opacity: flyTo ? 0 : 1, transition: 'opacity 0.4s ease',
+          }}>
+            <Typography sx={{ fontSize: '1.6rem', lineHeight: 1.1 }}>🙏</Typography>
+            <Box>
+              <Typography sx={{ color: BRAND.navy, fontWeight: 800, fontSize: '1.05rem', lineHeight: 1.3 }}>{COVERAGE.title}</Typography>
+              <Typography sx={{ color: '#475569', fontSize: '0.92rem', lineHeight: 1.45, mt: 0.25 }}>{COVERAGE.body}</Typography>
+            </Box>
           </Box>
         </Box>
 
@@ -197,7 +218,10 @@ const RegionSelection: React.FC = () => {
                 borderRadius: '14px',
                 textAlign: 'center',
                 fontWeight: 800,
-                fontSize: '1.35rem',
+                // Scales with the screen so "Centro América" stays on one line on small phones
+                fontSize: 'clamp(1.05rem, 4.8vw, 1.35rem)',
+                lineHeight: 1.15,
+                px: 0.5,
                 textShadow: '0 1px 6px rgba(0,0,0,0.6)',
                 cursor: 'pointer',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
@@ -238,6 +262,9 @@ const RegionSelection: React.FC = () => {
         <Typography sx={{ color: '#475569', fontWeight: 700, fontSize: '1rem' }}>
           👆 Toca un continente para explorar
         </Typography>
+        <Typography sx={{ color: '#64748B', fontSize: '0.85rem', lineHeight: 1.4, textAlign: 'center', maxWidth: 420, mt: -0.5 }}>
+          {COVERAGE.short}
+        </Typography>
         {today && (
           <Box sx={{ width: '100%', maxWidth: 420 }}>
             <MissionaryOfTheDay missionary={today} />
@@ -246,13 +273,8 @@ const RegionSelection: React.FC = () => {
         <Box sx={{ width: '100%', maxWidth: 420 }}>
           <ConferenceCard phase={phase} onClick={() => setConferenceOpen(true)} compact />
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: -0.25 }}>
-          <Box component="img" src={misionerosPasadosButton} alt="Misioneros Pasados"
-            sx={{ height: 30, width: 'auto', opacity: 0.35, pointerEvents: 'none', userSelect: 'none' }} />
-          <Button size="small" startIcon={<InfoOutlinedIcon />} onClick={() => setAboutOpen(true)}
-            sx={{ color: BRAND.muted, textTransform: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
-            Acerca de este sitio
-          </Button>
+        <Box sx={{ width: '100%', maxWidth: 420 }}>
+          <AboutButton onClick={() => setAboutOpen(true)} />
         </Box>
       </Box>
 
