@@ -388,14 +388,16 @@ export const STRINGS: Record<Lang, Strings> = { es, en };
 
 const STORAGE_KEY = 'ibl-reg-lang';
 
-// ?lang=en|es in the link wins, then the last choice on this device, then the browser language.
-export const detectLang = (): Lang => {
+// ?lang=en|es in the link wins, then the last choice on this device, then the page's default
+// (if it has one), then the browser language.
+export const detectLang = (defaultLang?: Lang): Lang => {
   const param = new URLSearchParams(window.location.search).get('lang');
   if (param === 'es' || param === 'en') return param;
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved === 'es' || saved === 'en') return saved;
   } catch { /* storage unavailable */ }
+  if (defaultLang) return defaultLang;
   return navigator.language?.toLowerCase().startsWith('es') ? 'es' : 'en';
 };
 
@@ -404,8 +406,8 @@ export const saveLang = (lang: Lang) => {
 };
 
 /** Current form language, persisted on this device and reflected in <html lang> and the tab title. */
-export const useLang = (pageTitle?: Record<Lang, string>): [Lang, (l: Lang) => void] => {
-  const [lang, setLang] = useState<Lang>(detectLang);
+export const useLang = (pageTitle?: Record<Lang, string>, defaultLang?: Lang): [Lang, (l: Lang) => void] => {
+  const [lang, setLang] = useState<Lang>(() => detectLang(defaultLang));
   useEffect(() => {
     document.documentElement.lang = lang;
     document.title = pageTitle?.[lang] ?? STRINGS[lang].conferenceName;

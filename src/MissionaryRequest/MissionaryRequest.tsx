@@ -95,7 +95,7 @@ const FileRow: React.FC<{ item: PendingFile; onRemove?: () => void; t: RequestSt
 );
 
 const MissionaryRequest: React.FC = () => {
-  const [lang, changeLang] = useLang(REQUEST_PAGE_TITLES);
+  const [lang, changeLang] = useLang(REQUEST_PAGE_TITLES, 'es');
   const t = REQUEST_STRINGS[lang];
   const [form, setForm] = useState<FormState>(initialForm);
   const [files, setFiles] = useState<PendingFile[]>([]);
