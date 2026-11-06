@@ -44,3 +44,7 @@ export const assignHotel = async (registrationIds: string[], hotelId: string | n
   if (!exists) await setDoc(hotelsRef, { hotels: settings.hotels, assignments: {}, updatedAt: serverTimestamp() });
   await updateDoc(hotelsRef, { ...changes, updatedAt: serverTimestamp() });
 };
+
+/** A new conference: keeps the hotel list (rename it in "Hoteles") but nobody is assigned yet. */
+export const resetHotelAssignments = (hotels: Hotel[]) =>
+  setDoc(hotelsRef, { hotels, assignments: {}, updatedAt: serverTimestamp() });

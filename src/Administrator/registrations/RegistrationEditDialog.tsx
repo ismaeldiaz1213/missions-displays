@@ -6,7 +6,7 @@ import {
 import { updateRegistration } from '../../data/registrations';
 import PersonFields from '../../Registration/components/PersonFields';
 import {
-  CATEGORIES, CATEGORY_LABELS, CONFERENCE_DAYS, HEARD_ABOUT, HEARD_ABOUT_LABELS, PICKUP_TRANSPORTS, TRANSPORT_LABELS,
+  CATEGORIES, CATEGORY_LABELS, HEARD_ABOUT, HEARD_ABOUT_LABELS, PICKUP_TRANSPORTS, TRANSPORT_LABELS,
   calculateHotelFee, formatConferenceDay, type Category, type ChildrenInfo, type HeardAbout, type PickupTransport,
   type Registration,
 } from '../../Registration/conference';
@@ -30,12 +30,14 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
 
 interface Props {
   registration: Registration;
+  /** The conference's days, to tick which ones they attend. */
+  days: readonly string[];
   fullScreen: boolean;
   onSaved: (updated: Registration) => void;
   onClose: () => void;
 }
 
-const RegistrationEditDialog: React.FC<Props> = ({ registration: r, fullScreen, onSaved, onClose }) => {
+const RegistrationEditDialog: React.FC<Props> = ({ registration: r, days, fullScreen, onSaved, onClose }) => {
   const [form, setForm] = useState<FormState>(() => fromRegistration(r));
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -50,7 +52,7 @@ const RegistrationEditDialog: React.FC<Props> = ({ registration: r, fullScreen, 
   const toggleDay = (day: string) => set({
     attendanceDays: form.attendanceDays.includes(day)
       ? form.attendanceDays.filter((d) => d !== day)
-      : CONFERENCE_DAYS.filter((d) => d === day || form.attendanceDays.includes(d)),
+      : days.filter((d) => d === day || form.attendanceDays.includes(d)),
   });
 
   const text = (key: string, label: string, value: string, onChange: (v: string) => void, extra: Record<string, unknown> = {}) => (
@@ -130,7 +132,7 @@ const RegistrationEditDialog: React.FC<Props> = ({ registration: r, fullScreen, 
 
         <Section title="Asistencia y hotel">
           <Box>
-            {CONFERENCE_DAYS.map((d) => (
+            {days.map((d) => (
               <FormControlLabel key={d} label={formatConferenceDay(d, { weekday: 'long', day: 'numeric', month: 'long' })}
                 control={<Checkbox checked={form.attendanceDays.includes(d)} onChange={() => toggleDay(d)} />} />
             ))}

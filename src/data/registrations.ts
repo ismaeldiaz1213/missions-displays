@@ -1,5 +1,6 @@
 import {
   Timestamp, collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc, updateDoc,
+  type QueryDocumentSnapshot,
 } from 'firebase/firestore/lite';
 import { db } from '../firebase';
 import { calculateHotelFee, type Registration, type RegistrationInput } from '../Registration/conference';
@@ -22,11 +23,13 @@ export const createRegistration = (id: string, input: RegistrationInput) =>
 // Admin-only (enforced by firestore.rules)
 export const listRegistrations = async (): Promise<Registration[]> => {
   const snap = await getDocs(registrationsCol);
-  return snap.docs.map((d) => {
-    const data = d.data();
-    const createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : '';
-    return { ...data, id: d.id, createdAt } as Registration;
-  });
+  return snap.docs.map(toRegistration);
+};
+
+export const toRegistration = (d: QueryDocumentSnapshot) => {
+  const data = d.data();
+  const createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : '';
+  return { ...data, id: d.id, createdAt } as Registration;
 };
 
 // Admin-only (enforced by firestore.rules, which apply the same checks as createRegistration).

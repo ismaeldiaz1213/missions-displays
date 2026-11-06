@@ -9,6 +9,9 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import MapIcon from '@mui/icons-material/Map';
 import PhoneIcon from '@mui/icons-material/Phone';
 import { listRegistrations } from '../../data/registrations';
+import { listArchivedRegistrations, type ArchivedConference } from '../../data/conferenceArchive';
+import type { AdminConferences } from '../conference/useAdminConferences';
+import ConferencePicker from '../conference/ConferencePicker';
 import { formatConferenceDay, type Registration } from '../../Registration/conference';
 import PickupMap, { type MapStop } from './PickupMap';
 import { exportPickupSheet } from './pickupSheet';
@@ -119,7 +122,15 @@ const TripCard: React.FC<{ trip: Trip; index: number; driveMinutes: number; esti
     );
   };
 
-const PickupBoard: React.FC = () => {
+interface Props {
+  conferences: AdminConferences;
+  /** An archived conference's pickups, or null for the current one. */
+  archive: ArchivedConference | null;
+  onSelectConference: (archiveId: string | null) => void;
+}
+
+const PickupBoard: React.FC<Props> = ({ conferences, archive, onSelectConference }) => {
+  const conferenceName = archive?.name ?? conferences.current?.name ?? '';
   const [regs, setRegs] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -132,14 +143,14 @@ const PickupBoard: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      setRegs(await listRegistrations());
+      setRegs(archive ? await listArchivedRegistrations(archive.id) : await listRegistrations());
     } catch (err) {
       console.error(err);
       setError('No se pudieron cargar los registros.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [archive]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -197,6 +208,10 @@ const PickupBoard: React.FC = () => {
 
   return (
     <Box>
+      <Box sx={{ mb: 2 }}>
+        <ConferencePicker conferences={conferences} archiveId={archive?.id ?? null} onChange={onSelectConference} />
+      </Box>
+      {archive && <Alert severity="info" sx={{ mb: 2 }}>Recogidas de {archive.name} (archivo de solo lectura).</Alert>}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'center', mb: 2 }}>
         <Typography variant="h6" sx={{ fontWeight: 700, flexGrow: 1 }}>Recogidas</Typography>
         <Tooltip title="Arribos dentro de esta ventana se juntan en un solo viaje">
@@ -208,7 +223,7 @@ const PickupBoard: React.FC = () => {
         <Tooltip title="Actualizar"><span><IconButton onClick={load} disabled={loading}><RefreshIcon /></IconButton></span></Tooltip>
         {activeDay && (
           <Button variant="outlined" startIcon={<PictureAsPdfIcon />} sx={{ textTransform: 'none' }}
-            onClick={() => exportPickupSheet(activeDay, dayTrips.map((t) => ({ trip: t, driveMinutes: driveOf(t).minutes })))}>
+            onClick={() => exportPickupSheet(conferenceName, activeDay, dayTrips.map((t) => ({ trip: t, driveMinutes: driveOf(t).minutes })))}>
             Hoja del chofer
           </Button>
         )}
@@ -226,7 +241,7 @@ const PickupBoard: React.FC = () => {
       {!trips.length ? (
         <Paper sx={{ ...cardSx, textAlign: 'center', py: 6 }}>
           <DirectionsCarIcon sx={{ fontSize: 48, color: '#444', mb: 1 }} />
-          <Typography sx={{ color: '#888' }}>Todavía nadie ha pedido transporte.</Typography>
+          <Typography sx={{ color: '#888' }}>{archive ? 'Nadie pidió transporte en esta conferencia.' : 'Todavía nadie ha pedido transporte.'}</Typography>
         </Paper>
       ) : (
         <>

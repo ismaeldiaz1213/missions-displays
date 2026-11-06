@@ -8,19 +8,20 @@
 export const withLegacyFees = (rules) => {
   const patched = rules.replace(
     '&& d.hotelFee == hotelFee(d, hotelRate(d))',
-    // hotelFee(d, 40): laymen before they were charged the $80 rate
-    '&& (d.hotelFee == hotelFee(d, hotelRate(d)) || d.hotelFee == hotelFee(d, 40) || d.hotelFee == legacyPerAdultFee(d, 40) || d.hotelFee == legacyPerAdultFee(d, 50))',
+    // hotelFee(d, 40): laymen before they were charged the $80 rate. (The even older $50-per-adult
+    // amount was dropped after the 2026 conference: rules may evaluate at most 1000 expressions.)
+    '&& (d.hotelFee == hotelFee(d, hotelRate(d)) || d.hotelFee == hotelFee(d, 40) || d.hotelFee == legacyPerAdultFee(d, 40))',
   );
   if (patched === rules) throw new Error('fee comparison not found in firestore.rules — update transitionRules.mjs');
 
   // The old formula: per adult per day, before rooms (and before the $50 → $40 change).
   return patched.replace(
-    '    function validRegistration(d) {',
+    '    function validRegistration(d, days) {',
     `    function legacyPerAdultFee(d, rate) {
       return d.category in ['missionary', 'evangelist'] || !d.needsLodging
         ? 0 : rate * d.attendanceDays.size() * (d.bringingWife ? 2 : 1);
     }
 
-    function validRegistration(d) {`,
+    function validRegistration(d, days) {`,
   );
 };

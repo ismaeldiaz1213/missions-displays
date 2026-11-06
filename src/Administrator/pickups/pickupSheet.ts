@@ -1,6 +1,6 @@
 // Printable driver sheet: one page per pickup day, with a block per trip.
 // jsPDF is imported lazily so it only loads when an admin exports.
-import { CONFERENCE_NAME, formatConferenceDay } from '../../Registration/conference';
+import { formatConferenceDay } from '../../Registration/conference';
 import { CHURCH, fromMinutes, riderLine, tripTimes, type Trip } from './pickupData';
 
 export interface SheetTrip {
@@ -8,7 +8,7 @@ export interface SheetTrip {
   driveMinutes: number;
 }
 
-export const exportPickupSheet = async (day: string, trips: SheetTrip[]) => {
+export const exportPickupSheet = async (conferenceName: string, day: string, trips: SheetTrip[]) => {
   const [{ jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const margin = 40;
@@ -22,7 +22,7 @@ export const exportPickupSheet = async (day: string, trips: SheetTrip[]) => {
   doc.text('Hoja de recogidas', margin, 26);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  doc.text(`${CONFERENCE_NAME} · ${formatConferenceDay(day, { weekday: 'long', day: 'numeric', month: 'long' })}`, margin, 44);
+  doc.text(`${conferenceName} · ${formatConferenceDay(day, { weekday: 'long', day: 'numeric', month: 'long' })}`, margin, 44);
   doc.text(`Salida: ${CHURCH.address}`, pageW - margin, 44, { align: 'right' });
 
   let y = 82;

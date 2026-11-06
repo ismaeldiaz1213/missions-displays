@@ -115,7 +115,14 @@ The map page's conference card follows **Admin → Pantallas**: *Automático* (b
 Kiosks remember the last missionary list, so they keep working when the Wi-Fi drops: every page shows the saved copy first and refreshes it in the background (`src/data/useCachedLoad.ts`). Photos, posters and prayer letters are cached by the service worker (`vite.config.ts`).
 
 ### Conference settings
-Dates, deadline, and hotel fee live in `src/Registration/conference.ts`. The deadline and fee are **also enforced** in `firestore.rules` / `storage.rules` — update both, then run `npm run deploy:rules`.
+The conference's name, days, registration deadline and video-upload deadline are set on the admin page (**Registros → Configurar**) and saved in Firestore at `settings/conference`. The registration page reads that document and so do `firestore.rules` / `storage.rules`, so nothing needs redeploying for a new year. Registration only accepts entries while the *Abierto al público* switch is on **and** before the deadline. Until that document exists, registration is closed.
+
+The hotel fee still lives in `src/Registration/conference.ts` and is mirrored in `firestore.rules` (see below).
+
+### Starting a new year (archiving)
+When a conference is over, use **Registros → Archivar esta conferencia**. It copies every registration and the hotel assignments into `conferences/{year}` (with a `registrations` subcollection), reads the copy back to check it, and only then empties `registrations/`. Then it saves the next conference with registration **closed**. Turn it on in *Configurar* once the dates are final. The uploaded videos stay in `conference-media/`.
+
+Pick an archived year in the dropdown at the top of **Registros** or **Recogidas** to view it read-only. You can still export it to Excel/PDF or download its videos. **Eliminar archivo** deletes an archive permanently, and its videos too if you tick that box. Keeping an archive costs almost nothing: a few hundred registrations add up to well under 1 MB.
 
 
 ## Hotel fee

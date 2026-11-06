@@ -1,9 +1,9 @@
 // Excel & PDF exports. Libraries are imported lazily so they only load when an admin exports.
 // Rows keep the order they're passed in — the admin table's order (newest registration first).
 import type { Hotel } from '../../data/hotels';
-import { CATEGORY_LABELS, CONFERENCE_NAME, formatConferenceDay, isFreeCategory, type Category, type Registration } from '../../Registration/conference';
+import { CATEGORY_LABELS, formatConferenceDay, isFreeCategory, type Category, type ConferenceConfig, type Registration } from '../../Registration/conference';
 import {
-  REGISTRATION_COLUMNS, byArrival, childCount, formatArrival, formatDays, fullName,
+  registrationColumns, byArrival, childCount, formatArrival, formatDays, fullName,
   homeChurchLabel, hotelFeeOf, infantCount, money, peopleCount, summarize, travelDetails, travelMode,
 } from './registrationData';
 
@@ -46,7 +46,8 @@ const download = (blob: Blob, filename: string) => {
 
 // ── Excel ────────────────────────────────────────────────────────────────────
 
-export const exportRegistrationsExcel = async (regs: Registration[], hotel: HotelInfo) => {
+export const exportRegistrationsExcel = async (regs: Registration[], hotel: HotelInfo, conference: ConferenceConfig) => {
+  const allColumns = registrationColumns(conference.days);
   const ExcelJS = (await import('exceljs')).default;
   const c = palette();
   const argb = (hex: string) => `FF${hex.slice(1)}`;
@@ -107,11 +108,11 @@ export const exportRegistrationsExcel = async (regs: Registration[], hotel: Hote
 
   // Sheet 1 — every field
   const cols = [
-    ...REGISTRATION_COLUMNS.slice(0, -1),
+    ...allColumns.slice(0, -1),
     { header: 'Hotel asignado', width: 18, value: (r: Registration) => hotel.hotelOf(r)?.name ?? '' },
-    ...REGISTRATION_COLUMNS.slice(-1),
+    ...allColumns.slice(-1),
   ];
-  const ws1 = addSheet('Registros', `${CONFERENCE_NAME} — Registros${hotel.title ? ` · ${hotel.title}` : ''}`, cols);
+  const ws1 = addSheet('Registros', `${conference.name} — Registros${hotel.title ? ` · ${hotel.title}` : ''}`, cols);
   const sorted = regs;
   addRows(ws1, sorted.map((r) => cols.map((col) => col.value(r))), cols.flatMap((col, i) => (col.money ? [i] : [])));
   ws1.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4 + sorted.length, column: cols.length } };
@@ -130,7 +131,7 @@ export const exportRegistrationsExcel = async (regs: Registration[], hotel: Hote
     { header: 'Cómo llega', width: 20 }, { header: 'Llegada', width: 22 }, { header: 'Recoger', width: 9 },
     { header: 'Detalles (vuelo / autobús / otro)', width: 40 }, { header: 'Salida', width: 16 }, { header: 'Notas', width: 36 },
   ];
-  const ws2 = addSheet('Llegadas', `${CONFERENCE_NAME} — Llegadas y transporte`, arrivalCols);
+  const ws2 = addSheet('Llegadas', `${conference.name} — Llegadas y transporte`, arrivalCols);
   addRows(ws2, [...regs].sort(byArrival).map((r) => [
     fullName(r.registrant), r.registrant.phone, peopleCount(r),
     travelMode(r), formatArrival(r),
@@ -143,8 +144,8 @@ export const exportRegistrationsExcel = async (regs: Registration[], hotel: Hote
   });
 
   // Sheet 3 — summary
-  const s = summarize(regs);
-  const ws3 = addSheet('Resumen', `${CONFERENCE_NAME} — Resumen`, [{ header: 'Concepto', width: 34 }, { header: 'Total', width: 16 }]);
+  const s = summarize(regs, conference.days);
+  const ws3 = addSheet('Resumen', `${conference.name} — Resumen`, [{ header: 'Concepto', width: 34 }, { header: 'Total', width: 16 }]);
   addRows(ws3, [
     ['Registros', s.registrations],
     ['Adultos', s.adults],
@@ -164,19 +165,19 @@ export const exportRegistrationsExcel = async (regs: Registration[], hotel: Hote
   ws3.getColumn(1).eachCell((cell, n) => { if (n > 4) cell.font = { bold: true, color: { argb: argb(c.text) } }; });
 
   const buffer = await wb.xlsx.writeBuffer();
-  download(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `registros-conferencia${fileSuffix(hotel.title)}-${stamp()}.xlsx`);
+  download(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `registros-conferencia-${(conference.days[0] ?? '').slice(0, 4)}${fileSuffix(hotel.title)}-${stamp()}.xlsx`);
 };
 
 // ── PDF ──────────────────────────────────────────────────────────────────────
 
-export const exportRegistrationsPdf = async (regs: Registration[], hotel: HotelInfo) => {
+export const exportRegistrationsPdf = async (regs: Registration[], hotel: HotelInfo, conference: ConferenceConfig) => {
   const [{ jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
   const c = palette();
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 32;
-  const s = summarize(regs);
+  const s = summarize(regs, conference.days);
 
   const banner = (subtitle: string) => {
     doc.setFillColor(...hexToRgb(c.dark));
@@ -184,7 +185,7 @@ export const exportRegistrationsPdf = async (regs: Registration[], hotel: HotelI
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(17);
-    doc.text(CONFERENCE_NAME, margin, 28);
+    doc.text(conference.name, margin, 28);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.text(subtitle, margin, 45);
@@ -269,7 +270,7 @@ export const exportRegistrationsPdf = async (regs: Registration[], hotel: HotelI
       const row = [
         String(i + 1), '', fullName(r.registrant), CATEGORY_LABELS[r.category] ?? r.category, org,
         [r.registrant.phone, r.registrant.email].filter(Boolean).join('\n'),
-        family, formatDays(r.attendanceDays), arrival, isFreeCategory(r.category) ? 'Sin costo' : money(hotelFeeOf(r)),
+        family, formatDays(r.attendanceDays, conference.days), arrival, isFreeCategory(r.category) ? 'Sin costo' : money(hotelFeeOf(r)),
       ];
       const h = hotel.hotelOf(r);
       if (h) rowHotel.set(row, h);
@@ -336,5 +337,5 @@ export const exportRegistrationsPdf = async (regs: Registration[], hotel: HotelI
     doc.text(`Página ${i} de ${pages}`, pageW - margin, pageH - 16, { align: 'right' });
   }
 
-  doc.save(`registros-conferencia${fileSuffix(hotel.title)}-${stamp()}.pdf`);
+  doc.save(`registros-conferencia-${(conference.days[0] ?? '').slice(0, 4)}${fileSuffix(hotel.title)}-${stamp()}.pdf`);
 };

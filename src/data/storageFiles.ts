@@ -76,3 +76,9 @@ export const totalBytes = async (prefixes: string[]): Promise<number> => {
   }));
   return all.reduce((a, b) => a + b, 0);
 };
+
+/** Deletes every file directly under a prefix. */
+export const deleteFolder = async (prefix: string) => {
+  const { items } = await listAll(ref(storage, prefix));
+  await Promise.all(items.map((i) => deleteObject(i)));
+};

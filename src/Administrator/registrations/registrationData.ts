@@ -2,7 +2,6 @@ import {
   CATEGORY_LABELS,
   calculateHotelFee,
   roomCount,
-  CONFERENCE_DAYS,
   HEARD_ABOUT_LABELS,
   TRANSPORT_LABELS,
   adultCount,
@@ -19,8 +18,9 @@ export const childCount = (r: Registration) => (r.bringingChildren ? r.children?
 export const infantCount = (r: Registration) => (r.bringingChildren ? r.children?.infants ?? 0 : 0);
 export const peopleCount = (r: Registration) => adultCount(r) + childCount(r);
 
-export const formatDays = (days: string[]) =>
-  days.length === CONFERENCE_DAYS.length ? 'Todos' : days.map((d) => formatConferenceDay(d, { day: 'numeric', month: 'short' })).join(', ');
+/** "Todos" when they come every day of the conference (`allDays`), otherwise the days. */
+export const formatDays = (days: string[], allDays: readonly string[]) =>
+  days.length === allDays.length && allDays.every((d) => days.includes(d)) ? 'Todos' : days.map((d) => formatConferenceDay(d, { day: 'numeric', month: 'short' })).join(', ');
 
 export const formatDateShort = (iso: string) => (iso ? formatConferenceDay(iso, { weekday: 'short', day: 'numeric', month: 'short' }) : '');
 
@@ -91,7 +91,7 @@ export interface Column {
 
 const yesNo = (b: boolean) => (b ? 'Sí' : 'No');
 
-export const REGISTRATION_COLUMNS: Column[] = [
+export const registrationColumns = (allDays: readonly string[]): Column[] => [
   { header: 'Fecha de registro', width: 16, value: (r) => formatSubmitted(r.createdAt) },
   { header: 'Idioma', width: 9, value: (r) => (r.language === 'en' ? 'Inglés' : 'Español') },
   { header: 'Categoría', width: 13, value: (r) => CATEGORY_LABELS[r.category] ?? r.category },
@@ -113,7 +113,7 @@ export const REGISTRATION_COLUMNS: Column[] = [
   { header: 'Edades', width: 14, value: (r) => r.children?.ages ?? '' },
   { header: 'Notas niños', width: 26, value: (r) => r.children?.notes ?? '' },
   { header: 'Total personas', width: 10, value: peopleCount },
-  { header: 'Días', width: 20, value: (r) => formatDays(r.attendanceDays) },
+  { header: 'Días', width: 20, value: (r) => formatDays(r.attendanceDays, allDays) },
   { header: 'Hospedaje', width: 18, value: lodgingLabel },
   { header: 'Recoger', width: 9, value: (r) => yesNo(r.travel.needsPickup) },
   { header: 'Transporte', width: 11, value: transportLabel },
@@ -136,12 +136,12 @@ export const REGISTRATION_COLUMNS: Column[] = [
 
 // ── Summary ──────────────────────────────────────────────────────────────────
 
-export const summarize = (regs: Registration[]) => {
+export const summarize = (regs: Registration[], allDays: readonly string[]) => {
   const byCategory = Object.fromEntries(
     (Object.keys(CATEGORY_LABELS) as Category[]).map((c) => [c, regs.filter((r) => r.category === c).length]),
   ) as Record<Category, number>;
   const byDay = Object.fromEntries(
-    CONFERENCE_DAYS.map((d) => [d, regs.filter((r) => r.attendanceDays.includes(d)).reduce((n, r) => n + peopleCount(r), 0)]),
+    allDays.map((d) => [d, regs.filter((r) => r.attendanceDays.includes(d)).reduce((n, r) => n + peopleCount(r), 0)]),
   ) as Record<string, number>;
   return {
     registrations: regs.length,

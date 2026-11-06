@@ -94,13 +94,13 @@ service firebase.storage {
     }
 
     // ── Conference videos uploaded by registered missionaries & evangelists ──
-    // Keep in sync with MEDIA_UPLOADS_CLOSE_AT in src/Registration/conference.ts.
-    // 1793599200000 = 2026-11-02 00:00 CST (conference start)
+    // Open until mediaUploadsCloseAt in Firestore settings/conference (set on the admin page).
+    // Only registrations of the current conference can upload; archived ones are no longer in registrations/.
     match /conference-media/{registrationId}/{file} {
       allow read, delete: if isAdmin();
       allow update: if false;
       allow create: if resource == null  // new files only — never overwrite an existing upload
-        && request.time < timestamp.value(1793599200000)
+        && request.time < firestore.get(/databases/(default)/documents/settings/conference).data.mediaUploadsCloseAt
         && request.resource.size < 2 * 1024 * 1024 * 1024
         && request.resource.contentType == 'video/mp4'
         && firestore.exists(/databases/(default)/documents/registrations/$(registrationId))

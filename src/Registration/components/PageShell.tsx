@@ -5,7 +5,8 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { Link as RouterLink } from 'react-router-dom';
 import HourglassBottomIcon from '@mui/icons-material/HourglassBottom';
 import iblLogo from '../../assets/ibl_logo.png';
-import { closeDateLabel, closeTimeLabel, conferenceRangeLabel, daysUntilClose } from '../conference';
+import { closeDateLabel, closeTimeLabel, conferenceName, conferenceRangeLabel, daysUntilClose } from '../conference';
+import { useConference } from '../../data/conference';
 import { LOCALES, type Lang, type Strings } from '../i18n';
 import '../registration.css';
 import '../../Conference/conference.css';
@@ -41,8 +42,9 @@ interface HeroProps {
 }
 
 const Hero: React.FC<HeroProps> = ({ showDeadline, t, lang, onLangChange, title, backTo, backLabel }) => {
-  const days = daysUntilClose();
+  const conference = useConference();
   const locale = LOCALES[lang];
+  const days = conference ? daysUntilClose(conference) : 0;
   const pillSx = {
     display: 'inline-flex', alignItems: 'center', gap: 0.75,
     px: 1.5, py: 0.75, borderRadius: '999px',
@@ -88,14 +90,14 @@ const Hero: React.FC<HeroProps> = ({ showDeadline, t, lang, onLangChange, title,
               {t.churchName}
             </Typography>
             <Typography component="h1" sx={{ color: 'var(--ibl-on-primary)', fontWeight: 800, fontSize: { xs: '1.65rem', md: '2.6rem' }, lineHeight: 1.1, my: 0.5, textShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>
-              {title ?? t.conferenceName}
+              {title ?? (conference ? conferenceName(conference, locale) : t.conferenceName)}
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
-              {!title && <Box sx={pillSx}><EventIcon sx={{ fontSize: '1.05rem' }} />{conferenceRangeLabel(locale)}</Box>}
-              {showDeadline && (
+              {!title && conference?.days.length ? <Box sx={pillSx}><EventIcon sx={{ fontSize: '1.05rem' }} />{conferenceRangeLabel(conference, locale)}</Box> : null}
+              {showDeadline && conference && (
                 <Box sx={pillSx}>
                   <HourglassBottomIcon sx={{ fontSize: '1.05rem' }} />
-                  {t.registerUntil(closeDateLabel(locale), closeTimeLabel(locale))}{days <= 14 && ` · ${days === 0 ? t.lastDay : t.daysLeft(days)}`}
+                  {t.registerUntil(closeDateLabel(conference, locale), closeTimeLabel(conference, locale))}{days <= 14 && ` · ${days === 0 ? t.lastDay : t.daysLeft(days)}`}
                 </Box>
               )}
             </Box>

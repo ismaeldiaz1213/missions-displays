@@ -21,6 +21,7 @@ import RegistrationTable from './registrations/RegistrationTable';
 import RequestTable from './requests/RequestTable';
 import PickupBoard from './pickups/PickupBoard';
 import KioskSettingsPanel from './kiosk/KioskSettingsPanel';
+import { useAdminConferences } from './conference/useAdminConferences';
 import { listMissionaryRequests } from '../data/missionaryRequests';
 import { firebaseApp, isAdminEmail } from '../firebase';
 import { usePageTitle } from '../usePageTitle';
@@ -55,6 +56,16 @@ const Admin: React.FC = () => {
   const tabParam = searchParams.get('tab');
   const tab = tabParam === 'registros' || tabParam === 'solicitudes' || tabParam === 'recogidas' || tabParam === 'pantallas' ? tabParam : 'misioneros';
   const [pendingRequests, setPendingRequests] = useState(0);
+  // Registros and Recogidas show the current conference, or an archived one with ?conferencia=2026
+  const conferences = useAdminConferences(authState === 'authenticated');
+  const archiveParam = searchParams.get('conferencia');
+  const archive = conferences.archives.find((a) => a.id === archiveParam) ?? null;
+  const selectConference = (id: string | null) =>
+    setSearchParams((p) => {
+      const next = new URLSearchParams(p);
+      if (id) next.set('conferencia', id); else next.delete('conferencia');
+      return next;
+    }, { replace: true });
 
   useEffect(() => {
     if (authState !== 'authenticated') return;
@@ -154,7 +165,10 @@ const Admin: React.FC = () => {
 
         <Tabs
           value={tab}
-          onChange={(_, v) => setSearchParams(v === 'misioneros' ? {} : { tab: v }, { replace: true })}
+          onChange={(_, v) => setSearchParams(
+            v === 'misioneros' ? {} : { tab: v, ...((v === 'registros' || v === 'recogidas') && archive ? { conferencia: archive.id } : {}) },
+            { replace: true },
+          )}
           variant={isMobile ? 'scrollable' : 'standard'}
           allowScrollButtonsMobile
           sx={{ px: { xs: 0, sm: 3 }, borderBottom: '1px solid #2a2a2a', bgcolor: '#141414' }}
@@ -182,12 +196,16 @@ const Admin: React.FC = () => {
             </>
           ) : tab === 'solicitudes' ? (
             <RequestTable onPendingCount={setPendingRequests} />
+          ) : (tab === 'recogidas' || tab === 'registros') && !conferences.current ? (
+            conferences.error
+              ? <Typography color="error.main">{conferences.error}</Typography>
+              : <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
           ) : tab === 'recogidas' ? (
-            <PickupBoard />
+            <PickupBoard key={archive?.id ?? 'actual'} conferences={conferences} archive={archive} onSelectConference={selectConference} />
           ) : tab === 'pantallas' ? (
             <KioskSettingsPanel />
           ) : (
-            <RegistrationTable />
+            <RegistrationTable key={archive?.id ?? 'actual'} conferences={conferences} archive={archive} onSelectConference={selectConference} />
           )}
         </Box>
       </Box>

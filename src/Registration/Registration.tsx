@@ -26,24 +26,27 @@ import MissionaryPageInfo from '../MissionaryRequest/MissionaryPageInfo';
 import { subPanelSx } from './styles';
 import {
   CATEGORIES,
-  CONFERENCE_DAYS,
   HEARD_ABOUT,
   PICKUP_TRANSPORTS,
   calculateHotelFee,
   canUploadMedia,
   closeDateLabel,
   closeTimeLabel,
+  conferenceName,
   formatConferenceDay,
   hotelRateFor,
   isFreeCategory,
   isMediaUploadOpen,
+  isRegistrationNotYetOpen,
   isRegistrationOpen,
   mediaUploadsCloseLabel,
   type Category,
   type ChildrenInfo,
+  type ConferenceConfig,
   type PickupTransport,
 } from './conference';
 import { LOCALES, STRINGS, useLang, type Lang, type Strings } from './i18n';
+import { useConference } from '../data/conference';
 import { initialForm, toInput, validate, type FormState } from './registrationForm';
 
 const CATEGORY_ICONS: Record<Category, React.ReactNode> = {
@@ -96,7 +99,7 @@ const StepIndicator: React.FC<{ labels: string[]; current: number }> = ({ labels
   </Box>
 );
 
-const InfoPanel: React.FC<{ t: Strings; locale: string }> = ({ t, locale }) => {
+const InfoPanel: React.FC<{ t: Strings; locale: string; days: string[] }> = ({ t, locale, days }) => {
   const day = (iso: string) => formatConferenceDay(iso, { weekday: 'long', day: 'numeric', month: 'long' }, locale);
   return (
     <Box component="section" sx={{
@@ -109,7 +112,7 @@ const InfoPanel: React.FC<{ t: Strings; locale: string }> = ({ t, locale }) => {
         <Typography component="h2" sx={{ color: 'var(--ibl-primary-dark)', fontWeight: 800, fontSize: '1.05rem' }}>{t.infoTitle}</Typography>
       </Box>
       <Box component="ul" sx={{ m: 0, pl: 2.5, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-        {t.infoItems(day(CONFERENCE_DAYS[0]), day(CONFERENCE_DAYS[CONFERENCE_DAYS.length - 1])).map((item) => (
+        {t.infoItems(day(days[0]), day(days[days.length - 1])).map((item) => (
           <Typography component="li" key={item} sx={{ color: 'var(--ibl-text-body)', fontSize: '0.92rem', lineHeight: 1.55 }}>{item}</Typography>
         ))}
         <Typography component="li" sx={{ color: 'var(--ibl-text-body)', fontSize: '0.92rem', lineHeight: 1.55, fontWeight: 700 }}>{t.infoVideoNote}</Typography>
@@ -199,10 +202,13 @@ const NextSteps: React.FC<{ t: Strings; steps: NextStep[] }> = ({ t, steps }) =>
 
 type Phase = 'form' | 'media' | 'done';
 
-const Registration: React.FC = () => {
-  const [lang, changeLang] = useLang();
-  const [open, setOpen] = useState(isRegistrationOpen);
-  const [form, setForm] = useState<FormState>(initialForm);
+const RegistrationForm: React.FC<{ conference: ConferenceConfig; lang: Lang; changeLang: (l: Lang) => void }> = ({ conference, lang, changeLang }) => {
+  const days = conference.days;
+  const lastDay = days[days.length - 1];
+  // Follows the conference as it loads; `expired` catches the deadline passing while the form is open.
+  const [expired, setExpired] = useState(false);
+  const open = !expired && isRegistrationOpen(conference);
+  const [form, setForm] = useState<FormState>(() => initialForm(days));
   const [honeypot, setHoneypot] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -219,7 +225,7 @@ const Registration: React.FC = () => {
   const errors = useMemo(() => (submitted ? validate(form, t.errors) : {}), [submitted, form, t]);
   const fee = calculateHotelFee({ ...form, needsLodging: !!form.needsLodging });
   // Missionaries/evangelists get a video step after the form (while uploads are open)
-  const hasMediaStep = canUploadMedia(form.category) && isMediaUploadOpen() && !honeypot;
+  const hasMediaStep = canUploadMedia(form.category) && isMediaUploadOpen(conference) && !honeypot;
 
   const set = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
   const setTravel = (patch: Partial<FormState['travel']>) => setForm((f) => ({ ...f, travel: { ...f.travel, ...patch } }));
@@ -227,7 +233,7 @@ const Registration: React.FC = () => {
   const toggleDay = (d: string) => set({
     attendanceDays: form.attendanceDays.includes(d)
       ? form.attendanceDays.filter((x) => x !== d)
-      : CONFERENCE_DAYS.filter((x) => x === d || form.attendanceDays.includes(x)),
+      : days.filter((x) => x === d || form.attendanceDays.includes(x)),
   });
 
   const goTo = (next: Phase) => {
@@ -246,7 +252,7 @@ const Registration: React.FC = () => {
       el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
-    if (!isRegistrationOpen()) { setOpen(false); return; }
+    if (!isRegistrationOpen(conference)) { setExpired(true); return; }
 
     setSubmitting(true);
     try {
@@ -257,7 +263,7 @@ const Registration: React.FC = () => {
       goTo(hasMediaStep ? 'media' : 'done');
     } catch (err) {
       console.error(err);
-      if (!isRegistrationOpen()) { setOpen(false); return; }
+      if (!isRegistrationOpen(conference)) { setExpired(true); return; }
       setSubmitError(true);
     } finally {
       setSubmitting(false);
@@ -268,6 +274,19 @@ const Registration: React.FC = () => {
     <PageShell showDeadline={open && phase === 'form'} t={t} lang={lang} onLangChange={changeLang} backTo={`/conferencia?lang=${lang}`}>{children}</PageShell>
   );
 
+  if (!open && phase === 'form' && isRegistrationNotYetOpen(conference)) {
+    return shell(
+      <CenterCard>
+        <LockClockIcon sx={{ fontSize: 56, color: 'var(--ibl-primary)', mb: 1.5 }} />
+        <Typography component="h2" sx={{ color: 'var(--ibl-primary-dark)', fontWeight: 800, fontSize: '1.6rem', mb: 1 }}>
+          {t.notOpenTitle}
+        </Typography>
+        <Typography sx={{ color: 'var(--ibl-text-body)', lineHeight: 1.7 }}>{t.notOpenBody}</Typography>
+        <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.9rem', mt: 2 }}>{t.closedContact}</Typography>
+      </CenterCard>,
+    );
+  }
+
   if (!open && phase === 'form') {
     return shell(
       <CenterCard>
@@ -276,7 +295,7 @@ const Registration: React.FC = () => {
           {t.closedTitle}
         </Typography>
         <Typography sx={{ color: 'var(--ibl-text-body)', lineHeight: 1.7 }}>
-          {t.closedBody(closeDateLabel(locale), closeTimeLabel(locale))}
+          {t.closedBody(closeDateLabel(conference, locale), closeTimeLabel(conference, locale))}
         </Typography>
         <Typography sx={{
           color: 'var(--ibl-text)', fontWeight: 700, lineHeight: 1.6, mt: 2, p: 1.5, borderRadius: '10px',
@@ -303,7 +322,7 @@ const Registration: React.FC = () => {
           </Typography>
           <Typography sx={{ color: 'var(--ibl-text-body)', lineHeight: 1.6, mb: 1 }}>{t.uploadIntro}</Typography>
           <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.88rem', mb: 2.5 }}>
-            {t.uploadLater} {t.uploadClosesOn(mediaUploadsCloseLabel(locale))}
+            {t.uploadLater} {t.uploadClosesOn(mediaUploadsCloseLabel(conference, locale))}
           </Typography>
           <MediaUploader registrationId={registrationId} t={t} onUploadingChange={setMediaUploading} />
           <Button fullWidth variant="contained" size="large" disabled={mediaUploading} onClick={() => goTo('done')} sx={{ ...primaryButtonSx, mt: 3 }}>
@@ -349,7 +368,7 @@ const Registration: React.FC = () => {
             {t.successTitle(form.registrant.firstName)}
           </Typography>
           <Typography sx={{ color: 'var(--ibl-text-body)', lineHeight: 1.6, fontSize: { xs: '0.92rem', md: '1rem' } }}>
-            {t.successBody(t.conferenceName)}
+            {t.successBody(conferenceName(conference, locale))}
           </Typography>
           {!isFreeCategory(form.category) && fee > 0 && (
             <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.9rem', mt: 2 }}>
@@ -376,7 +395,7 @@ const Registration: React.FC = () => {
         )}
 
         <Box sx={{ textAlign: 'center' }}>
-          <Button onClick={() => { setForm(initialForm()); setSubmitted(false); goTo('form'); }}
+          <Button onClick={() => { setForm(initialForm(days)); setSubmitted(false); goTo('form'); }}
             sx={{ mt: 3, textTransform: 'none', fontWeight: 600, color: 'var(--ibl-primary)' }}>
             {t.registerAnother}
           </Button>
@@ -396,7 +415,7 @@ const Registration: React.FC = () => {
     }}>
       <Box>
         {hasMediaStep && <StepIndicator labels={t.steps} current={0} />}
-        <InfoPanel t={t} locale={locale} />
+        <InfoPanel t={t} locale={locale} days={days} />
 
         {/* Honeypot */}
         <div className="reg-hp" aria-hidden="true">
@@ -470,7 +489,7 @@ const Registration: React.FC = () => {
 
         <FormSection step={++step} title={t.daysTitle} subtitle={isFreeCategory(form.category) ? t.daysSubFree : t.daysSub(hotelRateFor(form.category))}>
           <Box id="reg-attendanceDays" sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(4, minmax(0, 1fr))' }, gap: 1.5 }}>
-            {CONFERENCE_DAYS.map((d) => (
+            {days.map((d) => (
               <ChoiceCard key={d} role="checkbox" selected={form.attendanceDays.includes(d)} onClick={() => toggleDay(d)}
                 title={capitalize(formatConferenceDay(d, { weekday: 'long' }, locale))}
                 description={formatConferenceDay(d, { day: 'numeric', month: 'long' }, locale)}
@@ -544,7 +563,7 @@ const Registration: React.FC = () => {
                   )}
                   <TextField label={t.arrivalDate} name="travel.arrivalDate" type="date" required
                     value={form.travel.arrivalDate} onChange={(e) => setTravel({ arrivalDate: e.target.value })}
-                    slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: CONFERENCE_DAYS[CONFERENCE_DAYS.length - 1] } }}
+                    slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: lastDay } }}
                     error={!!errors['travel.arrivalDate']} helperText={errors['travel.arrivalDate']} />
                   <TextField label={t.arrivalTime} name="travel.arrivalTime" type="time" required
                     value={form.travel.arrivalTime} onChange={(e) => setTravel({ arrivalTime: e.target.value })}
@@ -565,7 +584,7 @@ const Registration: React.FC = () => {
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 2.5 }}>
                 <TextField label={t.approxArrivalDate} name="travel.arrivalDate" type="date" required
                   value={form.travel.arrivalDate} onChange={(e) => setTravel({ arrivalDate: e.target.value })}
-                  slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: CONFERENCE_DAYS[CONFERENCE_DAYS.length - 1] } }}
+                  slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: lastDay } }}
                   error={!!errors['travel.arrivalDate']} helperText={errors['travel.arrivalDate']} />
                 <TextField label={t.departureDate} type="date"
                   value={form.travel.departureDate} onChange={(e) => setTravel({ departureDate: e.target.value })}
@@ -614,6 +633,20 @@ const Registration: React.FC = () => {
       </Box>
     </Box>,
   );
+};
+
+/** Loads the current conference (dates and deadline are set on the admin page), then shows the form. */
+const Registration: React.FC = () => {
+  const [lang, changeLang] = useLang();
+  const conference = useConference();
+  if (!conference) {
+    return (
+      <PageShell showDeadline={false} t={STRINGS[lang]} lang={lang} onLangChange={changeLang} backTo={`/conferencia?lang=${lang}`}>
+        <CenterCard><CircularProgress /></CenterCard>
+      </PageShell>
+    );
+  }
+  return <RegistrationForm conference={conference} lang={lang} changeLang={changeLang} />;
 };
 
 export default Registration;

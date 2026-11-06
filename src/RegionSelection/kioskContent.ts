@@ -1,6 +1,7 @@
 // Text for the map page's "Conferencia" and "Acerca de este sitio" panels. Edit freely.
-// Conference dates come from src/Registration/conference.ts and the schedule from
-// src/Conference/conferenceContent.ts, so a new year only needs those two files plus the text below.
+// This is the 2026 conference's text; its dates come from CONFERENCE_DAYS in src/Registration/conference.ts
+// and the schedule from src/Conference/conferenceContent.ts. (Registration dates for later years are set on
+// the admin page instead; a new year's kiosk card still needs those two files plus the text below.)
 
 import { CONFERENCE_DAYS, CONFERENCE_NAME } from '../Registration/conference';
 import type { ConferencePhase, ConferencePhaseSetting } from '../data/settings';

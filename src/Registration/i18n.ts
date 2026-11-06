@@ -10,7 +10,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 const es = {
   language: 'Idioma',
   churchName: 'Iglesia Bautista Libertad',
-  conferenceName: 'Conferencia y Escuela de Misiones 2026',
+  conferenceName: 'Conferencia y Escuela de Misiones',
   backToConference: 'Página de la conferencia',
   registerUntil: (date: string, time: string) => `Registro en línea hasta el ${date}, ${time}`,
   lastDay: 'último día',
@@ -21,6 +21,8 @@ const es = {
     `El registro en línea cerró el ${date} a las ${time}. Todavía puede registrarse en persona en la iglesia el lunes de 12 PM a 6 PM.`,
   closedHotelWarning: 'Si se registra en persona, NO podemos garantizarle una habitación de hotel.',
   closedContact: 'Si tiene preguntas, comuníquese con la oficina de la iglesia.',
+  notOpenTitle: 'El registro aún no está abierto',
+  notOpenBody: 'Pronto anunciaremos las fechas de la próxima conferencia. Vuelva a visitar esta página más adelante.',
 
   // Conference information shown above the form. Days/dates are filled in from CONFERENCE_DAYS.
   infoTitle: 'Información importante',
@@ -201,7 +203,7 @@ export type Strings = typeof es;
 const en: Strings = {
   language: 'Language',
   churchName: 'Iglesia Bautista Libertad',
-  conferenceName: 'Missions Conference & School 2026',
+  conferenceName: 'Missions Conference & School',
   backToConference: 'Conference page',
   registerUntil: (date, time) => `Register online by ${date}, ${time}`,
   lastDay: 'last day',
@@ -211,6 +213,8 @@ const en: Strings = {
   closedBody: (date, time) => `Online registration closed on ${date} at ${time}. You can still register in person at the church on Monday from 12 PM to 6 PM.`,
   closedHotelWarning: 'If you register in person, a hotel room is NOT guaranteed.',
   closedContact: 'If you have questions, please contact the church office.',
+  notOpenTitle: 'Registration is not open yet',
+  notOpenBody: 'We will announce the dates of the next conference soon. Please check back later.',
 
   infoTitle: 'Important information',
   infoItems: (firstDay, lastDay) => [

@@ -28,6 +28,31 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
     }
 
+    // The current conference: name, days and deadlines. Admins set it on the admin page
+    // (Registros → Configurar); the registration rules below read it. See src/data/conference.ts.
+    match /settings/conference {
+      allow read: if true;
+      allow write: if isAdmin()
+        && request.resource.data.keys().hasOnly(['name', 'nameEn', 'days', 'registrationOpen',
+                                                 'registrationClosesAt', 'mediaUploadsCloseAt', 'updatedAt'])
+        && reqStr(request.resource.data.name, 200) && str(request.resource.data.nameEn, 200)
+        && request.resource.data.days is list
+        && request.resource.data.days.size() >= 1 && request.resource.data.days.size() <= 10
+        && request.resource.data.registrationOpen is bool
+        && request.resource.data.registrationClosesAt is timestamp
+        && request.resource.data.mediaUploadsCloseAt is timestamp
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    // Past conferences, moved here by "Archivar esta conferencia": a summary document (with the
+    // hotel assignments) and a copy of every registration. Admin only; never public.
+    match /conferences/{conferenceId} {
+      allow read, write: if isAdmin();
+      match /registrations/{registrationId} {
+        allow read, write: if isAdmin();
+      }
+    }
+
     // Hotel names/colors and which registration stays where. Admin only: assignments are keyed
     // by registration id.
     match /settings/hotels {
@@ -136,9 +161,13 @@ service cloud.firestore {
     }
 
     // ── Conference registrations ─────────────────────────────────────────────
-    // Keep the deadline in sync with REGISTRATION_CLOSES_AT in src/Registration/conference.ts.
-    // 1793397600000 = 2026-10-30 17:00 CDT
-    function registrationOpen() { return request.time < timestamp.value(1793397600000); }
+    // Days and deadline come from settings/conference (fetched once per write — rules may evaluate
+    // at most 1000 expressions, and the registration checks use most of them). No document = the get fails = closed.
+    function conferencePath() { return /databases/$(database)/documents/settings/conference; }
+
+    function registrationOpen(c) {
+      return c.registrationOpen == true && request.time < c.registrationClosesAt;
+    }
 
     function validAddress(a) {
       return a is map
@@ -218,7 +247,8 @@ service cloud.firestore {
     }
 
     // The fields themselves; create and update add their own key and timestamp checks.
-    function validRegistration(d) {
+    // `days` is the current conference's days.
+    function validRegistration(d, days) {
       return d.language in ['es', 'en']
         && d.category in ['missionary', 'evangelist', 'pastor', 'layman']
         && validRegistrant(d.registrant)
@@ -229,8 +259,9 @@ service cloud.firestore {
         && (d.bringingWife ? validWife(d.wife) : d.wife == null)
         && d.bringingChildren is bool
         && (d.bringingChildren ? validChildren(d.children) : d.children == null)
-        && d.attendanceDays is list && d.attendanceDays.size() >= 1 && d.attendanceDays.size() <= 4
-        && d.attendanceDays.hasOnly(['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05'])
+        && d.attendanceDays is list && d.attendanceDays.size() >= 1
+        && d.attendanceDays.size() <= days.size()
+        && d.attendanceDays.hasOnly(days)
         && d.needsLodging is bool
         && validTravel(d.travel)
         && d.heardAbout in ['pastor', 'missionary', 'friend', 'social', 'website', 'attended', 'other']
@@ -239,19 +270,28 @@ service cloud.firestore {
         && d.hotelFee == hotelFee(d, hotelRate(d));
     }
 
+    function canRegister(d) {
+      let c = get(conferencePath()).data;
+      return registrationOpen(c)
+        && d.keys().hasOnly(registrationKeys())
+        && validRegistration(d, c.days)
+        && d.createdAt == request.time;
+    }
+
+    function validEdit(d) {
+      let c = get(conferencePath()).data;
+      return d.keys().hasOnly(registrationKeys().concat(['updatedAt']))
+        && validRegistration(d, c.days)
+        && d.createdAt == resource.data.createdAt
+        && d.updatedAt == request.time;
+    }
+
     match /registrations/{id} {
-      allow create: if registrationOpen()
-        && request.resource.data.keys().hasOnly(registrationKeys())
-        && validRegistration(request.resource.data)
-        && request.resource.data.createdAt == request.time;
+      allow create: if canRegister(request.resource.data);
       allow read, delete: if isAdmin();
       // Admins can correct a registration at any time, even after the deadline. The fields are
       // checked as on create; createdAt can't change and updatedAt records the edit.
-      allow update: if isAdmin()
-        && request.resource.data.keys().hasOnly(registrationKeys().concat(['updatedAt']))
-        && validRegistration(request.resource.data)
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.updatedAt == request.time;
+      allow update: if isAdmin() && validEdit(request.resource.data);
     }
   }
 }

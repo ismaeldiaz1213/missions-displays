@@ -1,6 +1,5 @@
 // Form state, validation, and conversion shared by the public registration page and the admin editor.
 import {
-  CONFERENCE_DAYS,
   type Category,
   type ChildrenInfo,
   type HeardAbout,
@@ -24,7 +23,7 @@ export type FormState = Omit<RegistrationInput, 'language' | 'category' | 'wife'
   heardAbout: HeardAbout | '';
 };
 
-export const initialForm = (): FormState => ({
+export const initialForm = (days: readonly string[]): FormState => ({
   category: '',
   registrant: { ...emptyContact(), address: { street: '', city: '', state: '', zip: '', country: '' } },
   homeChurch: '',
@@ -35,7 +34,7 @@ export const initialForm = (): FormState => ({
   wife: emptyContact(),
   bringingChildren: false,
   children: { count: 1, infants: 0, ages: '', notes: '' },
-  attendanceDays: [...CONFERENCE_DAYS],
+  attendanceDays: [...days],
   needsLodging: null,
   travel: {
     needsPickup: null, transport: '', airline: '', flightNumber: '', airport: '', busCompany: '', busStation: '',
@@ -134,7 +133,7 @@ export const toInput = (f: FormState, language: Lang): RegistrationInput => {
 
 /** A saved registration as form state, for the admin editor. Older registrations lack some fields; they get the form's defaults. */
 export const fromRegistration = (r: Registration): FormState => {
-  const blank = initialForm();
+  const blank = initialForm([]);
   return {
     category: r.category,
     registrant: { ...blank.registrant, ...r.registrant, address: { ...blank.registrant.address, ...r.registrant.address } },

@@ -7,6 +7,7 @@ import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import iblLogo from '../assets/ibl_logo.png';
 import { LOCALES, useLang, type Lang } from '../Registration/i18n';
 import { daysUntilClose, isRegistrationOpen } from '../Registration/conference';
+import { useConference } from '../data/conference';
 import ScheduleBoard from './components/ScheduleBoard';
 import VideoBlock from './components/VideoBlock';
 import GalleryCarousel from './components/GalleryCarousel';
@@ -377,8 +378,9 @@ const ConferenceLanding: React.FC = () => {
   const [lang, changeLang] = useLang(CONFERENCE_PAGE_TITLES);
   const t = CONFERENCE_STRINGS[lang];
   const locale = LOCALES[lang];
-  const open = isRegistrationOpen();
-  const days = daysUntilClose();
+  const conference = useConference();
+  const open = !!conference && isRegistrationOpen(conference);
+  const days = conference ? daysUntilClose(conference) : 0;
 
   return (
     <Box className="ibl-harvest" sx={{

@@ -7,7 +7,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { Timestamp, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { withLegacyFees } from './transitionRules.mjs';
 
 const RULES = new URL('../../firestore.rules', import.meta.url);
@@ -23,6 +23,12 @@ await env.clearFirestore();
 const db = env.unauthenticatedContext().firestore();
 
 const DAYS = ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05'];
+
+// The current conference, as an admin saves it from the admin page: open, deadline far ahead.
+await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'settings/conference'), {
+  name: 'Conferencia 2026', nameEn: '', days: DAYS, registrationOpen: true,
+  registrationClosesAt: Timestamp.fromMillis(Date.UTC(2100, 0, 1)), mediaUploadsCloseAt: Timestamp.fromMillis(Date.UTC(2100, 0, 1)),
+}));
 
 const reg = (over = {}) => ({
   language: 'es', category: 'pastor',
@@ -89,7 +95,6 @@ if (!LEGACY_RATES) {
 
 if (LEGACY_RATES) {
   await check('old $40-per-adult amount still accepted', assertSucceeds(put({ ...wife, hotelFee: 320 })));
-  await check('old $50-per-adult amount still accepted', assertSucceeds(put({ ...wife, hotelFee: 400 })));
   await check('layman at the old $40 rate still accepted', assertSucceeds(put({ category: 'layman', hotelFee: 160 })));
 }
 

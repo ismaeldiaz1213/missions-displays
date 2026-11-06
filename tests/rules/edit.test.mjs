@@ -18,6 +18,12 @@ await env.clearFirestore();
 const DAYS = ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05'];
 const CREATED = Timestamp.fromMillis(Date.UTC(2026, 9, 1));
 
+// The current conference, as an admin saves it from the admin page: open, deadline far ahead.
+await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'settings/conference'), {
+  name: 'Conferencia 2026', nameEn: '', days: DAYS, registrationOpen: true,
+  registrationClosesAt: Timestamp.fromMillis(Date.UTC(2100, 0, 1)), mediaUploadsCloseAt: Timestamp.fromMillis(Date.UTC(2100, 0, 1)),
+}));
+
 // What updateRegistration sends: every form field, the recomputed fee, and updatedAt.
 const edit = (over = {}) => ({
   language: 'es', category: 'pastor',

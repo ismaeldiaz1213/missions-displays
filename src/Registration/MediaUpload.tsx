@@ -1,23 +1,27 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { Box, Typography } from '@mui/material';
+import { Box, CircularProgress, Typography } from '@mui/material';
 import LockClockIcon from '@mui/icons-material/LockClock';
 import PageShell, { CenterCard } from './components/PageShell';
 import MediaUploader from './components/MediaUploader';
 import { mediaUploadsCloseLabel, isMediaUploadOpen } from './conference';
 import { LOCALES, STRINGS, useLang } from './i18n';
+import { useConference } from '../data/conference';
 
 /** Standalone "upload later" page — the link is shown to missionaries and evangelists after registering. */
 const MediaUpload: React.FC = () => {
   const { registrationId = '' } = useParams<{ registrationId: string }>();
   const [lang, changeLang] = useLang();
   const t = STRINGS[lang];
+  const conference = useConference();
 
   const shell = (children: React.ReactNode) => (
     <PageShell showDeadline={false} t={t} lang={lang} onLangChange={changeLang}>{children}</PageShell>
   );
 
-  if (!isMediaUploadOpen()) {
+  if (!conference) return shell(<CenterCard><CircularProgress /></CenterCard>);
+
+  if (!isMediaUploadOpen(conference)) {
     return shell(
       <CenterCard>
         <LockClockIcon sx={{ fontSize: 56, color: 'var(--ibl-primary)', mb: 1.5 }} />
@@ -40,7 +44,7 @@ const MediaUpload: React.FC = () => {
         </Typography>
         <Typography sx={{ color: 'var(--ibl-text-body)', lineHeight: 1.6 }}>{t.uploadIntro}</Typography>
         <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.88rem', mt: 0.5, mb: 2.5 }}>
-          {t.uploadClosesOn(mediaUploadsCloseLabel(LOCALES[lang]))}
+          {t.uploadClosesOn(mediaUploadsCloseLabel(conference, LOCALES[lang]))}
         </Typography>
         <MediaUploader registrationId={registrationId} t={t} />
       </Box>
