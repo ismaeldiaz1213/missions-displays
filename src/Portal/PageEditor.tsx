@@ -45,7 +45,14 @@ const Thumb: React.FC<{ path: string; onRemove: () => void; label: string }> = (
  * Where a missionary edits their page. Every change is a proposal (missionaryEdits/{token}):
  * nothing goes live until an admin approves it. Uploads go to missionary-edits/{token}/…
  */
-const PageEditor: React.FC<{ token: string; t: PortalStrings; lang: 'es' | 'en' }> = ({ token, t, lang }) => {
+const PageEditor: React.FC<{
+  token: string;
+  t: PortalStrings;
+  lang: 'es' | 'en';
+  /** Admin "Ajustar": no missionary banners; saving keeps the change in review. */
+  adminMode?: boolean;
+  onSaved?: () => void;
+}> = ({ token, t, lang, adminMode, onSaved }) => {
   const theme = useTheme();
   const wide = useMediaQuery(theme.breakpoints.up('lg'));
   const [edit, setEdit] = useState<MissionaryEdit | null | undefined>(undefined);
@@ -113,7 +120,8 @@ const PageEditor: React.FC<{ token: string; t: PortalStrings; lang: 'es' | 'en' 
       const alreadySubmitted = edit.status === 'submitted';
       await (alreadySubmitted ? updateSubmittedEdit(token, clean) : submit ? submitEdit(token, clean) : saveEditDraft(token, clean));
       setEdit({ ...edit, status: alreadySubmitted || submit ? 'submitted' : 'draft' });
-      setNotice({ type: 'success', text: submit ? t.submittedOk : t.savedDraft });
+      setNotice({ type: 'success', text: adminMode ? t.saved : submit ? t.submittedOk : t.savedDraft });
+      onSaved?.();
     } catch (err) {
       console.error(err);
       setNotice({ type: 'error', text: t.error });
@@ -241,9 +249,9 @@ const PageEditor: React.FC<{ token: string; t: PortalStrings; lang: 'es' | 'en' 
 
   return (
     <Box>
-      <Alert severity="info" sx={{ mb: 2, fontSize: '0.95rem', fontWeight: 600 }}>{t.notPublishedBanner}</Alert>
-      {edit.status === 'submitted' && <Alert severity="success" sx={{ mb: 2 }}>{t.submittedBanner}</Alert>}
-      {edit.status === 'rejected' && edit.rejectionReason && (
+      {!adminMode && <Alert severity="info" sx={{ mb: 2, fontSize: '0.95rem', fontWeight: 600 }}>{t.notPublishedBanner}</Alert>}
+      {!adminMode && edit.status === 'submitted' && <Alert severity="success" sx={{ mb: 2 }}>{t.submittedBanner}</Alert>}
+      {!adminMode && edit.status === 'rejected' && edit.rejectionReason && (
         <Alert severity="warning" sx={{ mb: 2 }}><strong>{t.rejectedBanner}</strong><Box sx={{ whiteSpace: 'pre-wrap', mt: 0.5 }}>{edit.rejectionReason}</Box></Alert>
       )}
       {!wide && (
@@ -272,7 +280,7 @@ const PageEditor: React.FC<{ token: string; t: PortalStrings; lang: 'es' | 'en' 
         )}
         <Button size="large" variant="contained" onClick={() => save(true)} disabled={!!busy || uploads.length > 0} endIcon={<SendIcon />}
           sx={{ borderRadius: '999px', fontWeight: 800, px: 3, textTransform: 'none' }}>
-          {busy === 'submit' ? <CircularProgress size={20} color="inherit" /> : edit.status === 'submitted' ? t.updateSubmitted : t.submit}
+          {busy === 'submit' ? <CircularProgress size={20} color="inherit" /> : adminMode ? t.save : edit.status === 'submitted' ? t.updateSubmitted : t.submit}
         </Button>
       </Box>
     </Box>

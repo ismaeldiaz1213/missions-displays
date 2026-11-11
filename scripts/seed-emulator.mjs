@@ -78,6 +78,19 @@ await env.withSecurityRulesDisabled(async (ctx) => {
   await setDoc(doc(db, 'missionaryReports', 'demo-rep-1'), report({ missionaryId: 'demo-perez', quarterId: '2025-Q4',
     comments: 'Este trimestre bautizamos a 3 personas y empezamos un estudio bíblico en un barrio nuevo. Oren por un local para reunirnos.' }));
   await setDoc(doc(db, 'missionaryReports', 'demo-rep-2'), report({ missionaryId: 'demo-kim', quarterId: '2025-Q4', kind: 'noUpdates', submittedAt: days(25) }));
+  // A page change Daniel Kim sent from his page, waiting for approval, and an older version of Juan's page.
+  const { id: _id, ...kimPage } = { id: 'demo-kim', ...missionaries['demo-kim'] };
+  await setDoc(doc(db, 'missionaryEdits', 'demo-edit-kim'), {
+    missionaryId: 'demo-kim', status: 'submitted', rejectionReason: '', revoked: false,
+    proposed: { ...kimPage, missionType: 'Plantación de iglesias y discipulado',
+      description: 'Sirviendo al Señor plantando iglesias en Manila y formando líderes locales para el discipulado.',
+      specialNotes: 'Oren por la renovación de nuestras visas en marzo.',
+      contactInfo: [{ type: 'website', value: 'https://example.com/kim' }] },
+    createdAt: days(4), updatedAt: days(1), submittedAt: days(1), reviewedAt: null, reviewedBy: '',
+  });
+  await setDoc(doc(db, 'missionaryHistory', 'demo-perez', 'versions', 'v1'), {
+    ...missionaries['demo-perez'], description: 'Versión anterior de la descripción.', savedAt: days(40), savedBy: 'ayuda@iblibertad.org', reason: 'admin-edit',
+  });
   await setDoc(doc(db, 'missionaryReports', 'demo-rep-3'), report({ missionaryId: 'demo-perez', quarterId: '2025-Q3', comments: 'Seguimos con la obra en Lima.',
     submittedAt: days(100), reviewedAt: days(95), reviewedBy: 'ayuda@iblibertad.org' }));
   for (const [id, m] of Object.entries(missionaries)) await setDoc(doc(db, 'missionaries', id), m);

@@ -39,11 +39,14 @@ import { reportsSheet, useReportTasks } from './reports/reportTasks';
 import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import MailCenter from './mail/MailCenter';
 import MissionaryMail from './mail/MailStatus';
+import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
+import ChangesBoard, { PendingEditsProvider, usePendingEdits } from './changes/ChangesBoard';
+import HistorySection from './changes/HistorySection';
 
 
 type AuthState = 'loading' | 'unauthenticated' | 'authenticated';
 
-const TABS = ['inicio', 'misioneros', 'informes', 'correos', 'solicitudes', 'registros', 'recogidas', 'pantallas'] as const;
+const TABS = ['inicio', 'misioneros', 'cambios', 'informes', 'correos', 'solicitudes', 'registros', 'recogidas', 'pantallas'] as const;
 type AdminTab = (typeof TABS)[number];
 
 const Admin: React.FC = () => (
@@ -148,12 +151,14 @@ const AdminPage: React.FC = () => {
   return (
     <DirectoryProvider enabled>
       <ReportsProvider enabled>
+      <PendingEditsProvider>
       <AdminShell
         tab={tab} userEmail={userEmail} isMobile={isMobile}
         archive={archive} conferences={conferences} selectConference={selectConference}
         storageRefresh={storageRefresh} setStorageRefresh={setStorageRefresh}
         storageUsedBytes={storageUsedBytes} setStorageUsedBytes={setStorageUsedBytes}
       />
+      </PendingEditsProvider>
       </ReportsProvider>
     </DirectoryProvider>
   );
@@ -176,9 +181,19 @@ const AdminShell: React.FC<{
   const { entries, requests, reload } = useDirectory();
   const reports = useReports();
   const reportTasks = useReportTasks();
+  const { pending: pendingEdits } = usePendingEdits();
+  const changeTasks = pendingEdits.length ? [{
+    key: 'changes', icon: <RateReviewOutlinedIcon />, title: tr('Cambios por aprobar', 'Changes to approve'),
+    hint: tr('Misioneros que actualizaron su página. Revise y apruebe para publicarlo.', 'Missionaries who updated their page. Review and approve to publish it.'),
+    items: pendingEdits.map((e) => ({
+      key: e.token, title: [e.proposed.name, e.proposed.lastName].filter(Boolean).join(' '),
+      action: tr('Revisar', 'Review'), onAction: () => setSearchParams({ tab: 'cambios', cambio: e.token }),
+    })),
+  }] : [];
   const lateReports = reportTasks.groups.find((g) => g.key === 'reportsLate')?.items.length ?? 0;
   const profileSections = [{ key: 'informes', label: tr('Informes', 'Reports'), render: (e: Parameters<typeof MissionaryReports>[0]['entry']) => <MissionaryReports entry={e} /> },
-    { key: 'correos', label: tr('Correos', 'Email'), render: (e: Parameters<typeof MissionaryMail>[0]['entry']) => <MissionaryMail entry={e} /> }];
+    { key: 'correos', label: tr('Correos', 'Email'), render: (e: Parameters<typeof MissionaryMail>[0]['entry']) => <MissionaryMail entry={e} /> },
+    { key: 'historial', label: tr('Historial', 'History'), render: (e: Parameters<typeof HistorySection>[0]['entry']) => <HistorySection entry={e} /> }];
   const [pendingOverride, setPendingOverride] = useState<number | null>(null);
   const pendingRequests = pendingOverride ?? requests.filter((r) => r.status === 'pending' && !r.archived).length;
   // Stable: RequestTable reloads whenever this function changes.
@@ -228,6 +243,8 @@ const AdminShell: React.FC<{
         >
           <Tab value="inicio" label={tr('Inicio', 'Home')} icon={<HomeOutlinedIcon fontSize="small" />} iconPosition="start" sx={tabSx} />
           <Tab value="misioneros" label={tr('Misioneros', 'Missionaries')} icon={<PublicIcon fontSize="small" />} iconPosition="start" sx={tabSx} />
+          <Tab value="cambios" iconPosition="start" sx={tabSx} label={tr('Cambios', 'Changes')}
+            icon={<Badge badgeContent={pendingEdits.length} color="error"><RateReviewOutlinedIcon fontSize="small" /></Badge>} />
           <Tab value="informes" iconPosition="start" sx={tabSx} label={tr('Informes', 'Reports')}
             icon={<Badge badgeContent={lateReports} color="warning"><AssignmentOutlinedIcon fontSize="small" /></Badge>} />
           <Tab value="correos" label={tr('Correos', 'Email')} icon={<MailOutlineIcon fontSize="small" />} iconPosition="start" sx={tabSx} />
@@ -242,7 +259,7 @@ const AdminShell: React.FC<{
 
       <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 1600, mx: 'auto' }}>
         {tab === 'inicio' ? (
-          <AdminHome extraGroups={reportTasks.groups} extraStats={reportTasks.stat} />
+          <AdminHome extraGroups={[...changeTasks, ...reportTasks.groups]} extraStats={reportTasks.stat} />
         ) : tab === 'misioneros' ? (
           <MissionaryDirectory
             storageUsedBytes={storageUsedBytes}
@@ -250,6 +267,8 @@ const AdminShell: React.FC<{
             extraSections={profileSections}
             extraSheets={async () => [reportsSheet(entries, reports)]}
           />
+        ) : tab === 'cambios' ? (
+          <ChangesBoard />
         ) : tab === 'informes' ? (
           <ReportsBoard />
         ) : tab === 'correos' ? (

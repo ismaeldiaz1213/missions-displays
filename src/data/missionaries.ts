@@ -147,3 +147,36 @@ export const restoreMissionary = async (a: ArchivedMissionary) => {
   await (a.wasDraft ? saveDraft(a.page) : saveMissionary(a.page));
   await deleteDoc(doc(archiveCol, a.page.id));
 };
+
+export interface PageVersion {
+  id: string;
+  page: Missionary;
+  savedAt: string;
+  savedBy: string;
+  /** Why it was saved: 'admin-edit', 'profile-update', 'from-report', 'restore', or an approved change. */
+  reason: string;
+}
+
+const HISTORY_META = ['savedAt', 'savedBy', 'reason', 'replacedByEdit'];
+
+/** Every earlier version of a published page, newest first. */
+export const listHistory = async (id: string): Promise<PageVersion[]> => {
+  const snap = await getDocs(historyCol(id));
+  return snap.docs.map((d) => {
+    const data = { ...d.data() } as Record<string, unknown>;
+    const at = data.savedAt as { toDate?: () => Date } | undefined;
+    const reason = data.replacedByEdit ? 'approved-change' : String(data.reason ?? '');
+    const savedBy = String(data.savedBy ?? '');
+    for (const k of HISTORY_META) delete data[k];
+    return { id: d.id, page: toMissionary(id, data), savedAt: at?.toDate ? at.toDate().toISOString() : '', savedBy, reason };
+  }).sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+};
+
+/** Puts an earlier version back on the site; the version it replaces is kept in history too. */
+export const restoreVersion = (v: PageVersion, by: string) => publishWithHistory(v.page, by, 'restore');
+
+/** The published page straight from the server (admins reviewing changes need the latest). */
+export const getPublishedFresh = async (id: string) => {
+  const snap = await getDoc(doc(missionariesCol, id));
+  return snap.exists() ? toMissionary(snap.id, snap.data()) : null;
+};
