@@ -82,7 +82,8 @@ export const sendMail = async (
   transport: string, signer: string, sender: Sender, to: string, msg: Rendered,
 ): Promise<SendResult> => {
   if (transport !== 'gmail') {
-    logger.info('Email not sent (MAIL_TRANSPORT=log)', { to, subject: msg.subject });
+    // On the local emulators, print the whole text so sign-in links can be clicked from the log.
+    logger.info('Email not sent (MAIL_TRANSPORT=log)', { to, subject: msg.subject, ...(process.env.FUNCTIONS_EMULATOR === 'true' && { text: msg.text }) });
     return { status: 'logged', messageId: '' };
   }
   const token = await gmailToken(signer, sender.from);

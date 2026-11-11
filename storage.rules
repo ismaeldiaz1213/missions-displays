@@ -95,10 +95,18 @@ service firebase.storage {
 
     // ── Quarterly report PDFs ────────────────────────────────────────────────
     // Private: never public. New files only — a newer report never replaces an older one.
+    // The missionary signed in with their email link (their profile's ownerEmail).
+    function ownsMissionary(missionaryId) {
+      return request.auth != null && request.auth.token.email_verified == true
+        && firestore.exists(/databases/(default)/documents/missionaryProfiles/$(missionaryId))
+        && 'ownerEmail' in firestore.get(/databases/(default)/documents/missionaryProfiles/$(missionaryId)).data
+        && firestore.get(/databases/(default)/documents/missionaryProfiles/$(missionaryId)).data.ownerEmail == request.auth.token.email.lower();
+    }
+
     match /reports/{missionaryId}/{file} {
-      allow read: if isAdmin();
+      allow read: if isAdmin() || ownsMissionary(missionaryId);
       allow update, delete: if false;
-      allow create: if resource == null && isAdmin()
+      allow create: if resource == null && (isAdmin() || ownsMissionary(missionaryId))
         && request.resource.contentType == 'application/pdf'
         && request.resource.size < 50 * 1024 * 1024;
     }

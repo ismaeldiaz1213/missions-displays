@@ -20,6 +20,7 @@ import ConferenceLanding from './Conference/ConferenceLanding'
 import Registration from './Registration/Registration'
 import MediaUpload from './Registration/MediaUpload'
 import MissionaryRequest from './MissionaryRequest/MissionaryRequest'
+import Portal from './Portal/Portal'
 
 
 const App:React.FC = () => {
@@ -47,6 +48,7 @@ const App:React.FC = () => {
         <Route path="/conferencia/registro" element={<Registration/>} />
         <Route path="/conferencia/subir/:registrationId" element={<MediaUpload/>} />
         <Route path="/misioneros/solicitud" element={<MissionaryRequest/>} />
+        <Route path="/misioneros/mi-pagina" element={<Portal/>} />
       </Routes>
     </>
   )

@@ -7,7 +7,7 @@ const SKIP_PATHS = ['/', '/admin'];
 /** Dispatch on window to count as activity (e.g. while a video plays). */
 export const ACTIVITY_EVENT = 'ibl-activity';
 
-const SKIP_PREFIXES = ['/conferencia', '/misioneros/solicitud'];
+const SKIP_PREFIXES = ['/conferencia', '/misioneros/solicitud', '/misioneros/mi-pagina'];
 
 export const useInactivityRedirect = () => {
   const navigate = useNavigate();

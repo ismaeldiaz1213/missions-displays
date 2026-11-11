@@ -100,3 +100,6 @@ export const cleanUpVideo = onObjectDeleted({ region: 'us-east1' }, async (event
 
 // Email: outbox, page-request confirmations, report reminders (see src/mail/).
 export { sendQueuedMail, onMissionaryRequest, sendReportReminders, onReportSubmitted } from './mail/index.js';
+
+// Missionary portal: sign-in links, invitations, page changes (see src/portal.ts).
+export { requestSignInLink, inviteMissionary, startMissionaryEdit, onEditStatusChange } from './portal.js';

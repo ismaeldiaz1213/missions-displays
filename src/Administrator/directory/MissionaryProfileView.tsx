@@ -19,6 +19,7 @@ import { formatDate, useAdminLang } from '../adminUi';
 import { fullName, type DirectoryEntry } from './directoryData';
 import { CONTINENT_LABELS } from './exportMissionaries';
 import StatusTags from './StatusTags';
+import AccessPanel from './AccessPanel';
 
 const MissionaryPage = lazy(() => import('../../Missionaries/Missionary'));
 
@@ -28,7 +29,7 @@ export interface ProfileSection {
   render: (entry: DirectoryEntry) => React.ReactNode;
 }
 
-const Summary: React.FC<{ entry: DirectoryEntry; onCompleteProfile: () => void }> = ({ entry, onCompleteProfile }) => {
+const Summary: React.FC<{ entry: DirectoryEntry; onCompleteProfile: () => void; onChanged: () => void }> = ({ entry, onCompleteProfile, onChanged }) => {
   const { tr, lang } = useAdminLang();
   const { page: m, profile: p } = entry;
   const contacts = m.contactInfo ?? [];
@@ -51,6 +52,7 @@ const Summary: React.FC<{ entry: DirectoryEntry; onCompleteProfile: () => void }
           <strong>{method || entry.phone || tr('otro medio', 'another way')}</strong>{entry.phone ? ` · ${entry.phone}` : ''}.
         </Alert>
       )}
+      {entry.status !== 'archived' && <AccessPanel entry={entry} onChanged={onChanged} />}
       <DetailGroup title={tr('Contacto privado', 'Private contact')} rows={[
         [tr('Correo', 'Email'), p?.email ?? ''],
         [tr('Teléfono / WhatsApp', 'Phone / WhatsApp'), p?.phone ?? ''],
@@ -137,7 +139,7 @@ const MissionaryProfileView: React.FC<{
   };
 
   const sections: ProfileSection[] = [
-    { key: 'summary', label: tr('Resumen', 'Summary'), render: () => <Summary entry={entry} onCompleteProfile={onCompleteProfile} /> },
+    { key: 'summary', label: tr('Resumen', 'Summary'), render: () => <Summary entry={entry} onCompleteProfile={onCompleteProfile} onChanged={onChanged} /> },
     ...extraSections,
     {
       key: 'preview', label: tr('Vista previa', 'Preview'), render: () => (

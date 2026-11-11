@@ -72,6 +72,7 @@ await check('link holder reads their edit', assertSucceeds(getDoc(doc(anonymous,
 await check('link holder saves a draft', assertSucceeds(save(await seed())));
 await check('link holder submits', assertSucceeds(submit(await seed())));
 await check('link holder edits again after a rejection', assertSucceeds(submit(await seed({ status: 'rejected', rejectionReason: 'Falta foto' }))));
+await check('link holder adds to a submission without re-submitting', assertSucceeds(save(await seed({ status: 'submitted', submittedAt: CREATED }), { status: 'submitted' })));
 await check('link holder withdraws a submission to draft', assertSucceeds(save(await seed({ status: 'submitted', submittedAt: CREATED }))));
 await check('signed-in non-admin also works as a link holder', assertSucceeds(save(await seed(), {}, outsider)));
 

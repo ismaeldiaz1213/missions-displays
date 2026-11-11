@@ -32,12 +32,22 @@ export interface MissionaryProfile {
   notes: string;
   /** Page request this profile came from, if any. */
   requestId: string;
+  /** Lower-case email the missionary signs in with (kept equal to `email`). */
+  ownerEmail?: string;
+  invitedAt?: string;
+  invitedBy?: string;
+  /** The page change they are working on in the portal (missionaryEdits/{id}). */
+  openEditId?: string;
   createdAt: string;
   updatedAt: string;
   updatedBy: string;
 }
 
-export type ProfileInput = Omit<MissionaryProfile, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy'>;
+export type ProfileInput = Omit<MissionaryProfile, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'ownerEmail' | 'invitedAt' | 'invitedBy' | 'openEditId'>;
+
+const INPUT_KEYS: (keyof ProfileInput)[] = [
+  'email', 'phone', 'preferredContact', 'preferredContactNote', 'language', 'spouseName', 'sendingChurch', 'notes', 'requestId',
+];
 
 export const emptyProfile = (): ProfileInput => ({
   email: '', phone: '', preferredContact: '', preferredContactNote: '', language: 'es',
@@ -51,19 +61,25 @@ export const listProfiles = async (): Promise<MissionaryProfile[]> => {
   return snap.docs.map((d) => {
     const data = d.data();
     return {
-      ...emptyProfile(), ...data, id: d.id, createdAt: iso(data.createdAt), updatedAt: iso(data.updatedAt),
+      ...emptyProfile(), ...data, id: d.id, createdAt: iso(data.createdAt), updatedAt: iso(data.updatedAt), invitedAt: iso(data.invitedAt),
     } as MissionaryProfile;
   });
 };
 
 /** Creates or updates the profile; only the fields passed are changed. `by` is who made the change. */
-export const saveProfile = (id: string, fields: Partial<ProfileInput>, by: string, isNew = false) =>
-  setDoc(doc(profilesCol, id), {
-    ...JSON.parse(JSON.stringify(fields)),
+export const saveProfile = (id: string, fields: Partial<ProfileInput>, by: string, isNew = false) => {
+  // Only the editable fields: never write back timestamps or ids that came in with the profile.
+  const picked = Object.fromEntries(INPUT_KEYS.filter((k) => fields[k] !== undefined).map((k) => [k, fields[k]]));
+  // The email is also how the missionary signs in to their page.
+  const owner = typeof fields.email === 'string' ? { ownerEmail: fields.email.trim().toLowerCase() } : {};
+  return setDoc(doc(profilesCol, id), {
+    ...picked,
+    ...owner,
     ...(isNew ? { createdAt: serverTimestamp() } : {}),
     updatedAt: serverTimestamp(),
     updatedBy: by,
   }, { merge: true });
+};
 
 // ── Completeness ("Perfil completo" vs "Básico") ─────────────────────────────
 

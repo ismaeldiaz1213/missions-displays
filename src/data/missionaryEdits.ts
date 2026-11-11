@@ -80,6 +80,10 @@ export const submitEdit = (token: string, proposed: ProposedPage) =>
     submittedAt: serverTimestamp(),
   });
 
+/** More changes to a change that is already waiting for review: it stays submitted. */
+export const updateSubmittedEdit = (token: string, proposed: ProposedPage) =>
+  updateDoc(doc(editsCol, token), { proposed: toProposed(proposed), status: 'submitted', updatedAt: serverTimestamp() });
+
 // ── Admin-only (enforced by firestore.rules / storage.rules) ─────────────────
 
 /** Creates a private edit link for a published missionary, starting from their current page. Returns the token. */

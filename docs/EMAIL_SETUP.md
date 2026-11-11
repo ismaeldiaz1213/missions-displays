@@ -65,3 +65,17 @@ language set on their profile.
 Change the values in `functions/.env` (sender, name, notify address, site URL). A church on a
 different email provider only needs another `sendMail` branch in `functions/src/mail/transport.ts`
 (for example SMTP); nothing else depends on Gmail.
+
+## Missionary sign-in (their page at /misioneros/mi-pagina)
+
+Missionaries sign in with a one-time link sent to the email on their profile; there are no
+passwords. Once, in the Firebase console (project ibl-missions-display):
+
+1. Authentication → Sign-in method → **Email/Password** → enable it and turn on
+   **Email link (passwordless sign-in)**.
+2. Authentication → Settings → Authorized domains: make sure `misiones.iblibertad.org` is listed.
+
+The links themselves are sent by our functions from misiones@ (not Firebase's default sender), so
+they only work after step 4 above. Admins invite a missionary from their profile (Resumen →
+"Enviar invitación"); missionaries can also ask for a new link on the sign-in page.
+Missionaries without email can get a private edit link instead ("Crear enlace privado").

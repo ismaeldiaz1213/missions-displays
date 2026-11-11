@@ -5,7 +5,9 @@
  *   npm run emulators:seed     (terminal 2: this script)
  *   npm run dev:emulators      (terminal 2: the site, talking to the emulators)
  *
- * Sign in on /admin with the emulator's fake Google popup using any @iblibertad.org address.
+ * Admin: on /admin press "Entrar como ayuda@iblibertad.org (emulador)".
+ * Missionary portal: on /misioneros/mi-pagina ask for a link for juan.perez@example.com; the link
+ * appears in the emulator UI (http://127.0.0.1:4000/auth) and in Correos → Historial on the admin.
  * Everything here is fictional. The "demo-" project id means the real project is never touched.
  */
 import { initializeTestEnvironment } from '@firebase/rules-unit-testing';
@@ -47,6 +49,7 @@ const profile = (over) => ({
   email: '', phone: '', preferredContact: '', preferredContactNote: '', language: 'es',
   spouseName: '', sendingChurch: '', notes: '', requestId: '',
   createdAt: days(30), updatedAt: days(3), updatedBy: 'ayuda@iblibertad.org', ...over,
+  ownerEmail: (over.email ?? '').toLowerCase(),
 });
 
 const profiles = {

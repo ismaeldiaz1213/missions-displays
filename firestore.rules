@@ -10,6 +10,16 @@ service cloud.firestore {
         && request.auth.token.email.lower().matches('^[^@]+@iblibertad[.](org|com)$');
     }
 
+    // A missionary signed in with the email link: their verified email is their profile's ownerEmail.
+    function signedInEmail() {
+      return request.auth != null && request.auth.token.email_verified == true ? request.auth.token.email.lower() : '';
+    }
+
+    function isOwnerOf(missionaryId) {
+      return signedInEmail() != ''
+        && get(/databases/$(database)/documents/missionaryProfiles/$(missionaryId)).data.get('ownerEmail', '') == signedInEmail();
+    }
+
     function str(v, max) { return v is string && v.size() <= max; }
     function reqStr(v, max) { return str(v, max) && v.size() > 0; }
 
@@ -131,8 +141,21 @@ service cloud.firestore {
     }
 
     // Private details about each missionary (contact, preferred method, notes). Same id as the page.
+    // The missionary may read their own profile and change how we reach them (not their email,
+    // which is how they sign in; the church changes that).
     match /missionaryProfiles/{id} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin() || (signedInEmail() != '' && resource.data.get('ownerEmail', '') == signedInEmail());
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        signedInEmail() != '' && resource.data.get('ownerEmail', '') == signedInEmail()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['phone', 'preferredContact', 'preferredContactNote', 'language', 'updatedAt', 'updatedBy'])
+        && str(request.resource.data.phone, 40)
+        && request.resource.data.preferredContact in ['email', 'whatsapp', 'phone', 'text', 'other']
+        && str(request.resource.data.preferredContactNote, 200)
+        && request.resource.data.language in ['es', 'en']
+        && request.resource.data.updatedBy == 'missionary'
+        && request.resource.data.updatedAt == request.time
+      );
     }
 
     // Quarterly reports. Every report (or "no updates") is its own document and is never
@@ -150,8 +173,9 @@ service cloud.firestore {
     }
 
     match /missionaryReports/{id} {
-      allow read: if isAdmin();
-      allow create: if isAdmin() && validSubmission(request.resource.data);
+      allow read: if isAdmin() || isOwnerOf(resource.data.missionaryId);
+      allow create: if validSubmission(request.resource.data)
+        && (isAdmin() || (isOwnerOf(request.resource.data.missionaryId) && request.resource.data.submittedBy == 'missionary'));
       allow update: if isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reviewedAt', 'reviewedBy', 'reviewNote', 'usedOnPage']);
     }
