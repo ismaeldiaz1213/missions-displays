@@ -17,8 +17,20 @@ const isAdmin = (req: CallableRequest) => {
   return !!t && t.email_verified === true && /^[^@]+@iblibertad\.(org|com)$/i.test(t.email ?? '');
 };
 
-const signInLink = (email: string) =>
-  getAuth().generateSignInWithEmailLink(email, { url: `${SITE_URL.value()}${PORTAL_PATH}`, handleCodeInApp: true });
+/** A one-time sign-in link. A setup problem becomes a readable message instead of "INTERNAL". */
+const signInLink = async (email: string) => {
+  try {
+    return await getAuth().generateSignInWithEmailLink(email, { url: `${SITE_URL.value()}${PORTAL_PATH}`, handleCodeInApp: true });
+  } catch (err) {
+    logger.error('Could not create a sign-in link', { err: String(err) });
+    const code = (err as { code?: string }).code ?? '';
+    throw new HttpsError('failed-precondition', code.includes('operation-not-allowed') || /provider is disabled/i.test(String(err))
+      ? 'El inicio de sesión por enlace de correo no está activado en Firebase (Authentication → Sign-in method → Email/Password → Email link). / Email-link sign-in is not enabled in Firebase.'
+      : code.includes('unauthorized-continue-uri')
+        ? 'El dominio del sitio no está autorizado en Firebase (Authentication → Settings → Authorized domains). / The site domain is not authorized in Firebase.'
+        : 'No se pudo crear el enlace para entrar. / Could not create the sign-in link.');
+  }
+};
 
 /** The profile whose ownerEmail is this address, with its page, if the page is published. */
 const ownedProfile = async (email: string) => {
@@ -59,13 +71,14 @@ export const inviteMissionary = onCall({ region: REGION }, async (req) => {
   if (!pageSnap.exists) throw new HttpsError('failed-precondition', 'La página debe estar publicada antes de invitar.');
   const email = String(profileSnap.data()?.email ?? '').trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpsError('failed-precondition', 'El perfil no tiene un correo válido.');
-  await profileSnap.ref.set({
-    ownerEmail: email, invitedAt: FieldValue.serverTimestamp(), invitedBy: req.auth?.token.email ?? '',
-  }, { merge: true });
+  // Make the link first: the profile only says "invited" once the email is really on its way.
+  const url = await signInLink(email);
+  await profileSnap.ref.set({ ownerEmail: email }, { merge: true });
   await queueMail({
     to: email, template: 'invitation', lang: profileSnap.data()?.language === 'en' ? 'en' : 'es', missionaryId: id,
-    vars: { name: String(pageSnap.data()?.name ?? ''), url: await signInLink(email) },
+    vars: { name: String(pageSnap.data()?.name ?? ''), url },
   });
+  await profileSnap.ref.set({ invitedAt: FieldValue.serverTimestamp(), invitedBy: req.auth?.token.email ?? '' }, { merge: true });
   return { ok: true };
 });
 
