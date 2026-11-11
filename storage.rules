@@ -93,6 +93,16 @@ service firebase.storage {
         );
     }
 
+    // ── Quarterly report PDFs ────────────────────────────────────────────────
+    // Private: never public. New files only — a newer report never replaces an older one.
+    match /reports/{missionaryId}/{file} {
+      allow read: if isAdmin();
+      allow update, delete: if false;
+      allow create: if resource == null && isAdmin()
+        && request.resource.contentType == 'application/pdf'
+        && request.resource.size < 50 * 1024 * 1024;
+    }
+
     // ── Conference videos uploaded by registered missionaries & evangelists ──
     // Open until mediaUploadsCloseAt in Firestore settings/conference (set on the admin page).
     // Only registrations of the current conference can upload; archived ones are no longer in registrations/.

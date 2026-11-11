@@ -83,3 +83,6 @@ export const deleteFolder = async (prefix: string) => {
   const { items } = await listAll(ref(storage, prefix));
   await Promise.all(items.map((i) => deleteObject(i)));
 };
+
+/** A download URL for a private file the signed-in user may read. */
+export const fileUrl = (path: string) => getDownloadURL(ref(storage, path));

@@ -31,11 +31,16 @@ import { AdminLangProvider, adminTheme, useAdminLang } from './adminUi';
 import { DirectoryProvider, useDirectory } from './directory/directoryData';
 import MissionaryDirectory from './directory/MissionaryDirectory';
 import AdminHome from './home/AdminHome';
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
+import { ReportsProvider, useReports } from './reports/reportsData';
+import ReportsBoard from './reports/ReportsBoard';
+import MissionaryReports from './reports/MissionaryReports';
+import { reportsSheet, useReportTasks } from './reports/reportTasks';
 
 
 type AuthState = 'loading' | 'unauthenticated' | 'authenticated';
 
-const TABS = ['inicio', 'misioneros', 'solicitudes', 'registros', 'recogidas', 'pantallas'] as const;
+const TABS = ['inicio', 'misioneros', 'informes', 'solicitudes', 'registros', 'recogidas', 'pantallas'] as const;
 type AdminTab = (typeof TABS)[number];
 
 const Admin: React.FC = () => (
@@ -139,12 +144,14 @@ const AdminPage: React.FC = () => {
 
   return (
     <DirectoryProvider enabled>
+      <ReportsProvider enabled>
       <AdminShell
         tab={tab} userEmail={userEmail} isMobile={isMobile}
         archive={archive} conferences={conferences} selectConference={selectConference}
         storageRefresh={storageRefresh} setStorageRefresh={setStorageRefresh}
         storageUsedBytes={storageUsedBytes} setStorageUsedBytes={setStorageUsedBytes}
       />
+      </ReportsProvider>
     </DirectoryProvider>
   );
 };
@@ -163,7 +170,11 @@ const AdminShell: React.FC<{
 }> = ({ tab, userEmail, isMobile, archive, conferences, selectConference, storageRefresh, setStorageRefresh, storageUsedBytes, setStorageUsedBytes }) => {
   const { tr, lang, setLang } = useAdminLang();
   const [, setSearchParams] = useSearchParams();
-  const { requests, reload } = useDirectory();
+  const { entries, requests, reload } = useDirectory();
+  const reports = useReports();
+  const reportTasks = useReportTasks();
+  const lateReports = reportTasks.groups.find((g) => g.key === 'reportsLate')?.items.length ?? 0;
+  const profileSections = [{ key: 'informes', label: tr('Informes', 'Reports'), render: (e: Parameters<typeof MissionaryReports>[0]['entry']) => <MissionaryReports entry={e} /> }];
   const [pendingOverride, setPendingOverride] = useState<number | null>(null);
   const pendingRequests = pendingOverride ?? requests.filter((r) => r.status === 'pending' && !r.archived).length;
   // Stable: RequestTable reloads whenever this function changes.
@@ -213,6 +224,8 @@ const AdminShell: React.FC<{
         >
           <Tab value="inicio" label={tr('Inicio', 'Home')} icon={<HomeOutlinedIcon fontSize="small" />} iconPosition="start" sx={tabSx} />
           <Tab value="misioneros" label={tr('Misioneros', 'Missionaries')} icon={<PublicIcon fontSize="small" />} iconPosition="start" sx={tabSx} />
+          <Tab value="informes" iconPosition="start" sx={tabSx} label={tr('Informes', 'Reports')}
+            icon={<Badge badgeContent={lateReports} color="warning"><AssignmentOutlinedIcon fontSize="small" /></Badge>} />
           <Tab value="solicitudes" iconPosition="start" sx={tabSx}
             icon={<Badge badgeContent={pendingRequests} color="error"><InboxIcon fontSize="small" /></Badge>}
             label={tr('Solicitudes', 'Requests')} />
@@ -224,12 +237,16 @@ const AdminShell: React.FC<{
 
       <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 1600, mx: 'auto' }}>
         {tab === 'inicio' ? (
-          <AdminHome />
+          <AdminHome extraGroups={reportTasks.groups} extraStats={reportTasks.stat} />
         ) : tab === 'misioneros' ? (
           <MissionaryDirectory
             storageUsedBytes={storageUsedBytes}
             onSaveComplete={() => setStorageRefresh((r) => r + 1)}
+            extraSections={profileSections}
+            extraSheets={async () => [reportsSheet(entries, reports)]}
           />
+        ) : tab === 'informes' ? (
+          <ReportsBoard />
         ) : tab === 'solicitudes' ? (
           <RequestTable onPendingCount={onPendingCount} />
         ) : (tab === 'recogidas' || tab === 'registros') && !conferences.current ? (

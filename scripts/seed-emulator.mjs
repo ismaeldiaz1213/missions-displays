@@ -63,8 +63,20 @@ const request = (over) => ({
   contact: { email: '', phone: '', website: '', facebook: '', instagram: '' }, status: 'pending', createdAt: days(2), ...over,
 });
 
+const report = (over) => ({
+  missionaryId: '', quarterId: '', kind: 'report', pdfPath: '', fileName: '', comments: '', submittedBy: 'missionary',
+  submittedAt: days(20), reviewedAt: null, reviewedBy: '', reviewNote: '', usedOnPage: '', ...over,
+});
+
 await env.withSecurityRulesDisabled(async (ctx) => {
   const db = ctx.firestore();
+  // Track from the 2025 reporting year so the demo has finished quarters (the real default is 2026).
+  await setDoc(doc(db, 'settings', 'reportPeriods'), { startMonth: 11, firstYear: 2025, dueDays: 15, updatedAt: days(90) });
+  await setDoc(doc(db, 'missionaryReports', 'demo-rep-1'), report({ missionaryId: 'demo-perez', quarterId: '2025-Q4',
+    comments: 'Este trimestre bautizamos a 3 personas y empezamos un estudio bíblico en un barrio nuevo. Oren por un local para reunirnos.' }));
+  await setDoc(doc(db, 'missionaryReports', 'demo-rep-2'), report({ missionaryId: 'demo-kim', quarterId: '2025-Q4', kind: 'noUpdates', submittedAt: days(25) }));
+  await setDoc(doc(db, 'missionaryReports', 'demo-rep-3'), report({ missionaryId: 'demo-perez', quarterId: '2025-Q3', comments: 'Seguimos con la obra en Lima.',
+    submittedAt: days(100), reviewedAt: days(95), reviewedBy: 'ayuda@iblibertad.org' }));
   for (const [id, m] of Object.entries(missionaries)) await setDoc(doc(db, 'missionaries', id), m);
   for (const [id, p] of Object.entries(profiles)) await setDoc(doc(db, 'missionaryProfiles', id), p);
   await setDoc(doc(db, 'missionaryDrafts', 'demo-torres'), page({ name: 'Lucas', lastName: 'Torres', organization: 'Junta de Prueba',

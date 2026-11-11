@@ -98,15 +98,16 @@ const Summary: React.FC<{ entry: DirectoryEntry; onCompleteProfile: () => void }
 const MissionaryProfileView: React.FC<{
   entry: DirectoryEntry;
   extraSections?: ProfileSection[];
+  initialSection?: string;
   onClose: () => void;
   onEditPage: () => void;
   onCompleteProfile: () => void;
   onChanged: () => void;
-}> = ({ entry, extraSections = [], onClose, onEditPage, onCompleteProfile, onChanged }) => {
+}> = ({ entry, extraSections = [], initialSection, onClose, onEditPage, onCompleteProfile, onChanged }) => {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
   const { tr } = useAdminLang();
-  const [section, setSection] = useState('summary');
+  const [section, setSection] = useState(initialSection ?? 'summary');
   const [photo, setPhoto] = useState('');
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [busy, setBusy] = useState(false);

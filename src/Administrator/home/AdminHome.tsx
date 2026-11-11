@@ -134,7 +134,7 @@ const AdminHome: React.FC<{ extraGroups?: TaskGroup[]; extraStats?: React.ReactN
       </Typography>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 1.5, mb: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(auto-fit, minmax(190px, 1fr))' }, gap: 1.5, mb: 3 }}>
         <StatTile label={tr('Misioneros publicados', 'Published missionaries')} value={published.length} onClick={() => goTab('misioneros', { filtro: 'published' })} />
         <StatTile tone="green" label={tr('Perfiles completos', 'Complete profiles')} value={`${complete.length}/${active.length}`} onClick={() => goTab('misioneros', { filtro: 'basic' })} />
         <StatTile tone={noEmail.length ? 'red' : 'green'} label={tr('Sin correo', 'No email')} value={noEmail.length} onClick={() => goTab('misioneros', { filtro: 'noEmail' })} />

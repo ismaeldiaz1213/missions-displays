@@ -77,7 +77,7 @@ const MissionaryDirectory: React.FC<{
   const setOpen = (id: string | null) => setSearchParams((p) => {
     const next = new URLSearchParams(p);
     next.set('tab', 'misioneros');
-    if (id) next.set('m', id); else next.delete('m');
+    if (id) next.set('m', id); else { next.delete('m'); next.delete('seccion'); }
     return next;
   }, { replace: !id });
 
@@ -195,6 +195,7 @@ const MissionaryDirectory: React.FC<{
           key={open.id}
           entry={open}
           extraSections={extraSections}
+          initialSection={searchParams.get('seccion') ?? undefined}
           onClose={() => setOpen(null)}
           onEditPage={() => setForm({ missionary: open.page, isDraft: open.status === 'draft' })}
           onCompleteProfile={() => setCompleting(open)}

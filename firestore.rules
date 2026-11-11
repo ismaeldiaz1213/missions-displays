@@ -135,6 +135,38 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // Quarterly reports. Every report (or "no updates") is its own document and is never
+    // deleted; admins may only mark it reviewed or record what they used on the public page.
+    function validSubmission(d) {
+      return d.keys().hasOnly(['missionaryId', 'quarterId', 'kind', 'pdfPath', 'fileName', 'comments', 'submittedBy',
+                               'submittedAt', 'reviewedAt', 'reviewedBy', 'reviewNote', 'usedOnPage'])
+        && reqStr(d.missionaryId, 100) && d.quarterId.matches('^[0-9]{4}-Q[1-4]$')
+        && d.kind in ['report', 'noUpdates']
+        && str(d.pdfPath, 300) && (d.pdfPath == '' || d.pdfPath.matches('^reports/' + d.missionaryId + '/[^/]+$'))
+        && str(d.fileName, 200) && str(d.comments, 5000) && str(d.submittedBy, 200)
+        && (d.kind == 'report' ? d.pdfPath != '' || d.comments.size() > 0 : d.pdfPath == '')
+        && d.submittedAt == request.time && d.reviewedAt == null
+        && d.reviewedBy == '' && d.reviewNote == '' && d.usedOnPage == '';
+    }
+
+    match /missionaryReports/{id} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && validSubmission(request.resource.data);
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reviewedAt', 'reviewedBy', 'reviewNote', 'usedOnPage']);
+    }
+
+    // When the reporting year starts and how many days after each quarter reports are due.
+    match /settings/reportPeriods {
+      allow read: if true;
+      allow write: if isAdmin()
+        && request.resource.data.keys().hasOnly(['startMonth', 'firstYear', 'dueDays', 'updatedAt'])
+        && request.resource.data.startMonth is int && request.resource.data.startMonth >= 1 && request.resource.data.startMonth <= 12
+        && request.resource.data.firstYear is int && request.resource.data.firstYear >= 2020 && request.resource.data.firstYear <= 2100
+        && request.resource.data.dueDays is int && request.resource.data.dueDays >= 0 && request.resource.data.dueDays <= 90
+        && request.resource.data.updatedAt == request.time;
+    }
+
     // Pages an admin "deleted": moved here so nothing is lost, and restorable.
     match /missionaryArchive/{id} {
       allow read, write: if isAdmin();
