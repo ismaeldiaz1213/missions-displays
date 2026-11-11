@@ -55,7 +55,7 @@ const CATEGORY_COLORS: Record<Category, string> = {
 const CategoryChip: React.FC<{ category: Category }> = ({ category }) => (
   <Chip label={CATEGORY_LABELS[category] ?? category} size="small" sx={{
     fontWeight: 600, fontSize: '0.75rem',
-    color: `color-mix(in srgb, ${CATEGORY_COLORS[category]} 70%, white)`,
+    color: `color-mix(in srgb, ${CATEGORY_COLORS[category]} 75%, black)`,
     bgcolor: `color-mix(in srgb, ${CATEGORY_COLORS[category]} 16%, transparent)`,
     border: `1px solid color-mix(in srgb, ${CATEGORY_COLORS[category]} 40%, transparent)`,
   }} />

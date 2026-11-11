@@ -33,6 +33,11 @@ const es = {
   wifeName: 'Nombre de su esposa (opcional)',
   email: 'Correo electrónico',
   phone: 'Teléfono / WhatsApp',
+  contactPref: '¿Cómo prefiere que nos comuniquemos con usted?',
+  contactPrefNote: 'Algún detalle (opcional)',
+  contactPrefNotePlaceholder: 'Ej. Facebook Messenger, mejor por la tarde',
+  contactMethods: { email: 'Correo', whatsapp: 'WhatsApp', phone: 'Llamada', text: 'Mensaje de texto', other: 'Otro' },
+  selectContactPref: 'Elija una opción',
 
   ministryTitle: 'Su ministerio',
   organization: 'Junta misionera',
@@ -135,6 +140,11 @@ const en: RequestStrings = {
   wifeName: "Your wife's name (optional)",
   email: 'Email',
   phone: 'Phone / WhatsApp',
+  contactPref: 'How would you like us to reach you?',
+  contactPrefNote: 'Any details (optional)',
+  contactPrefNotePlaceholder: 'E.g. Facebook Messenger, afternoons are best',
+  contactMethods: { email: 'Email', whatsapp: 'WhatsApp', phone: 'Phone call', text: 'Text message', other: 'Other' },
+  selectContactPref: 'Choose one',
 
   ministryTitle: 'Your ministry',
   organization: 'Mission board',

@@ -39,16 +39,14 @@ const PickupMap: React.FC<{ stops: MapStop[]; height?: number }> = ({ stops, hei
 
   return (
     <Box sx={{
-      height, borderRadius: '12px', overflow: 'hidden', border: '1px solid #2f2f2f',
-      '& .ibl-pickup-tiles': { filter: 'brightness(0.78) saturate(0.85)' },
-      '& .leaflet-container': { bgcolor: '#101010' },
+      height, borderRadius: '12px', overflow: 'hidden', border: '1px solid #E2E8F0',
+      '& .leaflet-container': { bgcolor: '#EEF2F7' },
     }}>
       <MapContainer bounds={bounds} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
-        {/* Plain OpenStreetMap tiles: free and key-less. Dimmed to match the dark admin theme. */}
+        {/* Plain OpenStreetMap tiles: free and key-less. */}
         <TileLayer
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          className="ibl-pickup-tiles"
         />
         {stops.map((s, i) => (
           <React.Fragment key={s.key}>

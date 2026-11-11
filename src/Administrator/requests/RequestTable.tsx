@@ -6,15 +6,17 @@ import {
   useMediaQuery, useTheme,
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import DeleteIcon from '@mui/icons-material/Delete';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
 import {
-  approveMissionaryRequest, deleteMissionaryRequest, listMissionaryRequests, listRequestFiles, setRequestStatus,
+  approveMissionaryRequest, archiveMissionaryRequest, listMissionaryRequests, listRequestFiles, setRequestStatus,
   type MissionaryRequest, type RequestFileKind, type RequestStatus,
 } from '../../data/missionaryRequests';
 import type { StoredFile } from '../../data/storageFiles';
 import { DetailGroup, StoredFileList } from '../shared';
+import { CONTACT_METHOD_LABELS } from '../../data/missionaryProfiles';
+import { currentUserEmail } from '../../data/currentUser';
 
 export const REQUEST_FORM_PATH = '/misioneros/solicitud';
 
@@ -43,7 +45,7 @@ const FILE_GROUPS: [RequestFileKind, string][] = [
 const StatusChip: React.FC<{ status: RequestStatus }> = ({ status }) => (
   <Chip label={STATUS[status].label} size="small" sx={{
     fontWeight: 600, fontSize: '0.75rem',
-    color: `color-mix(in srgb, ${STATUS[status].color} 70%, white)`,
+    color: `color-mix(in srgb, ${STATUS[status].color} 75%, black)`,
     bgcolor: `color-mix(in srgb, ${STATUS[status].color} 16%, transparent)`,
     border: `1px solid color-mix(in srgb, ${STATUS[status].color} 40%, transparent)`,
   }} />
@@ -81,7 +83,7 @@ const RequestDetail: React.FC<{
   const approve = async () => {
     setError('');
     try {
-      const draft = await approveMissionaryRequest(r, setBusy);
+      const draft = await approveMissionaryRequest(r, currentUserEmail(), setBusy);
       onChanged();
       openDraft(draft.id);
     } catch (err) {
@@ -117,6 +119,7 @@ const RequestDetail: React.FC<{
         <DetailGroup title="Contacto (privado)" rows={[
           ['Correo', r.email],
           ['Teléfono', r.phone],
+          ['Prefiere', r.preferredContact ? CONTACT_METHOD_LABELS[r.preferredContact].es + (r.preferredContactNote ? ` · ${r.preferredContactNote}` : '') : ''],
           ['Esposa', r.wifeName],
           ['Idioma', r.language === 'en' ? 'Inglés' : 'Español'],
           ['Enviada', formatDate(r.createdAt)],
@@ -171,8 +174,8 @@ const RequestDetail: React.FC<{
         {error && <Typography color="error.main" variant="body2" sx={{ mt: 2 }}>{error}</Typography>}
       </DialogContent>
       <DialogActions sx={{ flexWrap: 'wrap', gap: 1, p: 2 }}>
-        <Button onClick={onDelete} disabled={!!busy} startIcon={<DeleteIcon />} sx={{ color: 'error.main', textTransform: 'none', mr: 'auto' }}>
-          Eliminar
+        <Button onClick={onDelete} disabled={!!busy} startIcon={<Inventory2OutlinedIcon />} sx={{ color: 'text.secondary', textTransform: 'none', mr: 'auto' }}>
+          {r.archived ? 'Sacar del archivo' : 'Archivar'}
         </Button>
         <Button onClick={onClose} disabled={!!busy} sx={{ textTransform: 'none' }}>Cerrar</Button>
         {r.status !== 'approved' && (
@@ -206,7 +209,7 @@ const RequestTable: React.FC<{ onPendingCount?: (n: number) => void }> = ({ onPe
   const [requests, setRequests] = useState<MissionaryRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
-  const [filter, setFilter] = useState<RequestStatus | 'all'>('pending');
+  const [filter, setFilter] = useState<RequestStatus | 'all' | 'archived'>('pending');
   const [viewing, setViewing] = useState<MissionaryRequest | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MissionaryRequest | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -220,7 +223,7 @@ const RequestTable: React.FC<{ onPendingCount?: (n: number) => void }> = ({ onPe
       const data = (await listMissionaryRequests()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       setRequests(data);
       setViewing((v) => (v ? data.find((r) => r.id === v.id) ?? null : null));
-      onPendingCount?.(data.filter((r) => r.status === 'pending').length);
+      onPendingCount?.(data.filter((r) => r.status === 'pending' && !r.archived).length);
     } catch (err) {
       setApiError(String(err));
     } finally {
@@ -230,18 +233,24 @@ const RequestTable: React.FC<{ onPendingCount?: (n: number) => void }> = ({ onPe
 
   useEffect(() => { load(); }, [load]);
 
-  const filtered = useMemo(() => requests.filter((r) => filter === 'all' || r.status === filter), [requests, filter]);
-  const counts = useMemo(() => ({
-    pending: requests.filter((r) => r.status === 'pending').length,
-    approved: requests.filter((r) => r.status === 'approved').length,
-    rejected: requests.filter((r) => r.status === 'rejected').length,
-  }), [requests]);
+  // Archived requests only show under "Archivadas"; nothing is ever deleted.
+  const filtered = useMemo(() => requests.filter((r) => (filter === 'archived'
+    ? r.archived : !r.archived && (filter === 'all' || r.status === filter))), [requests, filter]);
+  const counts = useMemo(() => {
+    const live = requests.filter((r) => !r.archived);
+    return {
+      pending: live.filter((r) => r.status === 'pending').length,
+      approved: live.filter((r) => r.status === 'approved').length,
+      rejected: live.filter((r) => r.status === 'rejected').length,
+      archived: requests.length - live.length,
+    };
+  }, [requests]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await deleteMissionaryRequest(deleteTarget.id);
+      await archiveMissionaryRequest(deleteTarget.id, !deleteTarget.archived);
       setDeleteTarget(null);
       setViewing(null);
       load();
@@ -270,12 +279,13 @@ const RequestTable: React.FC<{ onPendingCount?: (n: number) => void }> = ({ onPe
           <ToggleButton value="approved" sx={{ textTransform: 'none' }}>Aprobadas ({counts.approved})</ToggleButton>
           <ToggleButton value="rejected" sx={{ textTransform: 'none' }}>Rechazadas ({counts.rejected})</ToggleButton>
           <ToggleButton value="all" sx={{ textTransform: 'none' }}>Todas</ToggleButton>
+          <ToggleButton value="archived" sx={{ textTransform: 'none' }}>Archivadas ({counts.archived})</ToggleButton>
         </ToggleButtonGroup>
         <IconButton onClick={load} disabled={loading} title="Actualizar"><RefreshIcon /></IconButton>
       </Box>
 
       {apiError && (
-        <Box sx={{ bgcolor: '#2a1a1a', border: '1px solid #5a2a2a', borderRadius: 1, p: 2, mb: 2 }}>
+        <Box sx={{ bgcolor: '#FEE2E2', border: '1px solid #FECACA', borderRadius: 2, p: 2, mb: 2 }}>
           <Typography color="error.main" variant="body2">{apiError}</Typography>
         </Box>
       )}
@@ -312,17 +322,18 @@ const RequestTable: React.FC<{ onPendingCount?: (n: number) => void }> = ({ onPe
       )}
 
       <Dialog open={!!deleteTarget} onClose={() => !deleting && setDeleteTarget(null)}>
-        <DialogTitle>¿Eliminar solicitud?</DialogTitle>
+        <DialogTitle>{deleteTarget?.archived ? '¿Sacar del archivo?' : '¿Archivar solicitud?'}</DialogTitle>
         <DialogContent>
           <Typography>
-            Se eliminará la solicitud de <strong>{deleteTarget && fullName(deleteTarget)}</strong> y los archivos que subió.
-            {deleteTarget?.status === 'approved' && ' El borrador o la página ya creada no se verán afectados.'}
+            {deleteTarget?.archived
+              ? <>La solicitud de <strong>{fullName(deleteTarget)}</strong> vuelve a la lista.</>
+              : <>La solicitud de <strong>{deleteTarget && fullName(deleteTarget)}</strong> se oculta de la lista. No se borra nada: la solicitud y sus archivos quedan guardados en "Archivadas".</>}
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancelar</Button>
-          <Button color="error" variant="contained" onClick={handleDelete} disabled={deleting}>
-            {deleting ? <CircularProgress size={16} /> : 'Eliminar'}
+          <Button variant="contained" onClick={handleDelete} disabled={deleting}>
+            {deleting ? <CircularProgress size={16} /> : deleteTarget?.archived ? 'Sacar del archivo' : 'Archivar'}
           </Button>
         </DialogActions>
       </Dialog>

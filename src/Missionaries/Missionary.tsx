@@ -109,12 +109,16 @@ const HeroPill: React.FC<{ icon: React.ReactNode; children: React.ReactNode }> =
 
 interface Action { key: string; label: string; railLabel: string; icon: React.ReactNode; onClick: () => void; section?: string }
 
-const Missionary: React.FC = () => {
-  const { missionary: missionaryId } = useParams<{ missionary: string }>();
+/** The public missionary page. With `preview`, it shows that data instead of loading it (admin previews). */
+const Missionary: React.FC<{ preview?: MissionaryType }> = ({ preview }) => {
+  const { missionary: routeId } = useParams<{ missionary: string }>();
+  const missionaryId = preview ? undefined : routeId;
   const navigate = useNavigate();
 
   // Saved copy first (instant on slow Wi-Fi), then refreshed from the network
-  const { data, loading, error } = useCachedLoad(missionaryId ? `missionary:${missionaryId}` : null, () => getMissionary(missionaryId!));
+  const loaded = useCachedLoad(missionaryId ? `missionary:${missionaryId}` : null, () => getMissionary(missionaryId!));
+  const data = preview ?? loaded.data;
+  const { loading, error } = loaded;
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [letterOpen, setLetterOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -124,7 +128,7 @@ const Missionary: React.FC = () => {
 
   const m: MissionaryType = { ...DEFAULTS, ...data };
   const pageName = [data?.name, data?.lastName].filter(Boolean).join(' ');
-  usePageTitle(pageName ? `${pageName}${data?.location?.country ? ` (${data.location.country.trim()})` : ''}` : 'Misionero');
+  usePageTitle(preview ? null : pageName ? `${pageName}${data?.location?.country ? ` (${data.location.country.trim()})` : ''}` : 'Misionero');
 
   useEffect(() => {
     resolveUrl(m.profileImage, '').then(setProfileUrl);

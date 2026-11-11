@@ -19,6 +19,7 @@ import {
   type ContinentId, type MissionaryRequestInput, type RequestFileKind,
 } from '../data/missionaryRequests';
 import MissionaryPageInfo from './MissionaryPageInfo';
+import { CONTACT_METHODS } from '../data/missionaryProfiles';
 import { REQUEST_PAGE_TITLES, REQUEST_STRINGS, type RequestStrings } from './requestI18n';
 
 type FormState = Omit<MissionaryRequestInput, 'language' | 'continent'> & { continent: ContinentId | '' };
@@ -30,7 +31,7 @@ const continentFromUrl = (): ContinentId | '' => {
 };
 
 const initialForm = (): FormState => ({
-  name: '', lastName: '', wifeName: '', email: '', phone: '',
+  name: '', lastName: '', wifeName: '', email: '', phone: '', preferredContact: undefined, preferredContactNote: '',
   organization: '', sendingChurch: '', missionType: '', startYear: '',
   continent: continentFromUrl(), city: '', state: '', country: '',
   description: '', prayerRequests: '',
@@ -53,6 +54,7 @@ const validate = (f: FormState, t: RequestStrings) => {
   req('email', f.email);
   if (f.email && !EMAIL_RE.test(f.email.trim())) e.email = t.invalidEmail;
   req('phone', f.phone);
+  if (!f.preferredContact) e.preferredContact = t.selectContactPref;
   req('organization', f.organization);
   req('sendingChurch', f.sendingChurch);
   if (!f.continent) e.continent = t.selectContinent;
@@ -258,6 +260,14 @@ const MissionaryRequest: React.FC = () => {
           {text('phone', t.phone, { required: true, type: 'tel', autoComplete: 'tel' })}
           <Box sx={{ gridColumn: '1 / -1' }}>{text('wifeName', t.wifeName)}</Box>
         </Box>
+        <Typography sx={{ color: 'var(--ibl-text)', fontWeight: 700, mt: 2.5, mb: 1 }}>{t.contactPref}</Typography>
+        <Box id="req-preferredContact" role="radiogroup" aria-label={t.contactPref} sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(5, minmax(0, 1fr))' }, gap: 1.25 }}>
+          {CONTACT_METHODS.map((m) => (
+            <ChoiceCard key={m} selected={form.preferredContact === m} onClick={() => set({ preferredContact: m })} title={t.contactMethods[m]} error={!!errors.preferredContact} />
+          ))}
+        </Box>
+        {errors.preferredContact && <Typography sx={errorTextSx}>{errors.preferredContact}</Typography>}
+        <Box sx={{ mt: 2 }}>{text('preferredContactNote', t.contactPrefNote, { placeholder: t.contactPrefNotePlaceholder })}</Box>
       </FormSection>
 
       <FormSection step={++step} title={t.ministryTitle}>

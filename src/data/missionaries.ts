@@ -1,4 +1,6 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore/lite';
+import {
+  addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where,
+} from 'firebase/firestore/lite';
 import { db } from '../firebase';
 import type { Missionary } from '../types';
 
@@ -88,3 +90,60 @@ export const saveDraft = (m: Missionary) =>
   setDoc(doc(draftsCol, m.id), JSON.parse(JSON.stringify(m)));
 
 export const deleteDraft = (id: string) => deleteDoc(doc(draftsCol, id));
+
+// ── Admin directory, history and archive (admin-only in firestore.rules) ─────
+
+const historyCol = (id: string) => collection(db, 'missionaryHistory', id, 'versions');
+// "Deleted" pages are moved here, never destroyed; their files stay in Storage.
+const archiveCol = collection(db, 'missionaryArchive');
+
+/** Fresh from the server (no device cache): every published page and every draft. */
+export const listForAdmin = async () => {
+  const [pub, drafts] = await Promise.all([getDocs(missionariesCol), getDocs(draftsCol)]);
+  return {
+    published: pub.docs.map((d) => toMissionary(d.id, d.data())),
+    drafts: drafts.docs.map((d) => toMissionary(d.id, d.data())),
+  };
+};
+
+export interface ArchivedMissionary { page: Missionary; wasDraft: boolean; archivedAt: string; archivedBy: string }
+
+export const listArchived = async (): Promise<ArchivedMissionary[]> => {
+  const snap = await getDocs(archiveCol);
+  return snap.docs.map((d) => {
+    const data = d.data();
+    const at = data.archivedAt as { toDate?: () => Date } | undefined;
+    return {
+      page: toMissionary(d.id, data.page ?? {}),
+      wasDraft: !!data.wasDraft,
+      archivedAt: at?.toDate ? at.toDate().toISOString() : '',
+      archivedBy: String(data.archivedBy ?? ''),
+    };
+  });
+};
+
+/** Saves the current published page to missionaryHistory before it is replaced, so it can be restored. */
+export const snapshotPublished = async (id: string, savedBy: string, reason: string) => {
+  const current = await getDoc(doc(missionariesCol, id));
+  if (!current.exists()) return;
+  await addDoc(historyCol(id), { ...current.data(), savedAt: serverTimestamp(), savedBy, reason });
+};
+
+/** Publishes a page, keeping the version it replaces in history. */
+export const publishWithHistory = async (m: Missionary, savedBy: string, reason = 'admin-edit') => {
+  await snapshotPublished(m.id, savedBy, reason);
+  await saveMissionary(m);
+};
+
+/** Hides a page from the site without losing anything: it moves to missionaryArchive. */
+export const archiveMissionary = async (m: Missionary, wasDraft: boolean, archivedBy: string) => {
+  const page = JSON.parse(JSON.stringify(m));
+  delete page.id;
+  await setDoc(doc(archiveCol, m.id), { page, wasDraft, archivedAt: serverTimestamp(), archivedBy });
+  await (wasDraft ? deleteDraft(m.id) : deleteMissionary(m.id));
+};
+
+export const restoreMissionary = async (a: ArchivedMissionary) => {
+  await (a.wasDraft ? saveDraft(a.page) : saveMissionary(a.page));
+  await deleteDoc(doc(archiveCol, a.page.id));
+};

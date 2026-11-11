@@ -23,12 +23,12 @@ import {
 const WINDOW_OPTIONS = [60, 90, 120, 180];
 
 const cardSx = {
-  p: 2.5, bgcolor: '#151515', border: '1px solid #2a2a2a', borderRadius: '14px',
+  p: 2.5, bgcolor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px',
 };
 
 const Stat: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <Paper sx={{ ...cardSx, p: 2, minWidth: 120, flex: '1 1 120px' }}>
-    <Typography sx={{ color: '#888', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</Typography>
+    <Typography sx={{ color: 'text.secondary', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</Typography>
     <Typography sx={{ fontWeight: 800, fontSize: '1.4rem' }}>{value}</Typography>
   </Paper>
 );
@@ -52,7 +52,7 @@ const TripCard: React.FC<{ trip: Trip; index: number; driveMinutes: number; esti
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 1.5 }}>
           <Chip label={`Viaje ${index + 1}`} size="small" sx={{ bgcolor: '#2563EB', color: '#fff', fontWeight: 700 }} />
           <Typography sx={{ fontWeight: 700, flexGrow: 1 }}>{trip.place.label}</Typography>
-          <Chip label={`${trip.seats} persona${trip.seats === 1 ? '' : 's'}`} size="small" variant="outlined" sx={{ borderColor: '#444', color: '#bbb' }} />
+          <Chip label={`${trip.seats} persona${trip.seats === 1 ? '' : 's'}`} size="small" variant="outlined" sx={{ borderColor: '#CBD5E1', color: '#475569' }} />
           <Button size="small" startIcon={<MapIcon />} href={directionsUrl(coords, trip.place.label)} target="_blank" rel="noopener"
             sx={{ textTransform: 'none' }}>
             Cómo llegar
@@ -85,11 +85,11 @@ const TripCard: React.FC<{ trip: Trip; index: number; driveMinutes: number; esti
 
         {/* Scrolls sideways on a phone instead of stretching the card */}
         <TableContainer sx={{ overflowX: 'auto' }}>
-        <Table size="small" sx={{ minWidth: 520, '& td, & th': { borderColor: '#2a2a2a' } }}>
+        <Table size="small" sx={{ minWidth: 520, '& td, & th': { borderColor: '#E2E8F0' } }}>
           <TableHead>
             <TableRow>
               {['Nombre', 'Llegada', 'Detalle', 'Pers.', 'Teléfono'].map((h) => (
-                <TableCell key={h} sx={{ color: '#888', fontWeight: 700, fontSize: '0.75rem' }}>{h}</TableCell>
+                <TableCell key={h} sx={{ color: 'text.secondary', fontWeight: 700, fontSize: '0.75rem' }}>{h}</TableCell>
               ))}
             </TableRow>
           </TableHead>
@@ -100,10 +100,10 @@ const TripCard: React.FC<{ trip: Trip; index: number; driveMinutes: number; esti
                 <TableRow key={r.id}>
                   <TableCell sx={{ fontWeight: 600 }}>
                     {l.name}
-                    {l.notes && <Typography sx={{ color: '#888', fontSize: '0.75rem' }}>{l.notes}</Typography>}
+                    {l.notes && <Typography sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>{l.notes}</Typography>}
                   </TableCell>
                   <TableCell>{l.time || '—'}</TableCell>
-                  <TableCell sx={{ color: '#bbb' }}>{l.detail}</TableCell>
+                  <TableCell sx={{ color: '#475569' }}>{l.detail}</TableCell>
                   <TableCell align="center">{l.seats}</TableCell>
                   <TableCell>
                     {l.phone && (
@@ -216,7 +216,7 @@ const PickupBoard: React.FC<Props> = ({ conferences, archive, onSelectConference
         <Typography variant="h6" sx={{ fontWeight: 700, flexGrow: 1 }}>Recogidas</Typography>
         <Tooltip title="Arribos dentro de esta ventana se juntan en un solo viaje">
           <Select size="small" value={windowMinutes} onChange={(e) => setWindowMinutes(Number(e.target.value))}
-            sx={{ minWidth: 150, bgcolor: '#151515' }}>
+            sx={{ minWidth: 150, bgcolor: '#FFFFFF' }}>
             {WINDOW_OPTIONS.map((m) => <MenuItem key={m} value={m}>Ventana de {m} min</MenuItem>)}
           </Select>
         </Tooltip>
@@ -240,13 +240,13 @@ const PickupBoard: React.FC<Props> = ({ conferences, archive, onSelectConference
 
       {!trips.length ? (
         <Paper sx={{ ...cardSx, textAlign: 'center', py: 6 }}>
-          <DirectionsCarIcon sx={{ fontSize: 48, color: '#444', mb: 1 }} />
-          <Typography sx={{ color: '#888' }}>{archive ? 'Nadie pidió transporte en esta conferencia.' : 'Todavía nadie ha pedido transporte.'}</Typography>
+          <DirectionsCarIcon sx={{ fontSize: 48, color: '#CBD5E1', mb: 1 }} />
+          <Typography sx={{ color: 'text.secondary' }}>{archive ? 'Nadie pidió transporte en esta conferencia.' : 'Todavía nadie ha pedido transporte.'}</Typography>
         </Paper>
       ) : (
         <>
           <Tabs value={activeDay} onChange={(_, v) => setDay(v)} variant="scrollable" allowScrollButtonsMobile
-            sx={{ mb: 2, borderBottom: '1px solid #2a2a2a' }}>
+            sx={{ mb: 2, borderBottom: '1px solid #E2E8F0' }}>
             {days.map((d) => (
               <Tab key={d} value={d} sx={{ textTransform: 'none', fontWeight: 600 }}
                 label={d === 'sin-fecha' ? 'Sin fecha' : formatConferenceDay(d, { weekday: 'long', day: 'numeric', month: 'long' })} />
@@ -256,7 +256,7 @@ const PickupBoard: React.FC<Props> = ({ conferences, archive, onSelectConference
           {stops.length > 0 && (
             <Card sx={{ ...cardSx, p: 1.5, mb: 2 }}>
               <PickupMap stops={stops} />
-              <Typography sx={{ color: '#888', fontSize: '0.78rem', mt: 1 }}>
+              <Typography sx={{ color: 'text.secondary', fontSize: '0.78rem', mt: 1 }}>
                 ⛪ {CHURCH.label} ({CHURCH.address}). Los números marcan cada lugar de recogida de este día.
               </Typography>
             </Card>
@@ -270,7 +270,7 @@ const PickupBoard: React.FC<Props> = ({ conferences, archive, onSelectConference
             );
           })}
 
-          <Divider sx={{ my: 2, borderColor: '#2a2a2a' }} />
+          <Divider sx={{ my: 2, borderColor: '#E2E8F0' }} />
           <Typography sx={{ color: '#777', fontSize: '0.8rem' }}>
             Los tiempos de viaje a los aeropuertos están guardados en <code>pickupData.ts</code>; los demás lugares se estiman por distancia
             en línea recta. Ajuste la ventana si prefiere más viajes cortos o menos viajes largos.

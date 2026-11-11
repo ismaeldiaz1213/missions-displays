@@ -11,8 +11,10 @@ import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import CloseIcon from '@mui/icons-material/Close';
-import { removeFile, uploadFile } from '../data/storageFiles';
-import { deleteDraft, saveDraft, saveMissionary } from '../data/missionaries';
+import { uploadFile } from '../data/storageFiles';
+import { deleteDraft, publishWithHistory, saveDraft } from '../data/missionaries';
+import { currentUserEmail } from '../data/currentUser';
+import CityPicker from '../ui/CityPicker';
 import type { Missionary, ContactInfo } from '../types';
 import { formatBytes } from './formatBytes';
 import { isVideoPath, resolveUrl } from '../storageUrl';
@@ -41,7 +43,7 @@ interface Props {
   storageUsedBytes: number;
   /** Editing an unpublished draft: "Guardar" keeps it hidden, "Publicar" makes it public. */
   isDraft?: boolean;
-  onSave: () => void;
+  onSave: (saved: Missionary) => void;
   onClose: () => void;
 }
 
@@ -63,8 +65,6 @@ const emptyForm = (continent: string): FormData => ({
   missionType: '',
 });
 
-// Only attempt S3 deletion for paths that look like S3 storage keys (not local/http paths)
-const isS3Key = (p?: string) => !!p && !p.startsWith('/') && !p.startsWith('http');
 
 const MissionaryForm: React.FC<Props> = ({
   open, missionary, defaultContinent, storageUsedBytes, isDraft = false, onSave, onClose,
@@ -85,6 +85,7 @@ const MissionaryForm: React.FC<Props> = ({
   const [saveStep, setSaveStep] = useState('');
   const [savedOk, setSavedOk] = useState(false);
   const [published, setPublished] = useState(false);
+  const savedPage = useRef<Missionary | null>(null);
   const lastPublishAttempt = useRef(false); // so "Reintentar" repeats a failed publish, not a plain save
   const [fileError, setFileError] = useState('');   // inline — file type/size issues
   const [saveError, setSaveError] = useState('');   // dialog — shown when save fails
@@ -96,10 +97,8 @@ const MissionaryForm: React.FC<Props> = ({
     return 'full';
   });
 
-  // Track paths to delete from S3 on save
-  const [profileToRemove, setProfileToRemove] = useState<string | null>(null);
-  const [prayerToRemove, setPrayerToRemove] = useState<string | null>(null);
-  const [mediaToRemove, setMediaToRemove] = useState<string[]>([]);
+  // Files taken off the page are only unlinked, never deleted: older versions in history still use them.
+  const [filesUnlinked, setFilesUnlinked] = useState(false);
 
   const profileRef = useRef<HTMLInputElement>(null);
   const prayerRef = useRef<HTMLInputElement>(null);
@@ -131,9 +130,6 @@ const MissionaryForm: React.FC<Props> = ({
   const set = (field: keyof FormData, value: unknown) =>
     setForm((f) => ({ ...f, [field]: value }));
 
-  const setLocation = (field: keyof FormData['location'], value: string | number) =>
-    setForm((f) => ({ ...f, location: { ...f.location, [field]: value } }));
-
   const addContact = () =>
     setForm((f) => ({ ...f, contactInfo: [...f.contactInfo, { type: 'email', value: '' }] }));
 
@@ -148,19 +144,19 @@ const MissionaryForm: React.FC<Props> = ({
     setForm((f) => ({ ...f, contactInfo: f.contactInfo.filter((_, idx) => idx !== i) }));
 
   const removeCurrentProfileImage = () => {
-    if (form.profileImage) setProfileToRemove(form.profileImage);
+    setFilesUnlinked(true);
     set('profileImage', '');
     setProfileFile(null);
   };
 
   const removeCurrentPrayerLetter = () => {
-    if (form.prayerLetter) setPrayerToRemove(form.prayerLetter);
+    setFilesUnlinked(true);
     set('prayerLetter', '');
     setPrayerFile(null);
   };
 
   const removeMediaItem = (url: string) => {
-    setMediaToRemove((prev) => [...prev, url]);
+    setFilesUnlinked(true);
     setForm((f) => ({ ...f, media: f.media.filter((u) => u !== url) }));
   };
 
@@ -189,14 +185,11 @@ const MissionaryForm: React.FC<Props> = ({
     setSaveStep('Preparando...');
 
     // Calculate total weighted steps for progress tracking
-    const hasDeletes = (profileToRemove && isS3Key(profileToRemove)) ||
-      (prayerToRemove && isS3Key(prayerToRemove)) || mediaToRemove.some(isS3Key);
     const totalUploads = (profileFile ? 1 : 0) + (prayerFile ? 1 : 0) + mediaFiles.length;
     // Weights: deletes=5, each upload=15 (capped so API call always gets 20)
     const uploadWeight = totalUploads > 0 ? Math.min(15, 60 / totalUploads) : 0;
-    const deleteWeight = hasDeletes ? 5 : 0;
     const apiWeight = 20;
-    const totalWeight = deleteWeight + totalUploads * uploadWeight + apiWeight;
+    const totalWeight = totalUploads * uploadWeight + apiWeight;
     let done = 0;
     const advance = (weight: number, label: string) => {
       done += weight;
@@ -205,23 +198,6 @@ const MissionaryForm: React.FC<Props> = ({
     };
 
     try {
-      // Delete removed files from S3
-      if (hasDeletes) {
-        setSaveStep('Eliminando archivos anteriores...');
-        if (profileToRemove && isS3Key(profileToRemove)) {
-          try { await removeFile(profileToRemove); } catch (e) { console.warn('S3 delete skipped:', e); }
-        }
-        if (prayerToRemove && isS3Key(prayerToRemove)) {
-          try { await removeFile(prayerToRemove); } catch (e) { console.warn('S3 delete skipped:', e); }
-        }
-        for (const path of mediaToRemove) {
-          if (isS3Key(path)) {
-            try { await removeFile(path); } catch (e) { console.warn('S3 delete skipped:', e); }
-          }
-        }
-        advance(deleteWeight, 'Archivos eliminados.');
-      }
-
       let profileImage = form.profileImage;
       let prayerLetter = form.prayerLetter;
       const media = [...form.media];
@@ -258,9 +234,11 @@ const MissionaryForm: React.FC<Props> = ({
       if (isDraft && !publish) {
         await saveDraft(payload);
       } else {
-        await saveMissionary(payload);
+        // The version being replaced is kept in history so it can be restored.
+        await publishWithHistory(payload, currentUserEmail(), isDraft ? 'published-draft' : 'admin-edit');
         if (isDraft) await deleteDraft(id);
       }
+      savedPage.current = payload;
       setPublished(publish);
       advance(apiWeight, '¡Guardado!');
       setSaveProgress(100);
@@ -273,8 +251,7 @@ const MissionaryForm: React.FC<Props> = ({
   };
 
   const requiredFilled = !!form.name.trim() && !!form.lastName.trim() && !!form.organization.trim() && !!form.location.city.trim();
-  const filesChanged = !!profileFile || !!prayerFile || mediaFiles.length > 0
-    || profileToRemove !== null || prayerToRemove !== null || mediaToRemove.length > 0;
+  const filesChanged = !!profileFile || !!prayerFile || mediaFiles.length > 0 || filesUnlinked;
   const formChanged = stableStringify(form) !== initialForm.current;
   const canSave = requiredFilled && (formChanged || filesChanged);
   const canPublish = isDraft && requiredFilled;
@@ -282,15 +259,8 @@ const MissionaryForm: React.FC<Props> = ({
   const captionSx = { fontSize: isMobile ? '0.9rem' : '0.75rem', fontWeight: 600 };
 
   const inputSx = {
-    '& .MuiOutlinedInput-root': {
-      color: '#fff',
-      '& fieldset': { borderColor: '#555' },
-      '&.Mui-error fieldset': { borderColor: '#ef5350' },
-      '& input, & textarea': { fontSize: isMobile ? '1.05rem' : undefined },
-    },
-    '& .MuiInputLabel-root': { color: '#aaa', fontSize: isMobile ? '1rem' : undefined },
-    '& .MuiInputLabel-root.Mui-error': { color: '#ef9a9a' },
-    '& .MuiFormHelperText-root.Mui-error': { color: '#ef9a9a' },
+    '& .MuiOutlinedInput-root': { '& input, & textarea': { fontSize: isMobile ? '1.05rem' : undefined } },
+    '& .MuiInputLabel-root': { fontSize: isMobile ? '1rem' : undefined },
     '& .MuiSelect-select': { fontSize: isMobile ? '1.05rem' : undefined },
   };
 
@@ -300,10 +270,10 @@ const MissionaryForm: React.FC<Props> = ({
   return (
     <>
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth fullScreen={isMobile}
-      PaperProps={{ sx: { bgcolor: '#1a1a1a', color: '#fff' } }}>
-      <DialogTitle sx={{ borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', fontSize: { xs: '1.25rem', sm: '1.5rem' }, fontWeight: 700 }}>
+      PaperProps={{ sx: { bgcolor: 'background.paper' } }}>
+      <DialogTitle sx={{ borderBottom: '1px solid var(--ibl-border)', display: 'flex', alignItems: 'center', fontSize: { xs: '1.25rem', sm: '1.5rem' }, fontWeight: 700 }}>
         <Box sx={{ flex: 1 }}>{isDraft ? 'Editar Borrador' : missionary ? 'Editar Misionero' : 'Añadir Misionero'}</Box>
-        <IconButton onClick={onClose} size="small" sx={{ color: '#ef5350', '&:hover': { bgcolor: 'rgba(239,83,80,0.12)' } }}>
+        <IconButton onClick={onClose} size="small" sx={{ color: 'text.secondary' }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
@@ -312,17 +282,17 @@ const MissionaryForm: React.FC<Props> = ({
       {uploading && (
         <Box sx={{ px: 3, pt: 1.5, pb: 1 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.75 }}>
-            <Typography variant="caption" sx={{ color: '#90caf9', fontWeight: 600, fontSize: '0.85rem' }}>
+            <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 600, fontSize: '0.85rem' }}>
               {saveStep}
             </Typography>
-            <Typography variant="caption" sx={{ color: '#666', fontWeight: 600 }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
               {saveProgress}%
             </Typography>
           </Box>
           <LinearProgress
             variant="determinate"
             value={saveProgress}
-            sx={{ height: 6, borderRadius: 3, bgcolor: '#2a2a2a', '& .MuiLinearProgress-bar': { borderRadius: 3 } }}
+            sx={{ height: 6, borderRadius: 3, bgcolor: 'grey.100', '& .MuiLinearProgress-bar': { borderRadius: 3 } }}
           />
         </Box>
       )}
@@ -333,7 +303,7 @@ const MissionaryForm: React.FC<Props> = ({
           {/* Required fields legend — hidden once all required fields are filled */}
           {!requiredFilled && (
             <Box sx={{ bgcolor: 'rgba(239,83,80,0.1)', border: '1px solid rgba(239,83,80,0.3)', borderRadius: 1.5, px: 2, py: 1 }}>
-              <Typography variant="caption" sx={{ color: '#ef9a9a', ...captionSx }}>
+              <Typography variant="caption" sx={{ color: 'error.main', ...captionSx }}>
                 * Campos obligatorios — deben llenarse para poder guardar
               </Typography>
             </Box>
@@ -352,7 +322,7 @@ const MissionaryForm: React.FC<Props> = ({
               InputLabelProps={{ sx: { '& .MuiFormLabel-asterisk': { color: '#ef5350' } } }} />
             <TextField label="Tipo de Misión" value={form.missionType} onChange={(e) => set('missionType', e.target.value)} sx={inputSx} />
             <Box>
-              <Typography variant="caption" sx={{ color: '#aaa', fontSize: isMobile ? '0.9rem' : '0.75rem', display: 'block', mb: 0.75 }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: isMobile ? '0.9rem' : '0.75rem', display: 'block', mb: 0.75 }}>
                 Fecha de inicio en misión
               </Typography>
               <ToggleButtonGroup
@@ -380,11 +350,11 @@ const MissionaryForm: React.FC<Props> = ({
                 sx={{
                   mb: 1,
                   '& .MuiToggleButton-root': {
-                    color: '#aaa', borderColor: '#555',
+                    color: 'text.secondary', borderColor: 'divider',
                     fontSize: isMobile ? '0.85rem' : '0.72rem',
                     py: isMobile ? 1.25 : 0.5,
                     flex: 1,
-                    '&.Mui-selected': { color: '#90caf9', borderColor: '#90caf9', bgcolor: 'rgba(144,202,249,0.1)' },
+                    '&.Mui-selected': { color: 'primary.main', borderColor: '#90caf9', bgcolor: 'rgba(144,202,249,0.1)' },
                   },
                 }}
               >
@@ -432,27 +402,17 @@ const MissionaryForm: React.FC<Props> = ({
             <FormControl sx={inputSx}>
               <InputLabel>Continente</InputLabel>
               <Select value={form.continent} label="Continente" onChange={(e) => set('continent', e.target.value)}
-                sx={{ color: '#fff' }}>
+                sx={{}}>
                 {CONTINENTS.map((c) => <MenuItem key={c.value} value={c.value}>{c.label}</MenuItem>)}
               </Select>
             </FormControl>
           </Box>
 
           {/* Location */}
-          <Divider sx={{ borderColor: '#333' }}>
-            <Typography variant="caption" color="#aaa" sx={captionSx}>Ubicación</Typography>
+          <Divider>
+            <Typography variant="caption" color="text.secondary" sx={captionSx}>Ubicación</Typography>
           </Divider>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-            <TextField label="Ciudad *" value={form.location.city} onChange={(e) => setLocation('city', e.target.value)} sx={inputSx}
-              error={reqErr(form.location.city)} helperText={reqErr(form.location.city) ? 'Obligatorio' : ''}
-              InputLabelProps={{ sx: { '& .MuiFormLabel-asterisk': { color: '#ef5350' } } }} />
-            <TextField label="País" value={form.location.country} onChange={(e) => setLocation('country', e.target.value)} sx={inputSx} />
-            <TextField label="Estado / Provincia" value={form.location.state ?? ''} onChange={(e) => setLocation('state', e.target.value)} sx={inputSx} />
-            <Box />
-            <TextField label="Latitud" type="number" value={form.location.latitude} onChange={(e) => setLocation('latitude', parseFloat(e.target.value) || 0)} sx={inputSx}
-              helperText="Búscalo en Google Maps: clic derecho → ¿Qué hay aquí?" FormHelperTextProps={{ sx: { color: '#666' } }} />
-            <TextField label="Longitud" type="number" value={form.location.longitude} onChange={(e) => setLocation('longitude', parseFloat(e.target.value) || 0)} sx={inputSx} />
-          </Box>
+          <CityPicker value={form.location} onChange={(location) => set('location', location)} required showErrors={showFieldErrors} />
 
           {/* Description */}
           <TextField label="Descripción" value={form.description} onChange={(e) => set('description', e.target.value)}
@@ -461,15 +421,15 @@ const MissionaryForm: React.FC<Props> = ({
             multiline rows={2} sx={inputSx} />
 
           {/* File uploads */}
-          <Divider sx={{ borderColor: '#333' }}>
-            <Typography variant="caption" color="#aaa" sx={captionSx}>Archivos</Typography>
+          <Divider>
+            <Typography variant="caption" color="text.secondary" sx={captionSx}>Archivos</Typography>
           </Divider>
 
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
 
             {/* Profile image */}
             <Box>
-              <Typography variant="caption" color="#aaa" display="block" mb={1} sx={captionSx}>Foto de perfil</Typography>
+              <Typography variant="caption" color="text.secondary" display="block" mb={1} sx={captionSx}>Foto de perfil</Typography>
               <input ref={profileRef} type="file" accept="image/*" hidden onChange={(e) => {
                 const f = e.target.files?.[0] ?? null;
                 if (!f) return;
@@ -483,7 +443,7 @@ const MissionaryForm: React.FC<Props> = ({
                 <Box sx={{ position: 'relative', display: 'inline-block', mb: 1 }}>
                   <Box component="img"
                     src={profileFile ? URL.createObjectURL(profileFile) : (profilePreview ?? '')}
-                    sx={{ display: 'block', width: 80, height: 80, objectFit: 'cover', borderRadius: '8px', border: '1.5px solid #444' }}
+                    sx={{ display: 'block', width: 80, height: 80, objectFit: 'cover', borderRadius: '8px', border: '1.5px solid var(--ibl-border)' }}
                   />
                   {!profileFile && (
                     <IconButton size="small" onClick={removeCurrentProfileImage} title="Quitar foto de perfil"
@@ -494,17 +454,17 @@ const MissionaryForm: React.FC<Props> = ({
                 </Box>
               )}
               <Button variant="outlined" size="small" startIcon={<CloudUploadIcon />}
-                onClick={() => profileRef.current?.click()} sx={{ borderColor: '#555', color: '#ccc', display: 'block' }}>
+                onClick={() => profileRef.current?.click()} sx={{ borderColor: 'divider', display: 'block' }}>
                 {form.profileImage || profileFile ? 'Reemplazar' : 'Seleccionar imagen'}
               </Button>
               {profileFile && (
-                <Typography variant="caption" color="#90caf9" display="block" mt={0.5}>{profileFile.name}</Typography>
+                <Typography variant="caption" color="primary" display="block" mt={0.5}>{profileFile.name}</Typography>
               )}
             </Box>
 
             {/* Prayer letter PDF */}
             <Box>
-              <Typography variant="caption" color="#aaa" display="block" mb={1} sx={captionSx}>Carta de oración (PDF)</Typography>
+              <Typography variant="caption" color="text.secondary" display="block" mb={1} sx={captionSx}>Carta de oración (PDF)</Typography>
               <input ref={prayerRef} type="file" accept="application/pdf" hidden onChange={(e) => {
                 const f = e.target.files?.[0] ?? null;
                 if (!f) return;
@@ -517,12 +477,12 @@ const MissionaryForm: React.FC<Props> = ({
               {!prayerFile && form.prayerLetter && (
                 <Box sx={{ position: 'relative', display: 'inline-block', mb: 1 }}>
                   <Box sx={{
-                    width: 80, height: 80, borderRadius: '8px', border: '1.5px solid #444',
-                    bgcolor: '#2a2a2a', display: 'flex', flexDirection: 'column',
+                    width: 80, height: 80, borderRadius: '8px', border: '1.5px solid var(--ibl-border)',
+                    bgcolor: 'grey.100', display: 'flex', flexDirection: 'column',
                     alignItems: 'center', justifyContent: 'center', gap: 0.5,
                   }}>
                     <Typography sx={{ fontSize: '1.6rem', lineHeight: 1 }}>📄</Typography>
-                    <Typography variant="caption" sx={{ color: '#aaa', fontSize: '0.65rem' }}>PDF</Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem' }}>PDF</Typography>
                   </Box>
                   <IconButton size="small" onClick={removeCurrentPrayerLetter} title="Quitar PDF"
                     sx={{ position: 'absolute', top: -6, right: -6, bgcolor: '#ef5350', color: '#fff', p: 0.2, '&:hover': { bgcolor: '#c62828' }, width: 20, height: 20 }}>
@@ -531,17 +491,17 @@ const MissionaryForm: React.FC<Props> = ({
                 </Box>
               )}
               <Button variant="outlined" size="small" startIcon={<CloudUploadIcon />}
-                onClick={() => prayerRef.current?.click()} sx={{ borderColor: '#555', color: '#ccc', display: 'block' }}>
+                onClick={() => prayerRef.current?.click()} sx={{ borderColor: 'divider', display: 'block' }}>
                 {form.prayerLetter ? 'Reemplazar' : 'Seleccionar PDF'}
               </Button>
               {prayerFile && (
-                <Typography variant="caption" color="#90caf9" display="block" mt={0.5}>{prayerFile.name}</Typography>
+                <Typography variant="caption" color="primary" display="block" mt={0.5}>{prayerFile.name}</Typography>
               )}
             </Box>
 
             {/* Media photos */}
             <Box>
-              <Typography variant="caption" color="#aaa" display="block" mb={1} sx={captionSx}>Álbum de fotos y videos</Typography>
+              <Typography variant="caption" color="text.secondary" display="block" mb={1} sx={captionSx}>Álbum de fotos y videos</Typography>
               <input ref={mediaRef} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => {
                 const files = Array.from(e.target.files ?? []);
                 const invalid = files.find(f => !f.type.startsWith('image/') && !f.type.startsWith('video/'));
@@ -552,11 +512,11 @@ const MissionaryForm: React.FC<Props> = ({
                 setMediaFiles(files);
               }} />
               <Button variant="outlined" size="small" startIcon={<CloudUploadIcon />}
-                onClick={() => mediaRef.current?.click()} sx={{ borderColor: '#555', color: '#ccc' }}>
+                onClick={() => mediaRef.current?.click()} sx={{ borderColor: 'divider' }}>
                 Añadir fotos o videos
               </Button>
               {mediaFiles.length > 0 && (
-                <Typography variant="caption" color="#90caf9" display="block" mt={0.5}>
+                <Typography variant="caption" color="primary" display="block" mt={0.5}>
                   {mediaFiles.length} archivo(s) nuevo(s)
                 </Typography>
               )}
@@ -565,18 +525,18 @@ const MissionaryForm: React.FC<Props> = ({
                   {form.media.map((url, i) => (
                     <Box key={url} sx={{ position: 'relative' }}>
                       {isVideoPath(url) ? (
-                        <Box title="Video" sx={{ width: 64, height: 64, borderRadius: '6px', border: '1.5px solid #444', bgcolor: '#2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem' }}>
+                        <Box title="Video" sx={{ width: 64, height: 64, borderRadius: '6px', border: '1.5px solid var(--ibl-border)', bgcolor: 'grey.100', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem' }}>
                           🎬
                         </Box>
                       ) : mediaPreviews[url] ? (
                         <Box component="img"
                           src={mediaPreviews[url]}
                           alt={`Foto ${i + 1}`}
-                          sx={{ width: 64, height: 64, objectFit: 'cover', borderRadius: '6px', border: '1.5px solid #444', display: 'block' }}
+                          sx={{ width: 64, height: 64, objectFit: 'cover', borderRadius: '6px', border: '1.5px solid var(--ibl-border)', display: 'block' }}
                         />
                       ) : (
-                        <Box sx={{ width: 64, height: 64, borderRadius: '6px', border: '1.5px solid #444', bgcolor: '#2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <CircularProgress size={20} sx={{ color: '#555' }} />
+                        <Box sx={{ width: 64, height: 64, borderRadius: '6px', border: '1.5px solid var(--ibl-border)', bgcolor: 'grey.100', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <CircularProgress size={20} sx={{ color: 'text.disabled' }} />
                         </Box>
                       )}
                       <IconButton size="small" onClick={() => removeMediaItem(url)}
@@ -597,8 +557,8 @@ const MissionaryForm: React.FC<Props> = ({
           </Box>
 
           {/* Contact info */}
-          <Divider sx={{ borderColor: '#333' }}>
-            <Typography variant="caption" color="#aaa" sx={captionSx}>Información de Contacto</Typography>
+          <Divider>
+            <Typography variant="caption" color="text.secondary" sx={captionSx}>Información de Contacto</Typography>
           </Divider>
 
           {form.contactInfo.map((c, i) => (
@@ -606,7 +566,7 @@ const MissionaryForm: React.FC<Props> = ({
               <FormControl sx={{ minWidth: 130, ...inputSx }}>
                 <InputLabel>Tipo</InputLabel>
                 <Select value={c.type} label="Tipo" onChange={(e) => updateContact(i, 'type', e.target.value)}
-                  sx={{ color: '#fff' }}>
+                  sx={{}}>
                   {CONTACT_TYPES.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
                 </Select>
               </FormControl>
@@ -619,21 +579,21 @@ const MissionaryForm: React.FC<Props> = ({
           ))}
 
           <Button startIcon={<AddIcon />} onClick={addContact} size={isMobile ? 'large' : 'medium'}
-            sx={{ color: '#90caf9', alignSelf: 'flex-start', fontSize: isMobile ? '1rem' : undefined }}>
+            sx={{ color: 'primary.main', alignSelf: 'flex-start', fontSize: isMobile ? '1rem' : undefined }}>
             Añadir contacto
           </Button>
 
           {fileError && (
             <Box sx={{ bgcolor: 'rgba(239,83,80,0.1)', border: '1px solid rgba(239,83,80,0.35)', borderRadius: 1.5, px: 2, py: 1.25, display: 'flex', alignItems: 'flex-start', gap: 1 }}>
               <Typography sx={{ fontSize: '1.1rem', lineHeight: 1.4 }}>⚠️</Typography>
-              <Typography variant="body2" sx={{ color: '#ef9a9a', lineHeight: 1.5 }}>{fileError}</Typography>
+              <Typography variant="body2" sx={{ color: 'error.main', lineHeight: 1.5 }}>{fileError}</Typography>
             </Box>
           )}
         </Stack>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2, borderTop: '1px solid #333', gap: 1, flexDirection: { xs: 'column-reverse', sm: 'row' } }}>
-        <Button onClick={onClose} fullWidth={isMobile} sx={{ color: '#aaa' }}>Cancelar</Button>
+      <DialogActions sx={{ p: 2, borderTop: '1px solid var(--ibl-border)', gap: 1, flexDirection: { xs: 'column-reverse', sm: 'row' } }}>
+        <Button onClick={onClose} fullWidth={isMobile} sx={{ color: 'text.secondary' }}>Cancelar</Button>
         <Button variant={isDraft ? 'outlined' : 'contained'} onClick={() => handleSave()} disabled={uploading || !canSave}
           fullWidth={isMobile} size={isMobile ? 'large' : 'medium'}
           startIcon={uploading ? <CircularProgress size={16} sx={{ color: 'inherit' }} /> : null}
@@ -651,17 +611,17 @@ const MissionaryForm: React.FC<Props> = ({
 
       {/* ── SAVE ERROR ───────────────────────────────────────────────────── */}
       <Dialog open={!!saveError} onClose={() => setSaveError('')}
-        slotProps={{ paper: { sx: { bgcolor: '#1a1a1a', color: '#fff', borderRadius: 3, textAlign: 'center', px: 4, py: 3, maxWidth: 400 } } }}>
+        slotProps={{ paper: { sx: { borderRadius: 3, textAlign: 'center', px: 4, py: 3, maxWidth: 400 } } }}>
         <Typography sx={{ fontSize: '3rem', mb: 1 }}>❌</Typography>
         <Typography variant="h6" fontWeight={700} sx={{ mb: 0.75 }}>Error al guardar</Typography>
-        <Typography variant="body2" sx={{ color: '#aaa', mb: 0.75 }}>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 0.75 }}>
           Algo salió mal durante el proceso de guardado. Por favor intenta de nuevo.
         </Typography>
-        <Typography variant="caption" sx={{ color: '#666', display: 'block', mb: 3, fontFamily: 'monospace', wordBreak: 'break-all' }}>
+        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 3, fontFamily: 'monospace', wordBreak: 'break-all' }}>
           {saveError}
         </Typography>
         <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center' }}>
-          <Button variant="outlined" onClick={() => setSaveError('')} sx={{ borderColor: '#555', color: '#aaa', borderRadius: 2 }}>
+          <Button variant="outlined" onClick={() => setSaveError('')} sx={{ borderRadius: 2 }}>
             Cancelar
           </Button>
           <Button variant="contained" color="error" onClick={() => { setSaveError(''); handleSave(lastPublishAttempt.current); }} sx={{ fontWeight: 700, borderRadius: 2 }}>
@@ -671,16 +631,16 @@ const MissionaryForm: React.FC<Props> = ({
       </Dialog>
 
       {/* ── SUCCESS CONFIRMATION ─────────────────────────────────────────── */}
-      <Dialog open={savedOk} onClose={onSave}
-        slotProps={{ paper: { sx: { bgcolor: '#1a1a1a', color: '#fff', borderRadius: 3, textAlign: 'center', px: 4, py: 3, maxWidth: 360 } } }}>
+      <Dialog open={savedOk} onClose={() => savedPage.current && onSave(savedPage.current)}
+        slotProps={{ paper: { sx: { borderRadius: 3, textAlign: 'center', px: 4, py: 3, maxWidth: 360 } } }}>
         <Typography sx={{ fontSize: '3rem', mb: 1 }}>✅</Typography>
         <Typography variant="h6" fontWeight={700} sx={{ mb: 0.75 }}>
           {published ? '¡Página publicada!' : isDraft ? '¡Borrador guardado!' : missionary ? '¡Misionero actualizado!' : '¡Misionero guardado!'}
         </Typography>
-        <Typography variant="body2" color="#aaa" sx={{ mb: 3 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           {published ? 'La página ya es visible en el sitio.' : isDraft ? 'El borrador sigue oculto hasta que lo publiques.' : 'Los cambios han sido guardados correctamente.'}
         </Typography>
-        <Button variant="contained" fullWidth onClick={onSave} sx={{ fontWeight: 700, py: 1.25, borderRadius: 2 }}>
+        <Button variant="contained" fullWidth onClick={() => savedPage.current && onSave(savedPage.current)} sx={{ fontWeight: 700, py: 1.25, borderRadius: 2 }}>
           Volver a la lista
         </Button>
       </Dialog>

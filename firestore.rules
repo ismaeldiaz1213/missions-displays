@@ -124,8 +124,19 @@ service cloud.firestore {
       );
     }
 
-    // Snapshots of a published page taken before each approved edit, so it can be reverted.
+    // Snapshots of a published page taken before each approved edit or admin save, so it can be
+    // restored. History is never deleted.
     match /missionaryHistory/{missionaryId}/versions/{versionId} {
+      allow read, create: if isAdmin();
+    }
+
+    // Private details about each missionary (contact, preferred method, notes). Same id as the page.
+    match /missionaryProfiles/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // Pages an admin "deleted": moved here so nothing is lost, and restorable.
+    match /missionaryArchive/{id} {
       allow read, write: if isAdmin();
     }
 
@@ -139,12 +150,14 @@ service cloud.firestore {
 
     function validMissionaryRequest(d) {
       return d.keys().hasOnly(['language', 'name', 'lastName', 'wifeName', 'email', 'phone',
-                               'organization', 'sendingChurch', 'missionType', 'startYear',
+                               'preferredContact', 'preferredContactNote', 'organization', 'sendingChurch', 'missionType', 'startYear',
                                'continent', 'city', 'state', 'country', 'description', 'prayerRequests',
                                'contact', 'status', 'createdAt'])
         && d.language in ['es', 'en']
         && reqStr(d.name, 100) && reqStr(d.lastName, 100) && str(d.wifeName, 100)
         && reqStr(d.email, 200) && reqStr(d.phone, 40)
+        && d.get('preferredContact', '') in ['', 'email', 'whatsapp', 'phone', 'text', 'other']
+        && str(d.get('preferredContactNote', ''), 200)
         && reqStr(d.organization, 200) && reqStr(d.sendingChurch, 200)
         && str(d.missionType, 200) && str(d.startYear, 4)
         && d.continent in ['north-america', 'central-america', 'south-america', 'europe', 'africa', 'asia', 'oceania']

@@ -1,10 +1,12 @@
 import {
-  Timestamp, collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc, updateDoc,
+  Timestamp, collection, doc, getDocs, serverTimestamp, setDoc, updateDoc,
 } from 'firebase/firestore/lite';
 import { db } from '../firebase';
 import type { ContactInfo, Missionary } from '../types';
-import { copyFile, listFiles, removeFile, type StoredFile } from './storageFiles';
+import { copyFile, listFiles, type StoredFile } from './storageFiles';
 import { saveDraft } from './missionaries';
+import { geocodeFirst } from './geocode';
+import { saveProfile, type ContactMethod } from './missionaryProfiles';
 
 const requestsCol = collection(db, 'missionaryRequests');
 
@@ -41,6 +43,9 @@ export interface MissionaryRequestInput {
   wifeName: string;
   email: string;
   phone: string;
+  /** How they'd like the church to reach them. Optional: older requests don't have it. */
+  preferredContact?: ContactMethod;
+  preferredContactNote?: string;
   // Page content
   organization: string;
   sendingChurch: string;
@@ -60,6 +65,8 @@ export interface MissionaryRequest extends MissionaryRequestInput {
   status: RequestStatus;
   createdAt: string;
   draftId?: string;
+  /** "Deleted" requests are only hidden; the request and its files are kept. */
+  archived?: boolean;
 }
 
 export const newRequestId = () => doc(requestsCol).id;
@@ -89,28 +96,13 @@ export const listRequestFiles = async (id: string): Promise<Record<RequestFileKi
 export const setRequestStatus = (id: string, status: RequestStatus) =>
   updateDoc(doc(requestsCol, id), { status });
 
-/** Deletes the request and the files the missionary uploaded with it (approved pages keep their own copies). */
-export const deleteMissionaryRequest = async (id: string) => {
-  const files = await listRequestFiles(id);
-  await Promise.allSettled(Object.values(files).flat().map((f) => removeFile(f.path)));
-  await deleteDoc(doc(requestsCol, id));
-};
+/** Hides a request from the list. Nothing is deleted: the request and its files are kept. */
+export const archiveMissionaryRequest = (id: string, archived = true) =>
+  updateDoc(doc(requestsCol, id), { archived });
 
 const extension = (name: string, fallback: string) => {
   const m = /\.([a-z0-9]{1,5})$/i.exec(name);
   return m ? m[1].toLowerCase() : fallback;
-};
-
-/** Best-effort coordinates for the map pin (OpenStreetMap). The admin can correct them before publishing. */
-const geocode = async (r: MissionaryRequestInput) => {
-  try {
-    const q = [r.city, r.state, r.country].filter(Boolean).join(', ');
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`);
-    const [hit] = (await res.json()) as { lat: string; lon: string }[];
-    return hit ? { latitude: Number(hit.lat), longitude: Number(hit.lon) } : { latitude: 0, longitude: 0 };
-  } catch {
-    return { latitude: 0, longitude: 0 };
-  }
 };
 
 /**
@@ -119,6 +111,7 @@ const geocode = async (r: MissionaryRequestInput) => {
  */
 export const approveMissionaryRequest = async (
   r: MissionaryRequest,
+  by: string,
   onStep: (label: string) => void = () => {},
 ): Promise<Missionary> => {
   const id = r.draftId ?? crypto.randomUUID();
@@ -149,7 +142,8 @@ export const approveMissionaryRequest = async (
   }
 
   onStep('Buscando ubicación en el mapa…');
-  const coords = await geocode(r);
+  const place = await geocodeFirst(r.city, r.state, r.country);
+  const coords = place ? { latitude: place.latitude, longitude: place.longitude } : { latitude: 0, longitude: 0 };
 
   const contactInfo: ContactInfo[] = (['email', 'phone', 'website', 'facebook', 'instagram'] as const)
     .filter((type) => r.contact[type]?.trim())
@@ -174,6 +168,15 @@ export const approveMissionaryRequest = async (
 
   onStep('Guardando borrador…');
   await saveDraft(draft);
+  // The private details (never shown on the page) go to the missionary's profile.
+  if (!r.draftId) {
+    await saveProfile(id, {
+      email: r.email.trim(), phone: r.phone.trim(),
+      preferredContact: r.preferredContact ?? '', preferredContactNote: r.preferredContactNote ?? '',
+      language: r.language, spouseName: r.wifeName, sendingChurch: r.sendingChurch,
+      notes: '', requestId: r.id,
+    }, by, true);
+  }
   await updateDoc(doc(requestsCol, r.id), { status: 'approved', draftId: id });
   return draft;
 };

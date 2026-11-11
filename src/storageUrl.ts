@@ -1,12 +1,14 @@
-import { STORAGE_BUCKET } from './firebase';
+import { EMULATOR_HOST, STORAGE_BUCKET, USE_EMULATORS } from './firebase';
 
 /** True for storage paths like `images/abc.jpg` (as opposed to full URLs or bundled `/assets`). */
 export const isS3Key = (path?: string): boolean =>
   !!path && !path.startsWith('http') && !path.startsWith('/') && !path.startsWith('data:');
 
 /** Public download URL for a storage path (images/ and pdfs/ are publicly readable), or the path unchanged if it's already a URL. */
+const STORAGE_ORIGIN = USE_EMULATORS ? `http://${EMULATOR_HOST}:9199` : 'https://firebasestorage.googleapis.com';
+
 export const storageUrl = (path: string) =>
-  `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/${encodeURIComponent(path)}?alt=media`;
+  `${STORAGE_ORIGIN}/v0/b/${STORAGE_BUCKET}/o/${encodeURIComponent(path)}?alt=media`;
 
 export const resolveUrl = async (path: string | undefined, fallback: string): Promise<string> => {
   if (!path) return fallback;

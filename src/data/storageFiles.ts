@@ -1,11 +1,12 @@
 // Firebase Storage helpers that need the full Storage SDK (uploads, deletes, listing).
 // Public pages build download URLs with storageUrl() instead, so they don't load this SDK.
 import {
-  deleteObject, getBlob, getDownloadURL, getMetadata, getStorage, listAll, ref, uploadBytes, uploadBytesResumable,
+  connectStorageEmulator, deleteObject, getBlob, getDownloadURL, getMetadata, getStorage, listAll, ref, uploadBytes, uploadBytesResumable,
 } from 'firebase/storage';
-import { firebaseApp } from '../firebase';
+import { EMULATOR_HOST, USE_EMULATORS, firebaseApp } from '../firebase';
 
 const storage = getStorage(firebaseApp);
+if (USE_EMULATORS) connectStorageEmulator(storage, EMULATOR_HOST, 9199);
 
 export const uploadFile = (
   file: File,

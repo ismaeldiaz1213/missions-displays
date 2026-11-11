@@ -1,7 +1,7 @@
 // Admin dialogs for the conference itself: its dates and deadline, archiving it to start the
 // next one, and permanently deleting an old archive.
 import React, { useMemo, useState } from 'react';
-import { getAuth } from 'firebase/auth';
+import { currentUserEmail } from '../../data/currentUser';
 import {
   Alert, Box, Button, Checkbox, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle,
   FormControlLabel, LinearProgress, Switch, TextField, Typography,
@@ -13,7 +13,6 @@ import { saveConference } from '../../data/conference';
 import {
   archiveConference, archiveIdFor, deleteArchivedConference, type ArchiveStep, type ArchivedConference,
 } from '../../data/conferenceArchive';
-import { firebaseApp } from '../../firebase';
 
 /** firestore.rules allow up to this many conference days. */
 const MAX_DAYS = 10;
@@ -170,7 +169,7 @@ export const ArchiveConferenceDialog: React.FC<{
     if (problem) { setError(`Próxima conferencia: ${problem}`); return; }
     setError('');
     try {
-      const email = getAuth(firebaseApp).currentUser?.email ?? '';
+      const email = currentUserEmail();
       await archiveConference(id, conference, next, email, setStep);
       onArchived(id);
     } catch (err) {

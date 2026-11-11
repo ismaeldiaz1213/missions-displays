@@ -37,7 +37,7 @@ const StorageIndicator: React.FC<Props> = ({ compact = false, onUsageLoaded, ref
   const isWarning = percent > 70;
   const isDanger = percent > 90;
   const color = isDanger ? 'error' : isWarning ? 'warning' : 'primary';
-  const textColor = isDanger ? 'error.main' : isWarning ? 'warning.main' : '#aaa';
+  const textColor = isDanger ? 'error.main' : isWarning ? 'warning.main' : 'text.secondary';
 
   if (compact) {
     return (
@@ -46,14 +46,15 @@ const StorageIndicator: React.FC<Props> = ({ compact = false, onUsageLoaded, ref
           sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 1, cursor: 'pointer' }}
           onClick={fetchUsage}
         >
-          <Typography variant="caption" color={textColor} noWrap>
+          {/* Compact mode sits on the blue admin header */}
+          <Typography variant="caption" color={isDanger || isWarning ? textColor : 'rgba(255,255,255,0.85)'} noWrap>
             {formatBytes(usedBytes)} / 5 GB
           </Typography>
           <LinearProgress
             variant={loading ? 'indeterminate' : 'determinate'}
             value={percent}
             color={color}
-            sx={{ width: 70, height: 4, borderRadius: 2, bgcolor: '#333' }}
+            sx={{ width: 70, height: 4, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.25)', ...(color === 'primary' && { '& .MuiLinearProgress-bar': { bgcolor: '#FFFFFF' } }) }}
           />
         </Box>
       </Tooltip>
@@ -61,16 +62,16 @@ const StorageIndicator: React.FC<Props> = ({ compact = false, onUsageLoaded, ref
   }
 
   return (
-    <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', border: `1px solid ${isDanger ? '#5a2a2a' : '#2f2f2f'}`, borderRadius: 1 }}>
+    <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', border: `1px solid ${isDanger ? '#FECACA' : '#E2E8F0'}`, borderRadius: 1 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-        <Typography variant="body2" color="#888">
+        <Typography variant="body2" color="text.secondary">
           Almacenamiento de archivos — límite gratuito: 5 GB
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="body2" color={textColor} fontWeight={600}>
             {formatBytes(usedBytes)} / 5 GB ({percent.toFixed(1)}%)
           </Typography>
-          <IconButton size="small" onClick={fetchUsage} sx={{ color: '#555' }}>
+          <IconButton size="small" onClick={fetchUsage} sx={{ color: 'text.secondary' }}>
             <RefreshIcon fontSize="small" />
           </IconButton>
         </Box>
@@ -79,7 +80,7 @@ const StorageIndicator: React.FC<Props> = ({ compact = false, onUsageLoaded, ref
         variant={loading ? 'indeterminate' : 'determinate'}
         value={percent}
         color={color}
-        sx={{ height: 6, borderRadius: 3, bgcolor: '#2a2a2a' }}
+        sx={{ height: 6, borderRadius: 3, bgcolor: '#E2E8F0' }}
       />
       {isWarning && !isDanger && (
         <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, display: 'block' }}>
