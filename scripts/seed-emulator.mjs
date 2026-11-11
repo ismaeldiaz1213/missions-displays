@@ -31,7 +31,8 @@ const page = (over) => ({
 const missionaries = {
   'demo-perez': page({ name: 'Juan y Ana', lastName: 'Pérez', organization: 'Misión Ejemplo', continent: 'south-america',
     location: { city: 'Lima', state: '', country: 'Perú', latitude: -12.0464, longitude: -77.0428 },
-    contactInfo: [{ type: 'email', value: 'juan.perez@example.com' }] }),
+    contactInfo: [{ type: 'email', value: 'juan.perez@example.com' }],
+    churches: [{ name: 'Iglesia Bautista Gracia (ficticia)', address: 'Av. Arequipa 1200, Lince, Lima', latitude: -12.0835, longitude: -77.0347 }] }),
   'demo-garcia': page({ name: 'Carlos', lastName: 'García', organization: 'Junta de Prueba', continent: 'central-america',
     location: { city: 'Tegucigalpa', state: '', country: 'Honduras', latitude: 14.0723, longitude: -87.1921 } }),
   'demo-smith': page({ name: 'David y Ruth', lastName: 'Smith', organization: 'Example Missions', continent: 'africa',

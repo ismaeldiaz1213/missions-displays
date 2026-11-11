@@ -6,8 +6,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
 import { inviteMissionary } from '../../data/functions';
 import { createEditLink, listEditsForMissionary, revokeEditLink, type MissionaryEdit } from '../../data/missionaryEdits';
-import { BRAND } from '../../ui/brand';
-import { Panel, formatDate, useAdminLang } from '../adminUi';
+import { A, Panel, formatDate, useAdminLang } from '../adminUi';
 import type { DirectoryEntry } from './directoryData';
 
 export const PORTAL_PATH = '/misioneros/mi-pagina';
@@ -33,7 +32,7 @@ const AccessPanel: React.FC<{ entry: DirectoryEntry; onChanged: () => void }> = 
   }, [entry.id, entry.status, privateEmail]);
 
   if (entry.status !== 'published') {
-    return <Panel title={tr('Acceso a su página', 'Access to their page')}><Typography sx={{ color: BRAND.muted }}>
+    return <Panel title={tr('Acceso a su página', 'Access to their page')}><Typography sx={{ color: A.muted }}>
       {tr('Publique la página primero; luego podrá invitar al misionero.', 'Publish the page first; then you can invite the missionary.')}
     </Typography></Panel>;
   }
@@ -56,10 +55,10 @@ const AccessPanel: React.FC<{ entry: DirectoryEntry; onChanged: () => void }> = 
     <Panel title={tr('Acceso a su página', 'Access to their page')} sx={{ mb: 2.5 }}>
       {privateEmail ? (
         <>
-          <Typography sx={{ color: BRAND.text }}>
+          <Typography sx={{ color: A.text }}>
             {tr('Entra con', 'Signs in with')} <strong>{privateEmail}</strong> {tr('en', 'at')} {window.location.host}{PORTAL_PATH}
           </Typography>
-          <Typography sx={{ color: BRAND.muted, fontSize: '0.88rem', mt: 0.5 }}>
+          <Typography sx={{ color: A.muted, fontSize: '0.88rem', mt: 0.5 }}>
             {entry.profile?.invitedAt
               ? tr(`Invitado el ${formatDate(entry.profile.invitedAt, lang)}${entry.profile.invitedBy ? ` por ${entry.profile.invitedBy}` : ''}.`,
                 `Invited ${formatDate(entry.profile.invitedAt, lang)}${entry.profile.invitedBy ? ` by ${entry.profile.invitedBy}` : ''}.`)
@@ -72,13 +71,13 @@ const AccessPanel: React.FC<{ entry: DirectoryEntry; onChanged: () => void }> = 
         </>
       ) : (
         <>
-          <Typography sx={{ color: BRAND.text }}>
+          <Typography sx={{ color: A.text }}>
             {tr('No tiene correo, así que no puede entrar con un enlace por correo. Puede mandarle un enlace privado (por WhatsApp, por ejemplo) para que proponga cambios a su página.',
               "They have no email, so they can't sign in by email. You can send them a private link (by WhatsApp, for example) to propose changes to their page.")}
           </Typography>
           {link ? (
             <Box sx={{ mt: 1.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: BRAND.page, borderRadius: '10px', px: 1.5, py: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: A.page, borderRadius: '10px', px: 1.5, py: 1 }}>
                 <Typography sx={{ flex: 1, fontSize: '0.85rem', wordBreak: 'break-all' }}>{url}</Typography>
                 <Tooltip title={tr('Copiar', 'Copy')}>
                   <IconButton size="small" onClick={() => navigator.clipboard.writeText(url).then(() => setCopied(true)).catch(() => {})}>

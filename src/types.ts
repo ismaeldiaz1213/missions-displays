@@ -8,6 +8,14 @@ export interface MissionaryMedia {
   title?: string;
 }
 
+/** A church they planted or meet with, pinned on the map of their page. */
+export interface Church {
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+}
+
 export interface Missionary {
   id: string;
   name: string;
@@ -29,6 +37,7 @@ export interface Missionary {
   specialNotes?: string;
   startDate?: string;
   missionType: string;
+  churches?: Church[];
 }
 
 export interface ContinentInfo {

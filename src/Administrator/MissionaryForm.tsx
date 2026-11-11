@@ -15,6 +15,7 @@ import { uploadFile } from '../data/storageFiles';
 import { deleteDraft, publishWithHistory, saveDraft } from '../data/missionaries';
 import { currentUserEmail } from '../data/currentUser';
 import CityPicker from '../ui/CityPicker';
+import ChurchesEditor from '../ui/ChurchesEditor';
 import type { Missionary, ContactInfo } from '../types';
 import { formatBytes } from './formatBytes';
 import { isVideoPath, resolveUrl } from '../storageUrl';
@@ -63,6 +64,7 @@ const emptyForm = (continent: string): FormData => ({
   specialNotes: '',
   startDate: '',
   missionType: '',
+  churches: [],
 });
 
 
@@ -229,6 +231,7 @@ const MissionaryForm: React.FC<Props> = ({
         profileImage,
         prayerLetter,
         media: media.map((url) => ({ url })),
+        churches: (form.churches ?? []).filter((c) => c.name.trim()),
       };
 
       if (isDraft && !publish) {
@@ -271,7 +274,7 @@ const MissionaryForm: React.FC<Props> = ({
     <>
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth fullScreen={isMobile}
       PaperProps={{ sx: { bgcolor: 'background.paper' } }}>
-      <DialogTitle sx={{ borderBottom: '1px solid var(--ibl-border)', display: 'flex', alignItems: 'center', fontSize: { xs: '1.25rem', sm: '1.5rem' }, fontWeight: 700 }}>
+      <DialogTitle sx={{ borderBottom: '1px solid var(--adm-line)', display: 'flex', alignItems: 'center', fontSize: { xs: '1.25rem', sm: '1.5rem' }, fontWeight: 700 }}>
         <Box sx={{ flex: 1 }}>{isDraft ? 'Editar Borrador' : missionary ? 'Editar Misionero' : 'Añadir Misionero'}</Box>
         <IconButton onClick={onClose} size="small" sx={{ color: 'text.secondary' }}>
           <CloseIcon />
@@ -292,7 +295,7 @@ const MissionaryForm: React.FC<Props> = ({
           <LinearProgress
             variant="determinate"
             value={saveProgress}
-            sx={{ height: 6, borderRadius: 3, bgcolor: 'grey.100', '& .MuiLinearProgress-bar': { borderRadius: 3 } }}
+            sx={{ height: 6, borderRadius: 3, bgcolor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 3 } }}
           />
         </Box>
       )}
@@ -414,6 +417,12 @@ const MissionaryForm: React.FC<Props> = ({
           </Divider>
           <CityPicker value={form.location} onChange={(location) => set('location', location)} required showErrors={showFieldErrors} />
 
+          <Divider>
+            <Typography variant="caption" color="text.secondary" sx={captionSx}>Iglesias</Typography>
+          </Divider>
+          <ChurchesEditor value={form.churches ?? []} onChange={(churches) => set('churches', churches)}
+            near={[form.location.city, form.location.state, form.location.country].filter(Boolean).join(', ')} />
+
           {/* Description */}
           <TextField label="Descripción" value={form.description} onChange={(e) => set('description', e.target.value)}
             multiline rows={3} sx={inputSx} />
@@ -443,7 +452,7 @@ const MissionaryForm: React.FC<Props> = ({
                 <Box sx={{ position: 'relative', display: 'inline-block', mb: 1 }}>
                   <Box component="img"
                     src={profileFile ? URL.createObjectURL(profileFile) : (profilePreview ?? '')}
-                    sx={{ display: 'block', width: 80, height: 80, objectFit: 'cover', borderRadius: '8px', border: '1.5px solid var(--ibl-border)' }}
+                    sx={{ display: 'block', width: 80, height: 80, objectFit: 'cover', borderRadius: '8px', border: '1.5px solid var(--adm-line)' }}
                   />
                   {!profileFile && (
                     <IconButton size="small" onClick={removeCurrentProfileImage} title="Quitar foto de perfil"
@@ -477,8 +486,8 @@ const MissionaryForm: React.FC<Props> = ({
               {!prayerFile && form.prayerLetter && (
                 <Box sx={{ position: 'relative', display: 'inline-block', mb: 1 }}>
                   <Box sx={{
-                    width: 80, height: 80, borderRadius: '8px', border: '1.5px solid var(--ibl-border)',
-                    bgcolor: 'grey.100', display: 'flex', flexDirection: 'column',
+                    width: 80, height: 80, borderRadius: '8px', border: '1.5px solid var(--adm-line)',
+                    bgcolor: 'action.hover', display: 'flex', flexDirection: 'column',
                     alignItems: 'center', justifyContent: 'center', gap: 0.5,
                   }}>
                     <Typography sx={{ fontSize: '1.6rem', lineHeight: 1 }}>📄</Typography>
@@ -525,17 +534,17 @@ const MissionaryForm: React.FC<Props> = ({
                   {form.media.map((url, i) => (
                     <Box key={url} sx={{ position: 'relative' }}>
                       {isVideoPath(url) ? (
-                        <Box title="Video" sx={{ width: 64, height: 64, borderRadius: '6px', border: '1.5px solid var(--ibl-border)', bgcolor: 'grey.100', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem' }}>
+                        <Box title="Video" sx={{ width: 64, height: 64, borderRadius: '6px', border: '1.5px solid var(--adm-line)', bgcolor: 'action.hover', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem' }}>
                           🎬
                         </Box>
                       ) : mediaPreviews[url] ? (
                         <Box component="img"
                           src={mediaPreviews[url]}
                           alt={`Foto ${i + 1}`}
-                          sx={{ width: 64, height: 64, objectFit: 'cover', borderRadius: '6px', border: '1.5px solid var(--ibl-border)', display: 'block' }}
+                          sx={{ width: 64, height: 64, objectFit: 'cover', borderRadius: '6px', border: '1.5px solid var(--adm-line)', display: 'block' }}
                         />
                       ) : (
-                        <Box sx={{ width: 64, height: 64, borderRadius: '6px', border: '1.5px solid var(--ibl-border)', bgcolor: 'grey.100', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Box sx={{ width: 64, height: 64, borderRadius: '6px', border: '1.5px solid var(--adm-line)', bgcolor: 'action.hover', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <CircularProgress size={20} sx={{ color: 'text.disabled' }} />
                         </Box>
                       )}
@@ -592,7 +601,7 @@ const MissionaryForm: React.FC<Props> = ({
         </Stack>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2, borderTop: '1px solid var(--ibl-border)', gap: 1, flexDirection: { xs: 'column-reverse', sm: 'row' } }}>
+      <DialogActions sx={{ p: 2, borderTop: '1px solid var(--adm-line)', gap: 1, flexDirection: { xs: 'column-reverse', sm: 'row' } }}>
         <Button onClick={onClose} fullWidth={isMobile} sx={{ color: 'text.secondary' }}>Cancelar</Button>
         <Button variant={isDraft ? 'outlined' : 'contained'} onClick={() => handleSave()} disabled={uploading || !canSave}
           fullWidth={isMobile} size={isMobile ? 'large' : 'medium'}

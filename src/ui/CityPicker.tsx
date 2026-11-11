@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { CircleMarker, MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
   Box, Button, CircularProgress, List, ListItemButton, ListItemText, TextField, Typography,
@@ -102,20 +103,20 @@ const CityPicker: React.FC<{
           {t.find}
         </Button>
         {hasPin ? (
-          <Typography sx={{ color: '#15803D', fontWeight: 700, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Typography sx={{ color: 'success.main', fontWeight: 700, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <CheckCircleIcon fontSize="small" /> {t.found}
           </Typography>
         ) : (
-          <Typography sx={{ color: showErrors && required ? '#B91C1C' : BRAND.muted, fontSize: '0.85rem' }}>{t.missing}</Typography>
+          <Typography sx={{ color: showErrors && required ? 'error.main' : 'text.secondary', fontSize: '0.85rem' }}>{t.missing}</Typography>
         )}
       </Box>
-      {error && <Typography sx={{ color: '#B91C1C', fontSize: '0.85rem', mt: 1 }}>{error}</Typography>}
+      {error && <Typography sx={{ color: 'error.main', fontSize: '0.85rem', mt: 1 }}>{error}</Typography>}
       {results && (
         results.length === 0
-          ? <Typography sx={{ color: BRAND.amberDeep, fontSize: '0.9rem', mt: 1 }}>{t.none}</Typography>
+          ? <Typography sx={{ color: 'warning.dark', fontSize: '0.9rem', mt: 1 }}>{t.none}</Typography>
           : (
-            <Box sx={{ mt: 1, border: `1px solid ${BRAND.line}`, borderRadius: '12px', overflow: 'hidden' }}>
-              <Typography sx={{ px: 2, pt: 1.25, fontWeight: 700, fontSize: '0.85rem', color: BRAND.muted }}>{t.pick}</Typography>
+            <Box sx={{ mt: 1, border: 1, borderColor: 'divider', borderRadius: '12px', overflow: 'hidden' }}>
+              <Typography sx={{ px: 2, pt: 1.25, fontWeight: 700, fontSize: '0.85rem', color: 'text.secondary' }}>{t.pick}</Typography>
               <List dense>
                 {results.map((p) => (
                   <ListItemButton key={`${p.latitude},${p.longitude}`} onClick={() => choose(p)}>
@@ -128,8 +129,8 @@ const CityPicker: React.FC<{
       )}
       {hasPin && (
         <Box sx={{ mt: 1.5 }}>
-          <Box sx={{ height: 220, borderRadius: '12px', overflow: 'hidden', border: `1px solid ${BRAND.line}` }}>
-            <MapContainer center={[value.latitude, value.longitude]} zoom={9} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
+          <Box sx={{ height: 220, borderRadius: '12px', overflow: 'hidden', border: 1, borderColor: 'divider' }}>
+            <MapContainer center={[value.latitude, value.longitude]} zoom={9} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false} dragging={!L.Browser.mobile}>
               <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' />
               <CircleMarker center={[value.latitude, value.longitude]} radius={10}
@@ -138,7 +139,7 @@ const CityPicker: React.FC<{
               <ClickToMove onMove={(latitude, longitude) => onChange({ ...value, latitude, longitude })} />
             </MapContainer>
           </Box>
-          <Typography sx={{ color: BRAND.muted, fontSize: '0.8rem', mt: 0.5 }}>
+          <Typography sx={{ color: 'text.secondary', fontSize: '0.8rem', mt: 0.5 }}>
             {t.hint} ({value.latitude}, {value.longitude})
           </Typography>
         </Box>

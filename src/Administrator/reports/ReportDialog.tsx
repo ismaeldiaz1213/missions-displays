@@ -16,8 +16,7 @@ import { copyFile, fileUrl, uploadFile } from '../../data/storageFiles';
 import { publishWithHistory, saveDraft } from '../../data/missionaries';
 import { currentUserEmail } from '../../data/currentUser';
 import type { Missionary } from '../../types';
-import { BRAND } from '../../ui/brand';
-import { formatDate, useAdminLang } from '../adminUi';
+import { A, formatDate, useAdminLang } from '../adminUi';
 import { formatBytes } from '../formatBytes';
 import { fullName, useDirectory, type DirectoryEntry } from '../directory/directoryData';
 import { useReports } from './reportsData';
@@ -67,17 +66,17 @@ const SubmissionCard: React.FC<{ s: ReportSubmission; entry: DirectoryEntry; onC
   });
 
   return (
-    <Box sx={{ border: `1px solid ${BRAND.line}`, borderRadius: '14px', p: 2, bgcolor: BRAND.white }}>
+    <Box sx={{ border: `1px solid ${A.line}`, borderRadius: '14px', p: 2, bgcolor: A.surface }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
         <Typography sx={{ fontWeight: 800, flex: 1 }}>
           {s.kind === 'noUpdates' ? tr('Sin novedades este trimestre', 'No updates this quarter') : tr('Informe', 'Report')}
         </Typography>
-        <Typography sx={{ color: BRAND.muted, fontSize: '0.85rem' }}>
+        <Typography sx={{ color: A.muted, fontSize: '0.85rem' }}>
           {formatDate(s.submittedAt, lang)} · {s.submittedBy === 'missionary' ? tr('enviado por el misionero', 'sent by the missionary') : `${tr('subido por', 'uploaded by')} ${s.submittedBy}`}
         </Typography>
       </Box>
       {s.comments && (
-        <Typography sx={{ whiteSpace: 'pre-wrap', mt: 1.25, p: 1.5, bgcolor: BRAND.page, borderRadius: '10px', fontSize: '0.92rem' }}>{s.comments}</Typography>
+        <Typography sx={{ whiteSpace: 'pre-wrap', mt: 1.25, p: 1.5, bgcolor: A.page, borderRadius: '10px', fontSize: '0.92rem' }}>{s.comments}</Typography>
       )}
       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1.5 }}>
         {s.pdfPath && (
@@ -113,7 +112,7 @@ const SubmissionCard: React.FC<{ s: ReportSubmission; entry: DirectoryEntry; onC
         </Box>
       )}
       {useComments && (
-        <Box sx={{ mt: 1.5, p: 1.5, border: `1px dashed ${BRAND.blueLine}`, borderRadius: '12px' }}>
+        <Box sx={{ mt: 1.5, p: 1.5, border: `1px dashed ${A.softLine}`, borderRadius: '12px' }}>
           <TextField select size="small" label={tr('¿Dónde en la página?', 'Where on the page?')} value={useComments.field} sx={{ mb: 1.5, minWidth: 260 }}
             onChange={(e) => setUseComments({ ...useComments, field: e.target.value as 'specialNotes' | 'description' })}>
             <MenuItem value="specialNotes">{tr('Peticiones de oración / notas', 'Prayer requests / notes')}</MenuItem>
@@ -121,7 +120,7 @@ const SubmissionCard: React.FC<{ s: ReportSubmission; entry: DirectoryEntry; onC
           </TextField>
           <TextField fullWidth multiline minRows={4} value={useComments.text} onChange={(e) => setUseComments({ ...useComments, text: e.target.value })}
             helperText={tr('Reemplaza ese texto en la página pública. La versión anterior queda en el historial.', 'Replaces that text on the public page. The previous version stays in history.')} />
-          <Typography sx={{ color: BRAND.muted, fontSize: '0.8rem', mt: 1 }}>
+          <Typography sx={{ color: A.muted, fontSize: '0.8rem', mt: 1 }}>
             {tr('Texto actual: ', 'Current text: ')}{(entry.page[useComments.field] as string) || '—'}
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
@@ -131,13 +130,13 @@ const SubmissionCard: React.FC<{ s: ReportSubmission; entry: DirectoryEntry; onC
         </Box>
       )}
       {(s.reviewedAt || s.usedOnPage) && (
-        <Typography sx={{ color: '#166534', fontSize: '0.82rem', mt: 1.25 }}>
+        <Typography sx={{ color: A.greenText, fontSize: '0.82rem', mt: 1.25 }}>
           {s.reviewedAt && `✓ ${tr('Revisado', 'Reviewed')} ${formatDate(s.reviewedAt, lang)} · ${s.reviewedBy}${s.reviewNote ? ` — ${s.reviewNote}` : ''}`}
           {s.reviewedAt && s.usedOnPage && <br />}
           {s.usedOnPage && `✓ ${USED_LABELS[s.usedOnPage]?.[lang] ?? s.usedOnPage}`}
         </Typography>
       )}
-      {busy && <Typography sx={{ color: BRAND.muted, fontSize: '0.85rem', mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}><CircularProgress size={14} /> {busy}</Typography>}
+      {busy && <Typography sx={{ color: A.muted, fontSize: '0.85rem', mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}><CircularProgress size={14} /> {busy}</Typography>}
       {error && <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert>}
     </Box>
   );
@@ -200,15 +199,15 @@ const ReportDialog: React.FC<{ entry: DirectoryEntry; quarter: Quarter; onClose:
       <DialogTitle sx={{ fontWeight: 800 }}>
         {fullName(entry.page)}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mt: 0.5 }}>
-          <Typography sx={{ color: BRAND.muted, fontWeight: 600 }}>
+          <Typography sx={{ color: A.muted, fontWeight: 600 }}>
             {quarterLabel(quarter, lang)} · {tr('vence', 'due')} {formatDay(quarter.due, lang)}
           </Typography>
           <ReportStatusTag status={status} lang={lang} />
         </Box>
       </DialogTitle>
-      <DialogContent dividers sx={{ bgcolor: BRAND.page, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+      <DialogContent dividers sx={{ bgcolor: A.page, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
         {subs.length === 0 && (
-          <Typography sx={{ color: BRAND.muted }}>{tr('Todavía no hay nada para este trimestre.', 'Nothing for this quarter yet.')}</Typography>
+          <Typography sx={{ color: A.muted }}>{tr('Todavía no hay nada para este trimestre.', 'Nothing for this quarter yet.')}</Typography>
         )}
         {subs.map((s) => <SubmissionCard key={s.id} s={s} entry={entry} onChanged={changed} />)}
 
@@ -218,9 +217,9 @@ const ReportDialog: React.FC<{ entry: DirectoryEntry; quarter: Quarter; onClose:
           </Button>
         )}
         {adding && (
-          <Box sx={{ border: `1px solid ${BRAND.line}`, borderRadius: '14px', p: 2, bgcolor: BRAND.white }}>
+          <Box sx={{ border: `1px solid ${A.line}`, borderRadius: '14px', p: 2, bgcolor: A.surface }}>
             <Typography sx={{ fontWeight: 800, mb: 0.5 }}>{tr('Registrar en su nombre', 'Record on their behalf')}</Typography>
-            <Typography sx={{ color: BRAND.muted, fontSize: '0.85rem', mb: 1.5 }}>
+            <Typography sx={{ color: A.muted, fontSize: '0.85rem', mb: 1.5 }}>
               {tr('Por ejemplo, si lo mandó por correo o WhatsApp. Los informes anteriores no se reemplazan.',
                 'For example, if they sent it by email or WhatsApp. Earlier reports are never replaced.')}
             </Typography>

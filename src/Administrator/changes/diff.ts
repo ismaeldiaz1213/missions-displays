@@ -52,6 +52,7 @@ export const FIELD_LABELS: Record<string, { es: string; en: string }> = {
   profileImage: { es: 'Foto de perfil', en: 'Profile photo' },
   prayerLetter: { es: 'Carta de oración', en: 'Prayer letter' },
   media: { es: 'Galería', en: 'Gallery' },
+  churches: { es: 'Iglesias', en: 'Churches' },
 };
 
 const place = (l: Missionary['location']) =>
@@ -74,6 +75,9 @@ export const pageChanges = (before: Missionary | ProposedPage, after: ProposedPa
   }
   const bc = (before.contactInfo ?? []).map(contactLabel), ac = (after.contactInfo ?? []).map(contactLabel);
   if (bc.join('|') !== ac.join('|')) out.push({ field: 'contactInfo', kind: 'list', added: ac.filter((x) => !bc.includes(x)), removed: bc.filter((x) => !ac.includes(x)) });
+  const church = (c: { name: string; address: string; latitude: number; longitude: number }) => `${c.name} — ${c.address} (${c.latitude}, ${c.longitude})`;
+  const bch = (before.churches ?? []).map(church), ach = (after.churches ?? []).map(church);
+  if (bch.join('|') !== ach.join('|')) out.push({ field: 'churches', kind: 'list', added: ach.filter((x) => !bch.includes(x)), removed: bch.filter((x) => !ach.includes(x)) });
   const bm = (before.media ?? []).map((m) => m.url), am = (after.media ?? []).map((m) => m.url);
   if (bm.join('|') !== am.join('|')) out.push({ field: 'media', kind: 'list', added: am.filter((x) => !bm.includes(x)), removed: bm.filter((x) => !am.includes(x)) });
   return out;

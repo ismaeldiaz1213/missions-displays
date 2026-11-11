@@ -21,6 +21,7 @@ import Registration from './Registration/Registration'
 import MediaUpload from './Registration/MediaUpload'
 import MissionaryRequest from './MissionaryRequest/MissionaryRequest'
 import Portal from './Portal/Portal'
+import PreviewHost, { PREVIEW_PATH } from './Missionaries/PreviewHost'
 
 
 const App:React.FC = () => {
@@ -49,6 +50,7 @@ const App:React.FC = () => {
         <Route path="/conferencia/subir/:registrationId" element={<MediaUpload/>} />
         <Route path="/misioneros/solicitud" element={<MissionaryRequest/>} />
         <Route path="/misioneros/mi-pagina" element={<Portal/>} />
+        <Route path={PREVIEW_PATH} element={<PreviewHost/>} />
       </Routes>
     </>
   )

@@ -1,4 +1,5 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import PreviewFrame from '../../ui/PreviewFrame';
 import {
   Alert, Avatar, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle,
   Drawer, IconButton, Tab, Tabs, Typography, useMediaQuery, useTheme,
@@ -14,14 +15,12 @@ import { archiveMissionary, restoreMissionary } from '../../data/missionaries';
 import { CONTACT_METHOD_LABELS, MISSING_LABELS } from '../../data/missionaryProfiles';
 import { currentUserEmail } from '../../data/currentUser';
 import { DetailGroup } from '../shared';
-import { BRAND } from '../../ui/brand';
-import { formatDate, useAdminLang } from '../adminUi';
+import { A, formatDate, useAdminLang } from '../adminUi';
 import { fullName, type DirectoryEntry } from './directoryData';
 import { CONTINENT_LABELS } from './exportMissionaries';
 import StatusTags from './StatusTags';
 import AccessPanel from './AccessPanel';
 
-const MissionaryPage = lazy(() => import('../../Missionaries/Missionary'));
 
 export interface ProfileSection {
   key: string;
@@ -76,6 +75,7 @@ const Summary: React.FC<{ entry: DirectoryEntry; onCompleteProfile: () => void; 
         ...contacts.map((c, i) => [`${c.type}${contacts.filter((x) => x.type === c.type).length > 1 ? ` ${i + 1}` : ''}`, c.value] as [string, string]),
         [tr('Descripción', 'Description'), m.description],
         [tr('Peticiones / notas', 'Prayer requests / notes'), m.specialNotes ?? ''],
+        [tr('Iglesias', 'Churches'), (m.churches ?? []).map((c) => `${c.name}${c.address ? ` — ${c.address}` : ''}`).join('\n')],
         [tr('Archivos', 'Files'), [
           m.profileImage ? tr('foto de perfil', 'profile photo') : '',
           m.prayerLetter ? tr('carta de oración', 'prayer letter') : '',
@@ -108,7 +108,7 @@ const MissionaryProfileView: React.FC<{
 }> = ({ entry, extraSections = [], initialSection, onClose, onEditPage, onCompleteProfile, onChanged }) => {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
-  const { tr } = useAdminLang();
+  const { tr, lang } = useAdminLang();
   const [section, setSection] = useState(initialSection ?? 'summary');
   const [photo, setPhoto] = useState('');
   const [confirmArchive, setConfirmArchive] = useState(false);
@@ -142,27 +142,21 @@ const MissionaryProfileView: React.FC<{
     { key: 'summary', label: tr('Resumen', 'Summary'), render: () => <Summary entry={entry} onCompleteProfile={onCompleteProfile} onChanged={onChanged} /> },
     ...extraSections,
     {
-      key: 'preview', label: tr('Vista previa', 'Preview'), render: () => (
-        <Box sx={{ border: `1px solid ${BRAND.line}`, borderRadius: '16px', overflow: 'hidden', height: { xs: '70vh', md: '74vh' }, overflowY: 'auto', position: 'relative', transform: 'translateZ(0)' }}>
-          <Suspense fallback={<Box sx={{ p: 6, textAlign: 'center' }}><CircularProgress /></Box>}>
-            <MissionaryPage preview={m} />
-          </Suspense>
-        </Box>
-      ),
+      key: 'preview', label: tr('Vista previa', 'Preview'), render: () => <PreviewFrame page={m} lang={lang} height="72vh" />,
     },
   ];
   const current = sections.find((s) => s.key === section) ?? sections[0];
 
   return (
-    <Drawer anchor="right" open onClose={onClose} PaperProps={{ sx: { width: fullScreen ? '100%' : 'min(980px, 92vw)', bgcolor: BRAND.page } }}>
-      <Box sx={{ bgcolor: BRAND.white, borderBottom: `1px solid ${BRAND.line}`, px: { xs: 2, sm: 3 }, pt: 2 }}>
+    <Drawer anchor="right" open onClose={onClose} PaperProps={{ sx: { width: fullScreen ? '100%' : 'min(980px, 92vw)', bgcolor: A.page } }}>
+      <Box sx={{ bgcolor: A.surface, borderBottom: `1px solid ${A.line}`, px: { xs: 2, sm: 3 }, pt: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar src={photo || undefined} sx={{ width: 64, height: 64, bgcolor: BRAND.blueSoft, color: BRAND.navy, fontWeight: 800, fontSize: '1.4rem' }}>
+          <Avatar src={photo || undefined} sx={{ width: 64, height: 64, bgcolor: A.soft, color: A.navy, fontWeight: 800, fontSize: '1.4rem' }}>
             {m.name?.[0]}{m.lastName?.[0]}
           </Avatar>
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography sx={{ fontWeight: 800, fontSize: { xs: '1.2rem', sm: '1.45rem' }, color: BRAND.ink, lineHeight: 1.2 }}>{fullName(m)}</Typography>
-            <Typography sx={{ color: BRAND.muted, fontWeight: 600 }}>
+            <Typography sx={{ fontWeight: 800, fontSize: { xs: '1.2rem', sm: '1.45rem' }, color: A.ink, lineHeight: 1.2 }}>{fullName(m)}</Typography>
+            <Typography sx={{ color: A.muted, fontWeight: 600 }}>
               {[m.location?.city, m.location?.country].filter(Boolean).join(', ')}{m.organization ? ` · ${m.organization}` : ''}
             </Typography>
             <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mt: 0.75 }}><StatusTags entry={entry} /></Box>
@@ -189,7 +183,7 @@ const MissionaryProfileView: React.FC<{
               {tr('Restaurar', 'Restore')}
             </Button>
           ) : (
-            <Button color="inherit" startIcon={<Inventory2OutlinedIcon />} onClick={() => setConfirmArchive(true)} sx={{ color: BRAND.muted }}>
+            <Button color="inherit" startIcon={<Inventory2OutlinedIcon />} onClick={() => setConfirmArchive(true)} sx={{ color: A.muted }}>
               {tr('Archivar', 'Archive')}
             </Button>
           )}

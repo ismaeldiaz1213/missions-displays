@@ -6,7 +6,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Box, Button, Typography, CircularProgress, Paper,
   Chip, useTheme, useMediaQuery,
-  ThemeProvider, Tabs, Tab, Badge, ToggleButton, ToggleButtonGroup,
+  IconButton, Tooltip, Tabs, Tab, Badge, ToggleButton, ToggleButtonGroup,
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -26,8 +26,9 @@ import { USE_EMULATORS, isAdminEmail } from '../firebase';
 import { auth } from '../data/auth';
 import { usePageTitle } from '../usePageTitle';
 import iblLogo from '../assets/ibl_logo.png';
-import { BRAND } from '../ui/brand';
-import { AdminLangProvider, adminTheme, useAdminLang } from './adminUi';
+import { A, AdminLangProvider, AdminThemeProvider, useAdminLang, useAdminMode } from './adminUi';
+import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
+import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import { DirectoryProvider, useDirectory } from './directory/directoryData';
 import MissionaryDirectory from './directory/MissionaryDirectory';
 import AdminHome from './home/AdminHome';
@@ -50,11 +51,11 @@ const TABS = ['inicio', 'misioneros', 'cambios', 'informes', 'correos', 'solicit
 type AdminTab = (typeof TABS)[number];
 
 const Admin: React.FC = () => (
-  <ThemeProvider theme={adminTheme}>
+  <AdminThemeProvider>
     <AdminLangProvider>
       <AdminPage />
     </AdminLangProvider>
-  </ThemeProvider>
+  </AdminThemeProvider>
 );
 
 const AdminPage: React.FC = () => {
@@ -121,15 +122,15 @@ const AdminPage: React.FC = () => {
 
   if (authState === 'unauthenticated') {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', px: 2, background: `linear-gradient(160deg, ${BRAND.page} 0%, #E8F1FC 100%)` }}>
-        <Paper elevation={0} sx={{ p: { xs: 3, sm: 5 }, textAlign: 'center', maxWidth: 420, width: '100%', borderRadius: '24px', border: `1px solid ${BRAND.line}`, boxShadow: '0 30px 70px rgba(30,58,138,0.12)' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', px: 2, bgcolor: A.page }}>
+        <Paper elevation={0} sx={{ p: { xs: 3, sm: 5 }, textAlign: 'center', maxWidth: 420, width: '100%', borderRadius: '24px', border: `1px solid ${A.line}`, boxShadow: '0 30px 70px rgba(30,58,138,0.12)' }}>
           <Box component="img" src={iblLogo} alt="" sx={{ height: 64, mb: 2 }} />
-          <Typography variant="h5" gutterBottom fontWeight={800} color={BRAND.ink}>Administración de Misiones</Typography>
+          <Typography variant="h5" gutterBottom fontWeight={800} color={A.ink}>Administración de Misiones</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Acceso para cuentas de la iglesia · Church accounts only</Typography>
-          <Typography variant="body2" sx={{ mb: 3, color: BRAND.blue, fontWeight: 700 }}>@iblibertad.org · @iblibertad.com</Typography>
+          <Typography variant="body2" sx={{ mb: 3, color: A.blue, fontWeight: 700 }}>@iblibertad.org · @iblibertad.com</Typography>
           {authError && (
-            <Box sx={{ bgcolor: '#FEE2E2', border: '1px solid #FECACA', borderRadius: 2, p: 1.5, mb: 2 }}>
-              <Typography variant="caption" sx={{ color: '#991B1B' }}>{authError}</Typography>
+            <Box sx={{ bgcolor: A.redBg, border: '1px solid #FECACA', borderRadius: 2, p: 1.5, mb: 2 }}>
+              <Typography variant="caption" sx={{ color: A.redText }}>{authError}</Typography>
             </Box>
           )}
           <Button variant="contained" fullWidth size="large" startIcon={<LockOutlinedIcon />} onClick={signIn} sx={{ py: 1.5, fontSize: '1rem' }}>
@@ -177,6 +178,7 @@ const AdminShell: React.FC<{
   setStorageUsedBytes: (n: number) => void;
 }> = ({ tab, userEmail, isMobile, archive, conferences, selectConference, storageRefresh, setStorageRefresh, storageUsedBytes, setStorageUsedBytes }) => {
   const { tr, lang, setLang } = useAdminLang();
+  const { mode, setMode } = useAdminMode();
   const [searchParams, setSearchParams] = useSearchParams();
   const { entries, requests, reload } = useDirectory();
   const reports = useReports();
@@ -202,36 +204,49 @@ const AdminShell: React.FC<{
   const tabSx = { minHeight: 52, px: { xs: 1.5, sm: 2 } };
 
   return (
-    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
+    <Box sx={{ minHeight: '100vh' }}>
       <Box component="header" sx={{
-        background: `linear-gradient(120deg, ${BRAND.navy} 0%, ${BRAND.blueDeep} 100%)`, color: BRAND.white,
-        px: { xs: 2, sm: 3 }, py: 1.25, display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap',
+        background: A.header, color: '#FFFFFF',
+        px: { xs: 1.5, sm: 3 }, py: 1, display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1.5 },
       }}>
-        <Box component="img" src={iblLogo} alt="" sx={{ height: 36, bgcolor: BRAND.white, borderRadius: '10px', p: 0.5 }} />
+        <Box component="img" src={iblLogo} alt="" sx={{ height: { xs: 30, sm: 36 }, bgcolor: '#FFFFFF', borderRadius: '10px', p: 0.5, flexShrink: 0 }} />
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-          <Typography sx={{ fontWeight: 800, fontSize: { xs: '1rem', sm: '1.2rem' }, lineHeight: 1.2 }}>
-            {tr('Misiones · Administración', 'Missions · Admin')}
-          </Typography>
+          {/* Phones: the logo says enough; the space goes to the buttons */}
+          {!isMobile && (
+            <Typography noWrap sx={{ fontWeight: 800, fontSize: '1.2rem', lineHeight: 1.2 }}>
+              {tr('Misiones · Administración', 'Missions · Admin')}
+            </Typography>
+          )}
           {!isMobile && <Typography sx={{ opacity: 0.75, fontSize: '0.8rem' }}>Iglesia Bautista Libertad</Typography>}
         </Box>
         {!isMobile && tab === 'misioneros' && (
           <StorageIndicator compact refreshTrigger={storageRefresh} onUsageLoaded={setStorageUsedBytes} />
         )}
         <ToggleButtonGroup exclusive size="small" value={lang} onChange={(_, v) => v && setLang(v)} sx={{
-          bgcolor: 'rgba(255,255,255,0.12)', borderRadius: '999px',
-          '& .MuiToggleButton-root': { color: 'rgba(255,255,255,0.8)', border: 0, borderRadius: '999px !important', px: 1.5, py: 0.25, fontWeight: 800 },
-          '& .Mui-selected': { bgcolor: `${BRAND.white} !important`, color: `${BRAND.navy} !important` },
+          bgcolor: 'rgba(255,255,255,0.12)', borderRadius: '999px', flexShrink: 0,
+          '& .MuiToggleButton-root': { color: 'rgba(255,255,255,0.8)', border: 0, borderRadius: '999px !important', px: { xs: 1, sm: 1.5 }, py: 0.25, fontWeight: 800 },
+          '& .Mui-selected': { bgcolor: '#FFFFFF !important', color: '#1E3A8A !important' },
         }}>
           <ToggleButton value="es">ES</ToggleButton>
           <ToggleButton value="en">EN</ToggleButton>
         </ToggleButtonGroup>
-        {!isMobile && <Chip label={userEmail} size="small" sx={{ color: BRAND.white, bgcolor: 'rgba(255,255,255,0.14)' }} />}
-        <Button startIcon={<LogoutIcon />} onClick={() => signOut(auth)} size="small" sx={{ color: BRAND.white, minWidth: 0 }}>
-          {isMobile ? '' : tr('Salir', 'Sign out')}
-        </Button>
+        <Tooltip title={mode === 'dark' ? tr('Modo claro', 'Light mode') : tr('Modo oscuro', 'Dark mode')}>
+          <IconButton onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')} sx={{ color: '#FFFFFF', flexShrink: 0 }}
+            aria-label={mode === 'dark' ? tr('Modo claro', 'Light mode') : tr('Modo oscuro', 'Dark mode')}>
+            {mode === 'dark' ? <LightModeOutlinedIcon /> : <DarkModeOutlinedIcon />}
+          </IconButton>
+        </Tooltip>
+        {!isMobile && <Chip label={userEmail} size="small" sx={{ color: '#FFFFFF', bgcolor: 'rgba(255,255,255,0.14)' }} />}
+        {isMobile ? (
+          <Tooltip title={tr('Salir', 'Sign out')}>
+            <IconButton onClick={() => signOut(auth)} sx={{ color: '#FFFFFF', flexShrink: 0 }} aria-label={tr('Salir', 'Sign out')}><LogoutIcon /></IconButton>
+          </Tooltip>
+        ) : (
+          <Button startIcon={<LogoutIcon />} onClick={() => signOut(auth)} size="small" sx={{ color: '#FFFFFF', minWidth: 0 }}>{tr('Salir', 'Sign out')}</Button>
+        )}
       </Box>
 
-      <Box sx={{ bgcolor: BRAND.white, borderBottom: `1px solid ${BRAND.line}`, position: 'sticky', top: 0, zIndex: 10 }}>
+      <Box sx={{ bgcolor: A.surface, borderBottom: `1px solid ${A.line}`, position: 'sticky', top: 0, zIndex: 10 }}>
         <Tabs
           value={tab}
           onChange={(_, v: AdminTab) => setSearchParams(

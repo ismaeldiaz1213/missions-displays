@@ -103,7 +103,8 @@ service cloud.firestore {
       return p is map
         && p.keys().hasOnly(['name', 'lastName', 'organization', 'continent', 'location', 'profileImage',
                              'description', 'prayerLetter', 'media', 'contactInfo', 'specialNotes',
-                             'startDate', 'missionType'])
+                             'startDate', 'missionType', 'churches'])
+        && p.get('churches', []) is list && p.get('churches', []).size() <= 10
         && reqStr(p.name, 200) && reqStr(p.lastName, 100) && str(p.organization, 200)
         && p.continent in ['north-america', 'central-america', 'south-america', 'europe', 'africa', 'asia', 'oceania']
         && validLocation(p.location)

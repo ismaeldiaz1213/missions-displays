@@ -114,6 +114,7 @@ const missionaryColumns: Column<DirectoryEntry>[] = [
   { header: 'Sitio web', width: 26, value: (e) => pub(e, 'website') },
   { header: 'Facebook', width: 26, value: (e) => pub(e, 'facebook') },
   { header: 'Instagram', width: 22, value: (e) => pub(e, 'instagram') },
+  { header: 'Iglesias', width: 40, wrap: true, value: (e) => (e.page.churches ?? []).map((c) => `${c.name}${c.address ? ` — ${c.address}` : ''}`).join('\n') },
   { header: 'Descripción', width: 60, wrap: true, value: (e) => e.page.description },
   { header: 'Peticiones / notas', width: 40, wrap: true, value: (e) => e.page.specialNotes ?? '' },
   { header: 'Foto de perfil', width: 10, value: (e) => yesNo(!!e.page.profileImage) },

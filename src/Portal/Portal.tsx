@@ -312,6 +312,8 @@ const Portal: React.FC = () => {
   const [photo, setPhoto] = useState('');
   const [editToken, setEditToken] = useState('');
   const [problem, setProblem] = useState('');
+  const [editorDirty, setEditorDirty] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const view = (searchParams.get('vista') as View) || (searchParams.get('informe') ? 'report' : 'home');
   const preferredQuarter = searchParams.get('informe') ?? store.get(REPORT_KEY);
 
@@ -385,7 +387,7 @@ const Portal: React.FC = () => {
   );
 
   if (isAdminEmail(user.email)) return shell(<CenterCard><Typography sx={{ mb: 2 }}>{t.adminHere}</Typography>
-    <Button component={RouterLink} to="/admin" variant="contained" sx={bigButtonSx}>/admin</Button><Box>{signOutButton}</Box></CenterCard>);
+    <Button component={RouterLink} to="/admin" variant="contained" sx={bigButtonSx}>{lang === 'en' ? 'Go to admin' : 'Ir a administración'}</Button><Box>{signOutButton}</Box></CenterCard>);
   if (!account?.page) return shell(<CenterCard>
     <Typography sx={{ fontWeight: 800, fontSize: '1.4rem', color: 'var(--ibl-primary-dark)' }}>{t.noPageTitle}</Typography>
     <Typography sx={{ mt: 1.5 }}>{t.noPageBody(user.email ?? '')}</Typography>
@@ -396,7 +398,7 @@ const Portal: React.FC = () => {
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, bgcolor: 'var(--ibl-surface)', borderRadius: '20px', p: 2.5, mb: 3,
       boxShadow: '0 6px 24px color-mix(in srgb, var(--ibl-primary-dark) 8%, transparent)' }}>
       {view !== 'home' ? (
-        <Button startIcon={<ArrowBackIcon />} onClick={() => go('home')} sx={{ ...bigButtonSx, px: 2 }}>{t.back}</Button>
+        <Button startIcon={<ArrowBackIcon />} onClick={() => (view === 'page' && editorDirty ? setConfirmLeave(true) : go('home'))} sx={{ ...bigButtonSx, px: 2 }}>{t.back}</Button>
       ) : (
         <Avatar src={photo || undefined} sx={{ width: 64, height: 64, bgcolor: '#EFF6FF', color: 'var(--ibl-primary-dark)', fontWeight: 800 }}>
           {account.page.name?.[0]}
@@ -426,7 +428,18 @@ const Portal: React.FC = () => {
       )}
       {view === 'report' && <ReportView t={t} lang={lang} account={account} preferred={preferredQuarter} />}
       {view === 'contact' && <ContactView t={t} account={account} onSaved={loadAccount} />}
-      {view === 'page' && (editToken ? <PageEditor token={editToken} t={t} lang={lang} /> : <Box sx={{ textAlign: 'center', py: 6 }}><CircularProgress /></Box>)}
+      {view === 'page' && (editToken ? <PageEditor token={editToken} t={t} lang={lang} onDirtyChange={setEditorDirty} /> : <Box sx={{ textAlign: 'center', py: 6 }}><CircularProgress /></Box>)}
+      <Dialog open={confirmLeave} onClose={() => setConfirmLeave(false)} maxWidth="xs">
+        <DialogContent>
+          <Typography sx={{ fontWeight: 800, fontSize: '1.15rem' }}>{t.leaveTitle}</Typography>
+          <Typography sx={{ mt: 1 }}>{t.leaveBody}</Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setConfirmLeave(false)} sx={{ textTransform: 'none', fontWeight: 700 }}>{t.keepEditing}</Button>
+          <Button variant="contained" color="warning" onClick={() => { setConfirmLeave(false); setEditorDirty(false); go('home'); }}
+            sx={{ borderRadius: '999px', textTransform: 'none', fontWeight: 800 }}>{t.leaveYes}</Button>
+        </DialogActions>
+      </Dialog>
     </>,
     view === 'page',
   );

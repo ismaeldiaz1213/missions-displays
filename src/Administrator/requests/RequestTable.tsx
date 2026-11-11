@@ -285,7 +285,7 @@ const RequestTable: React.FC<{ onPendingCount?: (n: number) => void }> = ({ onPe
       </Box>
 
       {apiError && (
-        <Box sx={{ bgcolor: '#FEE2E2', border: '1px solid #FECACA', borderRadius: 2, p: 2, mb: 2 }}>
+        <Box sx={{ bgcolor: 'rgba(239,68,68,0.12)', border: 1, borderColor: 'error.light', borderRadius: 2, p: 2, mb: 2 }}>
           <Typography color="error.main" variant="body2">{apiError}</Typography>
         </Box>
       )}

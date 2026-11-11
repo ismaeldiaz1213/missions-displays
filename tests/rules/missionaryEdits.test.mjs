@@ -72,6 +72,14 @@ await check('link holder reads their edit', assertSucceeds(getDoc(doc(anonymous,
 await check('link holder saves a draft', assertSucceeds(save(await seed())));
 await check('link holder submits', assertSucceeds(submit(await seed())));
 await check('link holder edits again after a rejection', assertSucceeds(submit(await seed({ status: 'rejected', rejectionReason: 'Falta foto' }))));
+const churchToken = await seed();
+const manyToken = await seed();
+await check('link holder adds the churches they planted', assertSucceeds(save(churchToken, {
+  proposed: proposed(churchToken, { churches: [{ name: 'Iglesia Bautista Gracia', address: 'Av. Arequipa 123, Lima', latitude: -12.07, longitude: -77.03 }] }),
+})));
+await check('more than 10 churches refused', assertFails(save(manyToken, {
+  proposed: proposed(manyToken, { churches: Array.from({ length: 11 }, (_, i) => ({ name: `I${i}`, address: '', latitude: 0, longitude: 0 })) }),
+})));
 await check('link holder adds to a submission without re-submitting', assertSucceeds(save(await seed({ status: 'submitted', submittedAt: CREATED }), { status: 'submitted' })));
 await check('link holder withdraws a submission to draft', assertSucceeds(save(await seed({ status: 'submitted', submittedAt: CREATED }))));
 await check('signed-in non-admin also works as a link holder', assertSucceeds(save(await seed(), {}, outsider)));

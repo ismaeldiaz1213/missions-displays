@@ -62,7 +62,7 @@ const StorageIndicator: React.FC<Props> = ({ compact = false, onUsageLoaded, ref
   }
 
   return (
-    <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', border: `1px solid ${isDanger ? '#FECACA' : '#E2E8F0'}`, borderRadius: 1 }}>
+    <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', border: 1, borderColor: isDanger ? 'error.light' : 'divider', borderRadius: 1 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <Typography variant="body2" color="text.secondary">
           Almacenamiento de archivos — límite gratuito: 5 GB
@@ -80,7 +80,7 @@ const StorageIndicator: React.FC<Props> = ({ compact = false, onUsageLoaded, ref
         variant={loading ? 'indeterminate' : 'determinate'}
         value={percent}
         color={color}
-        sx={{ height: 6, borderRadius: 3, bgcolor: '#E2E8F0' }}
+        sx={{ height: 6, borderRadius: 3, bgcolor: 'action.hover' }}
       />
       {isWarning && !isDanger && (
         <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, display: 'block' }}>

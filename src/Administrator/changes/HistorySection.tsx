@@ -1,16 +1,15 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import PreviewFrame from '../../ui/PreviewFrame';
 import {
   Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Typography,
 } from '@mui/material';
 import RestoreIcon from '@mui/icons-material/Restore';
 import { listHistory, restoreVersion, type PageVersion } from '../../data/missionaries';
 import { currentUserEmail } from '../../data/currentUser';
-import { BRAND } from '../../ui/brand';
-import { formatDate, useAdminLang } from '../adminUi';
+import { A, formatDate, useAdminLang } from '../adminUi';
 import { useDirectory, type DirectoryEntry } from '../directory/directoryData';
 import { FIELD_LABELS, pageChanges } from './diff';
 
-const MissionaryPage = lazy(() => import('../../Missionaries/Missionary'));
 
 const REASONS: Record<string, { es: string; en: string }> = {
   // Each version is the page as it was just BEFORE this happened.
@@ -52,19 +51,19 @@ const HistorySection: React.FC<{ entry: DirectoryEntry }> = ({ entry }) => {
   if (versions === null) return <CircularProgress size={22} />;
   return (
     <Box>
-      <Typography sx={{ color: BRAND.muted, mb: 2 }}>
+      <Typography sx={{ color: A.muted, mb: 2 }}>
         {tr('Antes de cada cambio a la página se guarda la versión anterior. Puede ver cualquiera y restaurarla.',
           'Before every change to the page, the previous version is saved. You can view any of them and restore it.')}
       </Typography>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      {versions.length === 0 && <Typography sx={{ color: BRAND.muted }}>{tr('Todavía no hay versiones anteriores.', 'No earlier versions yet.')}</Typography>}
+      {versions.length === 0 && <Typography sx={{ color: A.muted }}>{tr('Todavía no hay versiones anteriores.', 'No earlier versions yet.')}</Typography>}
       {versions.map((v) => {
         const diff = pageChanges(v.page, entry.page);
         return (
-          <Box key={v.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.75, mb: 1, bgcolor: BRAND.white, border: `1px solid ${BRAND.line}`, borderRadius: '14px' }}>
+          <Box key={v.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.75, mb: 1, bgcolor: A.surface, border: `1px solid ${A.line}`, borderRadius: '14px' }}>
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography sx={{ fontWeight: 800 }}>{formatDate(v.savedAt, lang)} · {REASONS[v.reason]?.[lang] ?? v.reason}</Typography>
-              <Typography sx={{ color: BRAND.muted, fontSize: '0.85rem' }} noWrap>
+              <Typography sx={{ color: A.muted, fontSize: '0.85rem' }} noWrap>
                 {v.savedBy}{diff.length ? ` · ${tr('distinto en', 'differs in')}: ${diff.map((c) => FIELD_LABELS[c.field]?.[lang] ?? c.field).join(', ')}` : ` · ${tr('igual a la actual', 'same as current')}`}
               </Typography>
             </Box>
@@ -79,15 +78,11 @@ const HistorySection: React.FC<{ entry: DirectoryEntry }> = ({ entry }) => {
         </DialogTitle>
         <DialogContent dividers sx={{ p: 0 }}>
           {open && (
-            <Box sx={{ height: '70vh', overflowY: 'auto', transform: 'translateZ(0)' }}>
-              <Suspense fallback={<Box sx={{ p: 6, textAlign: 'center' }}><CircularProgress /></Box>}>
-                <MissionaryPage preview={open.page} />
-              </Suspense>
-            </Box>
+            <Box sx={{ p: 2 }}><PreviewFrame page={open.page} lang={lang} height="66vh" /></Box>
           )}
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Typography sx={{ flex: 1, color: BRAND.muted, fontSize: '0.85rem' }}>
+          <Typography sx={{ flex: 1, color: A.muted, fontSize: '0.85rem' }}>
             {tr('La versión actual también se guarda, así que esto se puede deshacer.', 'The current version is saved too, so this can be undone.')}
           </Typography>
           <Button color="inherit" onClick={() => setOpen(null)} disabled={busy}>{tr('Cerrar', 'Close')}</Button>

@@ -1,49 +1,69 @@
-import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert, Box, Button, CircularProgress, IconButton, LinearProgress, MenuItem, TextField, ToggleButton, ToggleButtonGroup,
-  Typography, useMediaQuery, useTheme,
+  Alert, Box, Button, ButtonBase, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, IconButton,
+  LinearProgress, MenuItem, Snackbar, TextField, ToggleButton, ToggleButtonGroup, Typography, useMediaQuery, useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
 import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
+import PlayCircleFilledWhiteOutlinedIcon from '@mui/icons-material/PlayCircleFilledWhiteOutlined';
 import MovieOutlinedIcon from '@mui/icons-material/MovieOutlined';
 import SendIcon from '@mui/icons-material/Send';
+import UndoIcon from '@mui/icons-material/Undo';
 import type { ContactInfo, Missionary } from '../types';
 import {
   editFilesPrefix, getEdit, saveEditDraft, submitEdit, updateSubmittedEdit, type EditFileKind, type MissionaryEdit, type ProposedPage,
 } from '../data/missionaryEdits';
 import { CONTINENT_IDS, REQUEST_LIMITS } from '../data/missionaryRequests';
 import { uploadFile } from '../data/storageFiles';
-import { isVideoPath, resolveUrl } from '../storageUrl';
+import { isVideoPath, storageUrl, videoPosterPath, webVideoPath } from '../storageUrl';
 import CityPicker from '../ui/CityPicker';
+import ChurchesEditor from '../ui/ChurchesEditor';
+import PreviewFrame from '../ui/PreviewFrame';
 import FormSection from '../Registration/components/FormSection';
 import type { PortalStrings } from './portalI18n';
 
-const MissionaryPage = lazy(() => import('../Missionaries/Missionary'));
-
 const CONTACT_TYPES: ContactInfo['type'][] = ['email', 'phone', 'website', 'facebook', 'instagram'];
 const safeName = (name: string) => name.normalize('NFKD').replace(/[^\w.-]+/g, '_').slice(-100);
+const isVideo = (path: string) => isVideoPath(path) || /\.(mp4|mov|m4v|webm)$/i.test(path);
+/** Published videos have a poster and a web-friendly copy; ones just uploaded don't yet. */
+const isPublished = (path: string) => /^(images|videos|pdfs)\//.test(path);
+const posterOf = (path: string) => (isPublished(path) ? storageUrl(videoPosterPath(path)) : '');
+const videoSrcOf = (path: string) => (isPublished(path) ? storageUrl(webVideoPath(path)) : storageUrl(path));
 
-const Thumb: React.FC<{ path: string; onRemove: () => void; label: string }> = ({ path, onRemove, label }) => {
-  const [url, setUrl] = useState('');
-  const video = isVideoPath(path) || /\/gallery\/.*\.(mp4|mov|m4v|webm)$/i.test(path);
-  useEffect(() => { if (!video) resolveUrl(path, '').then(setUrl); }, [path, video]);
+const normalize = (p: ProposedPage): ProposedPage => ({
+  ...p, location: { state: '', ...p.location }, specialNotes: p.specialNotes ?? '', startDate: p.startDate ?? '', churches: p.churches ?? [],
+});
+
+/** A gallery photo or video: tap to view it large, X to take it off the page (undoable). */
+const MediaTile: React.FC<{ path: string; onOpen: () => void; onRemove: () => void; removeLabel: string; size?: number }> = ({ path, onOpen, onRemove, removeLabel, size = 112 }) => {
+  const [failed, setFailed] = useState(false);
+  const video = isVideo(path);
+  const src = video ? posterOf(path) : storageUrl(path);
   return (
-    <Box sx={{ position: 'relative', width: 96, height: 96, borderRadius: '12px', overflow: 'hidden', bgcolor: '#EEF2F7', display: 'grid', placeItems: 'center' }}>
-      {video ? <MovieOutlinedIcon sx={{ fontSize: 36, color: 'var(--ibl-primary)' }} />
-        : url ? <Box component="img" src={url} alt="" sx={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <CircularProgress size={20} />}
-      <IconButton size="small" aria-label={label} onClick={onRemove}
-        sx={{ position: 'absolute', top: 4, right: 4, bgcolor: 'rgba(255,255,255,0.92)', '&:hover': { bgcolor: '#fff' }, p: 0.4 }}>
-        <CloseIcon sx={{ fontSize: 16 }} />
+    <Box sx={{ position: 'relative', width: size, height: size, flex: '0 0 auto' }}>
+      <ButtonBase onClick={onOpen} sx={{ width: '100%', height: '100%', borderRadius: '14px', overflow: 'hidden', bgcolor: '#E2E8F0', display: 'grid', placeItems: 'center' }}>
+        {src && !failed
+          ? <Box component="img" src={src} alt="" loading="lazy" onError={() => setFailed(true)} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          : video ? <MovieOutlinedIcon sx={{ fontSize: 40, color: 'var(--ibl-primary)' }} /> : <CircularProgress size={18} />}
+        {video && <PlayCircleFilledWhiteOutlinedIcon sx={{ position: 'absolute', fontSize: 40, color: '#fff', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))' }} />}
+      </ButtonBase>
+      <IconButton aria-label={removeLabel} onClick={onRemove} sx={{
+        position: 'absolute', top: -8, right: -8, width: 34, height: 34, bgcolor: '#fff', boxShadow: '0 2px 8px rgba(15,23,42,0.25)',
+        '&:hover': { bgcolor: '#FEE2E2' },
+      }}>
+        <DeleteOutlineIcon sx={{ fontSize: 20, color: '#B91C1C' }} />
       </IconButton>
     </Box>
   );
 };
 
 /**
- * Where a missionary edits their page. Every change is a proposal (missionaryEdits/{token}):
- * nothing goes live until an admin approves it. Uploads go to missionary-edits/{token}/…
+ * Where a missionary edits their page. Every change is a proposal (missionaryEdits/{token}) that an
+ * admin approves before it goes live. Changes here stay on this screen until they press Save or
+ * Send; "Descartar cambios" puts everything back as it was last saved, and each removal can be undone.
  */
 const PageEditor: React.FC<{
   token: string;
@@ -52,16 +72,22 @@ const PageEditor: React.FC<{
   /** Admin "Ajustar": no missionary banners; saving keeps the change in review. */
   adminMode?: boolean;
   onSaved?: () => void;
-}> = ({ token, t, lang, adminMode, onSaved }) => {
+  onDirtyChange?: (dirty: boolean) => void;
+}> = ({ token, t, lang, adminMode, onSaved, onDirtyChange }) => {
   const theme = useTheme();
   const wide = useMediaQuery(theme.breakpoints.up('lg'));
+  const phone = useMediaQuery(theme.breakpoints.down('sm'));
   const [edit, setEdit] = useState<MissionaryEdit | null | undefined>(undefined);
   const [page, setPage] = useState<ProposedPage | null>(null);
+  const [saved, setSaved] = useState('');
   const [view, setView] = useState<'edit' | 'preview'>('edit');
   const [uploads, setUploads] = useState<{ key: string; name: string; progress: number }[]>([]);
   const [busy, setBusy] = useState<'' | 'draft' | 'submit'>('');
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showErrors, setShowErrors] = useState(false);
+  const [undo, setUndo] = useState<ProposedPage | null>(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [viewing, setViewing] = useState<string | null>(null);
   const photoRef = useRef<HTMLInputElement>(null);
   const letterRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -70,14 +96,29 @@ const PageEditor: React.FC<{
     getEdit(token).then((e) => {
       const usable = e && !e.revoked && e.status !== 'approved' ? e : null;
       setEdit(usable);
-      if (usable) setPage({ ...usable.proposed, location: { state: '', ...usable.proposed.location }, specialNotes: usable.proposed.specialNotes ?? '', startDate: usable.proposed.startDate ?? '' });
+      if (usable) {
+        const p = normalize(usable.proposed);
+        setPage(p);
+        setSaved(JSON.stringify(p));
+      }
     }).catch(() => setEdit(null));
   }, [token]);
+
+  const dirty = useMemo(() => !!page && JSON.stringify(page) !== saved, [page, saved]);
+  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
 
   if (edit === undefined) return <Box sx={{ textAlign: 'center', py: 6 }}><CircularProgress /></Box>;
   if (!edit || !page) return <Alert severity="warning" sx={{ fontSize: '1rem' }}>{t.linkGone}</Alert>;
 
   const set = <K extends keyof ProposedPage>(k: K, v: ProposedPage[K]) => setPage((p) => (p ? { ...p, [k]: v } : p));
+  /** Removing anything first remembers the page, so "Deshacer" can bring it back. */
+  const remove = <K extends keyof ProposedPage>(k: K, v: ProposedPage[K]) => { setUndo(page); set(k, v); };
 
   const upload = async (file: File, kind: EditFileKind): Promise<string | null> => {
     const isImg = file.type.startsWith('image/');
@@ -106,7 +147,7 @@ const PageEditor: React.FC<{
 
   const save = async (submit: boolean) => {
     setNotice(null);
-    if (submit) {
+    if (submit || invalid) {
       setShowErrors(true);
       if (invalid) { setNotice({ type: 'error', text: t.fixErrors }); return; }
     }
@@ -115,11 +156,15 @@ const PageEditor: React.FC<{
       const clean: ProposedPage = {
         ...page,
         contactInfo: page.contactInfo.filter((c) => c.value.trim()).map((c) => ({ ...c, value: c.value.trim() })),
+        churches: (page.churches ?? []).filter((c) => c.name.trim()).map((c) => ({ ...c, name: c.name.trim(), address: c.address.trim() })),
       };
       // Once submitted, further saves stay in review (they never withdraw it).
       const alreadySubmitted = edit.status === 'submitted';
       await (alreadySubmitted ? updateSubmittedEdit(token, clean) : submit ? submitEdit(token, clean) : saveEditDraft(token, clean));
       setEdit({ ...edit, status: alreadySubmitted || submit ? 'submitted' : 'draft' });
+      setPage(clean);
+      setSaved(JSON.stringify(clean));
+      setUndo(null);
       setNotice({ type: 'success', text: adminMode ? t.saved : submit ? t.submittedOk : t.savedDraft });
       onSaved?.();
     } catch (err) {
@@ -130,15 +175,20 @@ const PageEditor: React.FC<{
     }
   };
 
+  const discard = () => {
+    setPage(JSON.parse(saved));
+    setUndo(null);
+    setShowErrors(false);
+    setConfirmDiscard(false);
+    setNotice(null);
+  };
+
   const preview = (
-    <Box sx={{ border: '1px solid var(--ibl-border)', borderRadius: '16px', overflow: 'hidden', height: wide ? 'calc(100vh - 120px)' : '75vh', overflowY: 'auto', transform: 'translateZ(0)', bgcolor: '#fff' }}>
-      <Suspense fallback={<Box sx={{ p: 6, textAlign: 'center' }}><CircularProgress /></Box>}>
-        <MissionaryPage preview={{ ...page, id: edit.missionaryId } as Missionary} />
-      </Suspense>
-    </Box>
+    <PreviewFrame lang={lang} height={wide ? 'calc(100vh - 170px)' : '72vh'} page={{ ...page, id: edit.missionaryId } as Missionary} />
   );
 
   const err = (k: keyof typeof missing) => showErrors && missing[k];
+  const near = [page.location.city, page.location.state, page.location.country].filter(Boolean).join(', ');
 
   const form = (
     <Box>
@@ -169,10 +219,12 @@ const PageEditor: React.FC<{
       <FormSection step={3} title={t.photos}>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2.5 }}>
           <Box>
-            <Typography sx={{ fontWeight: 700, mb: 1 }}>{t.profilePhoto}</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              {page.profileImage && <Thumb path={page.profileImage} label={t.remove} onRemove={() => set('profileImage', '')} />}
-              <Button variant="outlined" onClick={() => photoRef.current?.click()} sx={{ borderRadius: '999px', fontWeight: 700 }}>
+            <Typography sx={{ fontWeight: 700, mb: 1.25 }}>{t.profilePhoto}</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+              {page.profileImage && (
+                <MediaTile path={page.profileImage} removeLabel={t.remove} onOpen={() => setViewing(page.profileImage!)} onRemove={() => remove('profileImage', '')} />
+              )}
+              <Button variant="outlined" onClick={() => photoRef.current?.click()} sx={{ borderRadius: '999px', fontWeight: 700, textTransform: 'none' }}>
                 {page.profileImage ? t.replace : t.choose}
               </Button>
             </Box>
@@ -183,15 +235,16 @@ const PageEditor: React.FC<{
             }} />
           </Box>
           <Box>
-            <Typography sx={{ fontWeight: 700, mb: 1 }}>{t.prayerLetter}</Typography>
+            <Typography sx={{ fontWeight: 700, mb: 1.25 }}>{t.prayerLetter}</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
               {page.prayerLetter && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 1.5, py: 1, borderRadius: '12px', bgcolor: '#EEF2F7' }}>
-                  <PictureAsPdfOutlinedIcon sx={{ color: 'var(--ibl-primary)' }} /> PDF
-                  <IconButton size="small" aria-label={t.remove} onClick={() => set('prayerLetter', '')}><CloseIcon sx={{ fontSize: 16 }} /></IconButton>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, pl: 1.5, pr: 0.5, py: 0.5, borderRadius: '12px', bgcolor: '#EEF2F7' }}>
+                  <PictureAsPdfOutlinedIcon sx={{ color: 'var(--ibl-primary)' }} />
+                  <Box component="a" href={storageUrl(page.prayerLetter)} target="_blank" rel="noopener" sx={{ fontWeight: 700, color: 'var(--ibl-primary-dark)' }}>PDF</Box>
+                  <IconButton aria-label={t.remove} onClick={() => remove('prayerLetter', '')}><DeleteOutlineIcon sx={{ color: '#B91C1C' }} /></IconButton>
                 </Box>
               )}
-              <Button variant="outlined" onClick={() => letterRef.current?.click()} sx={{ borderRadius: '999px', fontWeight: 700 }}>
+              <Button variant="outlined" onClick={() => letterRef.current?.click()} sx={{ borderRadius: '999px', fontWeight: 700, textTransform: 'none' }}>
                 {page.prayerLetter ? t.replace : t.choose}
               </Button>
             </Box>
@@ -202,13 +255,19 @@ const PageEditor: React.FC<{
             }} />
           </Box>
         </Box>
-        <Typography sx={{ fontWeight: 700, mt: 3, mb: 1 }}>{t.gallery}</Typography>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25 }}>
+
+        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'wrap', mt: 3, mb: 0.5 }}>
+          <Typography sx={{ fontWeight: 700 }}>{t.gallery}</Typography>
+          <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.88rem' }}>· {t.mediaCount(page.media.length)}</Typography>
+        </Box>
+        {page.media.length > 0 && <Typography sx={{ color: 'var(--ibl-text-muted)', fontSize: '0.85rem', mb: 1.5 }}>{t.tapToView}</Typography>}
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, pt: 1 }}>
           {page.media.map((m) => (
-            <Thumb key={m.url} path={m.url} label={t.remove} onRemove={() => set('media', page.media.filter((x) => x.url !== m.url))} />
+            <MediaTile key={m.url} path={m.url} removeLabel={t.remove} onOpen={() => setViewing(m.url)}
+              onRemove={() => remove('media', page.media.filter((x) => x.url !== m.url))} />
           ))}
           <Button onClick={() => galleryRef.current?.click()} disabled={page.media.length >= 50}
-            sx={{ width: 96, height: 96, borderRadius: '12px', border: '2px dashed var(--ibl-border)', flexDirection: 'column', fontSize: '0.75rem', fontWeight: 700 }}>
+            sx={{ width: 112, height: 112, borderRadius: '14px', border: '2px dashed var(--ibl-border)', flexDirection: 'column', gap: 0.5, fontSize: '0.78rem', fontWeight: 700, textTransform: 'none' }}>
             <AddPhotoAlternateOutlinedIcon />{t.addPhotos}
           </Button>
         </Box>
@@ -228,18 +287,27 @@ const PageEditor: React.FC<{
         ))}
       </FormSection>
 
-      <FormSection step={4} title={t.publicContact}>
+      <FormSection step={4} title={t.churches}>
+        <ChurchesEditor lang={lang} near={near} value={page.churches ?? []}
+          onChange={(churches) => (churches.length < (page.churches ?? []).length ? remove('churches', churches) : set('churches', churches))} />
+      </FormSection>
+
+      <FormSection step={5} title={t.publicContact}>
         {page.contactInfo.map((c, i) => (
-          <Box key={i} sx={{ display: 'flex', gap: 1, mb: 1.5, alignItems: 'center' }}>
-            <TextField select value={c.type} sx={{ minWidth: 140 }} onChange={(e) => set('contactInfo', page.contactInfo.map((x, j) => (j === i ? { ...x, type: e.target.value as ContactInfo['type'] } : x)))}>
+          <Box key={i} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr auto', sm: '150px 1fr auto' }, gap: 1, mb: 1.5, alignItems: 'center' }}>
+            <TextField select value={c.type} sx={{ gridColumn: { xs: '1 / 2', sm: 'auto' } }}
+              onChange={(e) => set('contactInfo', page.contactInfo.map((x, j) => (j === i ? { ...x, type: e.target.value as ContactInfo['type'] } : x)))}>
               {CONTACT_TYPES.map((ty) => <MenuItem key={ty} value={ty}>{t.contactTypes[ty]}</MenuItem>)}
             </TextField>
-            <TextField fullWidth value={c.value} onChange={(e) => set('contactInfo', page.contactInfo.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))} />
-            <IconButton aria-label={t.remove} onClick={() => set('contactInfo', page.contactInfo.filter((_, j) => j !== i))}><CloseIcon /></IconButton>
+            <IconButton aria-label={t.remove} onClick={() => remove('contactInfo', page.contactInfo.filter((_, j) => j !== i))} sx={{ gridColumn: { xs: '2', sm: '3' }, gridRow: { xs: '1', sm: 'auto' } }}>
+              <CloseIcon />
+            </IconButton>
+            <TextField fullWidth value={c.value} sx={{ gridColumn: { xs: '1 / -1', sm: '2' }, gridRow: { xs: '2', sm: '1' } }}
+              onChange={(e) => set('contactInfo', page.contactInfo.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))} />
           </Box>
         ))}
         {page.contactInfo.length < 10 && (
-          <Button startIcon={<AddIcon />} onClick={() => set('contactInfo', [...page.contactInfo, { type: 'email', value: '' }])} sx={{ fontWeight: 700 }}>
+          <Button startIcon={<AddIcon />} onClick={() => set('contactInfo', [...page.contactInfo, { type: 'email', value: '' }])} sx={{ fontWeight: 700, textTransform: 'none' }}>
             {t.addContact}
           </Button>
         )}
@@ -267,22 +335,61 @@ const PageEditor: React.FC<{
         </Box>
       ) : view === 'edit' ? form : preview}
 
+      {/* Space so the last fields can scroll clear of the bar below */}
+      <Box sx={{ height: { xs: 24, sm: 8 } }} />
       <Box sx={{
-        position: 'sticky', bottom: 0, zIndex: 5, mt: 2, py: 1.5, px: 2, bgcolor: 'rgba(255,255,255,0.95)', borderRadius: '16px',
-        border: '1px solid var(--ibl-border)', boxShadow: '0 -6px 24px rgba(15,23,42,0.08)', display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center',
+        position: 'sticky', bottom: { xs: 8, sm: 12 }, zIndex: 5, py: 1.25, px: { xs: 1.5, sm: 2 }, bgcolor: '#FFFFFF', borderRadius: '18px',
+        border: '1px solid var(--ibl-border)', boxShadow: '0 -4px 28px rgba(15,23,42,0.14)', display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center',
       }}>
         {notice && <Alert severity={notice.type} sx={{ flex: '1 1 100%' }} onClose={() => setNotice(null)}>{notice.text}</Alert>}
-        <Box sx={{ flex: 1 }} />
-        {edit.status !== 'submitted' && (
-          <Button size="large" variant="outlined" onClick={() => save(false)} disabled={!!busy || uploads.length > 0} sx={{ borderRadius: '999px', fontWeight: 800, px: 3, textTransform: 'none' }}>
-            {busy === 'draft' ? <CircularProgress size={20} /> : t.saveDraft}
+        {(dirty || !phone) && (
+          <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', color: dirty ? '#B45309' : 'var(--ibl-text-muted)', flex: { xs: '1 1 100%', sm: 1 } }}>
+            {dirty ? `● ${t.unsaved}` : `✓ ${t.allSaved}`}
+          </Typography>
+        )}
+        {dirty && (
+          <Button onClick={() => setConfirmDiscard(true)} disabled={!!busy} color="inherit" sx={{ borderRadius: '999px', fontWeight: 700, textTransform: 'none', whiteSpace: 'nowrap' }}>
+            {phone ? t.undoAll : t.discard}
           </Button>
         )}
-        <Button size="large" variant="contained" onClick={() => save(true)} disabled={!!busy || uploads.length > 0} endIcon={<SendIcon />}
-          sx={{ borderRadius: '999px', fontWeight: 800, px: 3, textTransform: 'none' }}>
-          {busy === 'submit' ? <CircularProgress size={20} color="inherit" /> : adminMode ? t.save : edit.status === 'submitted' ? t.updateSubmitted : t.submit}
+        {edit.status !== 'submitted' && !adminMode && (
+          <Button variant="outlined" onClick={() => save(false)} disabled={!!busy || uploads.length > 0 || !dirty}
+            sx={{ borderRadius: '999px', fontWeight: 800, px: 2.5, textTransform: 'none', flex: { xs: 1, sm: 'none' }, whiteSpace: 'nowrap' }}>
+            {busy === 'draft' ? <CircularProgress size={20} /> : phone ? t.saveShort : t.saveDraft}
+          </Button>
+        )}
+        <Button variant="contained" onClick={() => save(true)} disabled={!!busy || uploads.length > 0 || (edit.status === 'submitted' && !dirty)} endIcon={<SendIcon />}
+          sx={{ borderRadius: '999px', fontWeight: 800, px: 2.5, textTransform: 'none', flex: { xs: 1, sm: 'none' }, whiteSpace: 'nowrap' }}>
+          {busy === 'submit' ? <CircularProgress size={20} color="inherit" /> : adminMode ? t.save : phone ? (edit.status === 'submitted' ? t.saveShort : t.sendShort) : edit.status === 'submitted' ? t.updateSubmitted : t.submit}
         </Button>
       </Box>
+
+      <Snackbar open={!!undo} autoHideDuration={8000} onClose={(_, reason) => reason !== 'clickaway' && setUndo(null)} message={t.removed}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} sx={{ bottom: { xs: 130, sm: 120 } }}
+        action={<Button color="inherit" startIcon={<UndoIcon />} onClick={() => { if (undo) setPage(undo); setUndo(null); }} sx={{ fontWeight: 800 }}>{t.undo}</Button>} />
+
+      <Dialog open={confirmDiscard} onClose={() => setConfirmDiscard(false)} maxWidth="xs">
+        <DialogTitle sx={{ fontWeight: 800 }}>{t.discardTitle}</DialogTitle>
+        <DialogContent><Typography>{t.discardBody}</Typography></DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setConfirmDiscard(false)} sx={{ textTransform: 'none', fontWeight: 700 }}>{t.keepEditing}</Button>
+          <Button variant="contained" color="warning" onClick={discard} sx={{ borderRadius: '999px', textTransform: 'none', fontWeight: 800 }}>{t.discardYes}</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={!!viewing} onClose={() => setViewing(null)} maxWidth="md" fullWidth PaperProps={{ sx: { bgcolor: '#0F172A' } }}>
+        <Box sx={{ position: 'relative', display: 'grid', placeItems: 'center', minHeight: 240 }}>
+          {viewing && (isVideo(viewing)
+            ? <Box component="video" key={viewing} controls autoPlay playsInline poster={posterOf(viewing) || undefined}
+                sx={{ width: '100%', maxHeight: '80vh', display: 'block' }}
+                onError={(e: React.SyntheticEvent<HTMLVideoElement>) => { if (e.currentTarget.src !== storageUrl(viewing)) e.currentTarget.src = storageUrl(viewing); }}
+                src={videoSrcOf(viewing)} />
+            : <Box component="img" src={storageUrl(viewing)} alt="" sx={{ maxWidth: '100%', maxHeight: '80vh', display: 'block' }} />)}
+          <IconButton aria-label={t.close} onClick={() => setViewing(null)} sx={{ position: 'absolute', top: 8, right: 8, bgcolor: 'rgba(255,255,255,0.9)', '&:hover': { bgcolor: '#fff' } }}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+      </Dialog>
     </Box>
   );
 };

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Box, ButtonBase, Typography } from '@mui/material';
 import { formatDay, quarterLabel, quartersOfYear, today, yearLabel, type Quarter } from '../../data/reports';
-import { BRAND } from '../../ui/brand';
-import { useAdminLang } from '../adminUi';
+import { A, useAdminLang } from '../adminUi';
 import type { DirectoryEntry } from '../directory/directoryData';
 import { useReports } from './reportsData';
 import { ReportStatusTag } from './ReportStatus';
@@ -23,7 +22,7 @@ const MissionaryReports: React.FC<{ entry: DirectoryEntry }> = ({ entry }) => {
         if (!quarters.length) return null;
         return (
           <Box key={y} sx={{ mb: 2.5 }}>
-            <Typography sx={{ color: BRAND.blue, fontWeight: 800, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.07em', mb: 1 }}>
+            <Typography sx={{ color: A.blue, fontWeight: 800, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.07em', mb: 1 }}>
               {tr('Año', 'Year')} {yearLabel(y, reports.settings)}
             </Typography>
             {quarters.map((q) => {
@@ -31,11 +30,11 @@ const MissionaryReports: React.FC<{ entry: DirectoryEntry }> = ({ entry }) => {
               return (
                 <ButtonBase key={q.id} onClick={() => setOpen(q)} sx={{
                   width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 1.5, p: 1.75, mb: 1,
-                  bgcolor: BRAND.white, border: `1px solid ${BRAND.line}`, borderRadius: '14px', '&:hover': { borderColor: BRAND.blueLine },
+                  bgcolor: A.surface, border: `1px solid ${A.line}`, borderRadius: '14px', '&:hover': { borderColor: A.softLine },
                 }}>
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography sx={{ fontWeight: 800 }}>{quarterLabel(q, lang)}</Typography>
-                    <Typography sx={{ color: BRAND.muted, fontSize: '0.85rem' }}>
+                    <Typography sx={{ color: A.muted, fontSize: '0.85rem' }}>
                       {tr('Vence', 'Due')} {formatDay(q.due, lang)}{subs.length > 1 ? ` · ${subs.length} ${tr('envíos', 'submissions')}` : ''}
                     </Typography>
                   </Box>

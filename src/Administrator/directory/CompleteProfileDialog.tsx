@@ -12,8 +12,7 @@ import {
 import { publishWithHistory, saveDraft } from '../../data/missionaries';
 import { currentUserEmail } from '../../data/currentUser';
 import CityPicker from '../../ui/CityPicker';
-import { BRAND } from '../../ui/brand';
-import { useAdminLang } from '../adminUi';
+import { A, useAdminLang } from '../adminUi';
 import { fullName, requestFor, useDirectory, type DirectoryEntry } from './directoryData';
 
 /** Prefills a new profile from the page request (if any) and the public page. */
@@ -34,7 +33,7 @@ const startingProfile = (entry: DirectoryEntry, requests: ReturnType<typeof useD
 };
 
 const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <Typography sx={{ color: BRAND.blue, fontWeight: 800, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.07em', mt: 1 }}>
+  <Typography sx={{ color: A.blue, fontWeight: 800, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.07em', mt: 1 }}>
     {children}
   </Typography>
 );
@@ -114,8 +113,8 @@ const CompleteProfileDialog: React.FC<{ entry: DirectoryEntry; onClose: () => vo
             {tr('¿Cómo prefiere que le contactemos?', 'How do they prefer to be contacted?')}
           </Typography>
           <ToggleButtonGroup exclusive value={profile.preferredContact} onChange={(_, v: ContactMethod | null) => v && setP('preferredContact', v)}
-            sx={{ flexWrap: 'wrap', gap: 1, '& .MuiToggleButton-root': { border: `1px solid ${BRAND.line} !important`, borderRadius: '999px !important', px: 2, fontWeight: 700, textTransform: 'none' },
-              '& .Mui-selected': { bgcolor: `${BRAND.blueSoft} !important`, color: `${BRAND.navy} !important`, borderColor: `${BRAND.blue} !important` } }}>
+            sx={{ flexWrap: 'wrap', gap: 1, '& .MuiToggleButton-root': { border: `1px solid ${A.line} !important`, borderRadius: '999px !important', px: 2, fontWeight: 700, textTransform: 'none' },
+              '& .Mui-selected': { bgcolor: `${A.soft} !important`, color: `${A.navy} !important`, borderColor: `${A.blue} !important` } }}>
             {CONTACT_METHODS.map((m) => <ToggleButton key={m} value={m}>{CONTACT_METHOD_LABELS[m][lang]}</ToggleButton>)}
           </ToggleButtonGroup>
           <TextField fullWidth sx={{ mt: 1.5 }} label={profile.preferredContact === 'other' ? tr('¿Cuál?', 'Which one?') : tr('Nota (opcional)', 'Note (optional)')}

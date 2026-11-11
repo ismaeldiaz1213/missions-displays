@@ -3,8 +3,7 @@ import { Box, Button, CircularProgress, Tooltip, Typography } from '@mui/materia
 import { useSearchParams } from 'react-router-dom';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { listMailFor, type MailRecord, type MailStatus } from '../../data/mail';
-import { BRAND } from '../../ui/brand';
-import { Tag, formatDate, useAdminLang } from '../adminUi';
+import { A, Tag, formatDate, useAdminLang } from '../adminUi';
 import type { DirectoryEntry } from '../directory/directoryData';
 
 export const MailStatusTag: React.FC<{ status: MailStatus; error?: string }> = ({ status, error }) => {
@@ -38,7 +37,7 @@ const MissionaryMail: React.FC<{ entry: DirectoryEntry }> = ({ entry }) => {
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-        <Typography sx={{ flex: 1, color: BRAND.muted }}>
+        <Typography sx={{ flex: 1, color: A.muted }}>
           {entry.email ? `${tr('Escribimos a', 'We write to')} ${entry.email}` : tr('Sin correo: no recibe correos masivos ni recordatorios.', 'No email: gets no mass emails or reminders.')}
         </Typography>
         {entry.email && (
@@ -48,12 +47,12 @@ const MissionaryMail: React.FC<{ entry: DirectoryEntry }> = ({ entry }) => {
         )}
       </Box>
       {mails === null ? <CircularProgress size={20} /> : mails.length === 0 ? (
-        <Typography sx={{ color: BRAND.muted }}>{tr('Todavía no le hemos enviado correos.', "We haven't emailed them yet.")}</Typography>
+        <Typography sx={{ color: A.muted }}>{tr('Todavía no le hemos enviado correos.', "We haven't emailed them yet.")}</Typography>
       ) : mails.map((m) => (
-        <Box key={m.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5, mb: 1, bgcolor: BRAND.white, border: `1px solid ${BRAND.line}`, borderRadius: '12px' }}>
+        <Box key={m.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5, mb: 1, bgcolor: A.surface, border: `1px solid ${A.line}`, borderRadius: '12px' }}>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography sx={{ fontWeight: 700 }} noWrap>{m.subject || m.vars?.subject || TEMPLATE_LABELS[m.template]?.[lang] || m.template}</Typography>
-            <Typography sx={{ color: BRAND.muted, fontSize: '0.85rem' }}>
+            <Typography sx={{ color: A.muted, fontSize: '0.85rem' }}>
               {formatDate(m.createdAt, lang)} · {TEMPLATE_LABELS[m.template]?.[lang] ?? tr('Correo escrito por el equipo', 'Written by the team')} · {m.to}
             </Typography>
           </Box>

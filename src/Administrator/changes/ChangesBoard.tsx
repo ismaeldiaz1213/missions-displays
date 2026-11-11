@@ -2,8 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { useSearchParams } from 'react-router-dom';
 import { Alert, Box, ButtonBase, CircularProgress, Typography } from '@mui/material';
 import { listPendingEdits, type MissionaryEdit } from '../../data/missionaryEdits';
-import { BRAND } from '../../ui/brand';
-import { formatDate, panelSx, useAdminLang } from '../adminUi';
+import { A, formatDate, panelSx, useAdminLang } from '../adminUi';
 import { useDirectory } from '../directory/directoryData';
 import { pageChanges } from './diff';
 import ReviewDialog from './ReviewDialog';
@@ -38,8 +37,8 @@ const ChangesBoard: React.FC = () => {
 
   return (
     <Box>
-      <Typography component="h2" sx={{ fontWeight: 800, fontSize: '1.5rem', color: BRAND.ink }}>{tr('Cambios por aprobar', 'Changes to approve')}</Typography>
-      <Typography sx={{ color: BRAND.muted, mb: 2.5 }}>
+      <Typography component="h2" sx={{ fontWeight: 800, fontSize: '1.5rem', color: A.ink }}>{tr('Cambios por aprobar', 'Changes to approve')}</Typography>
+      <Typography sx={{ color: A.muted, mb: 2.5 }}>
         {tr('Lo que los misioneros cambiaron en su página. Nada se publica hasta que alguien lo aprueba.', 'What missionaries changed on their page. Nothing goes live until someone approves it.')}
       </Typography>
       {loading ? <Box sx={{ textAlign: 'center', py: 8 }}><CircularProgress /></Box>
@@ -50,14 +49,14 @@ const ChangesBoard: React.FC = () => {
                 const current = entries.find((x) => x.id === e.missionaryId)?.page;
                 const n = current ? pageChanges(current, e.proposed).length : null;
                 return (
-                  <ButtonBase key={e.token} onClick={() => open(e.token)} sx={{ ...panelSx, p: 2, justifyContent: 'flex-start', textAlign: 'left', '&:hover': { borderColor: BRAND.blueLine } }}>
+                  <ButtonBase key={e.token} onClick={() => open(e.token)} sx={{ ...panelSx, p: 2, justifyContent: 'flex-start', textAlign: 'left', '&:hover': { borderColor: A.softLine } }}>
                     <Box sx={{ flex: 1 }}>
                       <Typography sx={{ fontWeight: 800 }}>{[e.proposed.name, e.proposed.lastName].filter(Boolean).join(' ')}</Typography>
-                      <Typography sx={{ color: BRAND.muted, fontSize: '0.88rem' }}>
+                      <Typography sx={{ color: A.muted, fontSize: '0.88rem' }}>
                         {tr('Enviado', 'Submitted')} {formatDate(e.submittedAt, lang)}{n !== null && ` · ${n} ${tr('campos cambiaron', 'fields changed')}`}
                       </Typography>
                     </Box>
-                    <Typography sx={{ color: BRAND.blue, fontWeight: 800 }}>{tr('Revisar', 'Review')} →</Typography>
+                    <Typography sx={{ color: A.blue, fontWeight: 800 }}>{tr('Revisar', 'Review')} →</Typography>
                   </ButtonBase>
                 );
               })}

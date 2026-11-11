@@ -13,12 +13,14 @@ import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
+import ChurchOutlinedIcon from '@mui/icons-material/ChurchOutlined';
 import type { Missionary as MissionaryType } from '../types';
 import ContactDialog from './components/ContactDialog';
 import MissionaryLocalInfo from './components/MissionaryLocalInfo';
 import ImageLightbox from './components/ImageLightbox';
 import VideoPlayer from './components/VideoPlayer';
 import LocationGlobe from './components/LocationGlobe';
+import ChurchMap from './components/ChurchMap';
 import iblLogo from '../assets/ibl_logo.png';
 import { isVideoPath, resolveUrl } from '../storageUrl';
 import { getMissionary } from '../data/missionaries';
@@ -149,6 +151,7 @@ const Missionary: React.FC<{ preview?: MissionaryType }> = ({ preview }) => {
   const hasVideos = videos.length > 0;
   const hasContactInfo = m.contactInfo.length > 0;
   const hasAbout = !!(m.description || m.specialNotes);
+  const churches = (m.churches ?? []).filter((c) => c.name?.trim());
   const locationText = [m.location?.city, m.location?.state, m.location?.country].filter(Boolean).join(', ');
   const hasCoords = !!m.location && m.location.latitude !== 0 && m.location.longitude !== 0;
   const continent = m.continent ? CONTINENTS[m.continent] : undefined;
@@ -164,6 +167,7 @@ const Missionary: React.FC<{ preview?: MissionaryType }> = ({ preview }) => {
   const railItems: Action[] = [
     { key: 'top', section: 'top', label: 'Inicio', railLabel: hasAbout ? 'Sobre\nellos' : 'Inicio', icon: <InfoOutlinedIcon />, onClick: () => scrollToId('top') },
     ...actions,
+    ...(churches.length ? [{ key: 'iglesias', section: 'iglesias', label: 'Iglesias', railLabel: churches.length > 1 ? 'Iglesias' : 'Iglesia', icon: <ChurchOutlinedIcon />, onClick: () => scrollToId('iglesias') }] : []),
   ];
   const activeSection = useActiveSection(railItems.filter((r) => r.section).map((r) => r.section!));
 
@@ -375,6 +379,13 @@ const Missionary: React.FC<{ preview?: MissionaryType }> = ({ preview }) => {
                   </ButtonBase>
                 ))}
               </Box>
+            </Box>
+          )}
+
+          {churches.length > 0 && (
+            <Box id="iglesias" sx={cardSx}>
+              <SectionTitle count={churches.length > 1 ? churches.length : undefined}>{churches.length > 1 ? 'Iglesias' : 'Iglesia'}</SectionTitle>
+              <ChurchMap churches={churches} />
             </Box>
           )}
         </Box>

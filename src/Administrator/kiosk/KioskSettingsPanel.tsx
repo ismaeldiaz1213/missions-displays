@@ -46,7 +46,7 @@ const KioskSettingsPanel: React.FC = () => {
   const selected = OPTIONS.find((o) => o.value === value)!;
 
   return (
-    <Paper sx={{ p: { xs: 2.5, sm: 4 }, maxWidth: 820, border: '1px solid #E2E8F0' }}>
+    <Paper sx={{ p: { xs: 2.5, sm: 4 }, maxWidth: 820, border: 1, borderColor: 'divider' }}>
       <Typography variant="h6" fontWeight={700}>Conferencia en las pantallas</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 3 }}>
         Elija qué muestra la tarjeta de la conferencia en el mapa de los pasillos y en el sitio.
@@ -57,7 +57,7 @@ const KioskSettingsPanel: React.FC = () => {
         {OPTIONS.map((o) => <ToggleButton key={o.value} value={o.value}>{o.label}</ToggleButton>)}
       </ToggleButtonGroup>
 
-      <Box sx={{ mt: 2.5, p: 2, borderRadius: 1, bgcolor: '#F4F7FB', border: '1px solid #E2E8F0' }}>
+      <Box sx={{ mt: 2.5, p: 2, borderRadius: 1, bgcolor: 'action.hover', border: 1, borderColor: 'divider' }}>
         <Typography variant="body2">{selected.help}</Typography>
         {value === 'auto' && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>

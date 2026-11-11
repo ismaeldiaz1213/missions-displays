@@ -7,8 +7,7 @@ import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import PhoneInTalkOutlinedIcon from '@mui/icons-material/PhoneInTalkOutlined';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import { CONTACT_METHOD_LABELS, MISSING_LABELS } from '../../data/missionaryProfiles';
-import { BRAND } from '../../ui/brand';
-import { Panel, StatTile, formatDate, useAdminLang } from '../adminUi';
+import { A, Panel, StatTile, formatDate, useAdminLang } from '../adminUi';
 import { fullName, useDirectory } from '../directory/directoryData';
 
 export interface TaskItem {
@@ -37,18 +36,18 @@ const TaskPanel: React.FC<{ group: TaskGroup }> = ({ group }) => {
   return (
     <Panel title={
       <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Box component="span" sx={{ color: BRAND.blue, display: 'flex' }}>{group.icon}</Box>
+        <Box component="span" sx={{ color: A.blue, display: 'flex' }}>{group.icon}</Box>
         {group.title}
-        <Box component="span" sx={{ bgcolor: BRAND.blueSoft, color: BRAND.navy, borderRadius: '999px', px: 1.1, fontSize: '0.85rem' }}>{group.items.length}</Box>
+        <Box component="span" sx={{ bgcolor: A.soft, color: A.navy, borderRadius: '999px', px: 1.1, fontSize: '0.85rem' }}>{group.items.length}</Box>
       </Box>
     }>
-      <Typography sx={{ color: BRAND.muted, fontSize: '0.85rem', mt: -1, mb: 1.5 }}>{group.hint}</Typography>
+      <Typography sx={{ color: A.muted, fontSize: '0.85rem', mt: -1, mb: 1.5 }}>{group.hint}</Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
         {items.map((it) => (
-          <Box key={it.key} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1.1, borderTop: `1px solid ${BRAND.line}` }}>
+          <Box key={it.key} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1.1, borderTop: `1px solid ${A.line}` }}>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography sx={{ fontWeight: 700, color: BRAND.ink }}>{it.title}</Typography>
-              {it.detail && <Typography sx={{ color: BRAND.muted, fontSize: '0.85rem' }}>{it.detail}</Typography>}
+              <Typography sx={{ fontWeight: 700, color: A.ink }}>{it.title}</Typography>
+              {it.detail && <Typography sx={{ color: A.muted, fontSize: '0.85rem' }}>{it.detail}</Typography>}
             </Box>
             <Button size="small" variant="outlined" onClick={it.onAction} sx={{ flexShrink: 0 }}>{it.action}</Button>
           </Box>
@@ -126,10 +125,10 @@ const AdminHome: React.FC<{ extraGroups?: TaskGroup[]; extraStats?: React.ReactN
 
   return (
     <Box>
-      <Typography component="h2" sx={{ fontWeight: 800, fontSize: '1.5rem', color: BRAND.ink, mb: 0.5 }}>
+      <Typography component="h2" sx={{ fontWeight: 800, fontSize: '1.5rem', color: A.ink, mb: 0.5 }}>
         {tr('Inicio', 'Home')}
       </Typography>
-      <Typography sx={{ color: BRAND.muted, mb: 2.5 }}>
+      <Typography sx={{ color: A.muted, mb: 2.5 }}>
         {tr('Lo que necesita atención hoy. Cada tarea tiene su botón.', 'What needs attention today. Every task has its button.')}
       </Typography>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -147,7 +146,7 @@ const AdminHome: React.FC<{ extraGroups?: TaskGroup[]; extraStats?: React.ReactN
           <Box sx={{ textAlign: 'center', py: 4 }}>
             <TaskAltIcon sx={{ fontSize: 56, color: '#16A34A' }} />
             <Typography sx={{ fontWeight: 800, fontSize: '1.2rem', mt: 1 }}>{tr('¡Todo al día!', 'All caught up!')}</Typography>
-            <Typography sx={{ color: BRAND.muted }}>{tr('No hay nada pendiente por ahora.', 'Nothing needs attention right now.')}</Typography>
+            <Typography sx={{ color: A.muted }}>{tr('No hay nada pendiente por ahora.', 'Nothing needs attention right now.')}</Typography>
           </Box>
         </Panel>
       ) : (

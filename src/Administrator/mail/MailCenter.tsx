@@ -14,8 +14,7 @@ import {
 import { CONTACT_METHOD_LABELS } from '../../data/missionaryProfiles';
 import { currentUserEmail } from '../../data/currentUser';
 import { quarterLabel } from '../../data/reports';
-import { BRAND } from '../../ui/brand';
-import { Panel, Tag, formatDate, useAdminLang } from '../adminUi';
+import { A, Panel, Tag, formatDate, useAdminLang } from '../adminUi';
 import { fullName, useDirectory, type DirectoryEntry } from '../directory/directoryData';
 import { CONTINENT_LABELS } from '../directory/exportMissionaries';
 import { useReports } from '../reports/reportsData';
@@ -34,16 +33,16 @@ const offlineContact = (e: DirectoryEntry, lang: 'es' | 'en') => [
 const Preview: React.FC<{ subject: string; body: string; name: string; lang: 'es' | 'en' }> = ({ subject, body, name, lang }) => {
   const fill = (s: string) => s.replace(/\{(nombre|name)\}/gi, name);
   return (
-    <Box sx={{ border: `1px solid ${BRAND.line}`, borderRadius: '14px', overflow: 'hidden', bgcolor: BRAND.white }}>
-      <Box sx={{ px: 2, py: 1.25, borderBottom: `1px solid ${BRAND.line}`, bgcolor: BRAND.page }}>
-        <Typography sx={{ fontSize: '0.8rem', color: BRAND.muted }}>{lang === 'en' ? 'Subject' : 'Asunto'}</Typography>
+    <Box sx={{ border: `1px solid ${A.line}`, borderRadius: '14px', overflow: 'hidden', bgcolor: A.surface }}>
+      <Box sx={{ px: 2, py: 1.25, borderBottom: `1px solid ${A.line}`, bgcolor: A.page }}>
+        <Typography sx={{ fontSize: '0.8rem', color: A.muted }}>{lang === 'en' ? 'Subject' : 'Asunto'}</Typography>
         <Typography sx={{ fontWeight: 800 }}>{fill(subject) || '—'}</Typography>
       </Box>
-      <Box sx={{ bgcolor: BRAND.navy, color: BRAND.white, px: 2.5, py: 1.5, fontWeight: 800 }}>
+      <Box sx={{ bgcolor: A.navy, color: A.surface, px: 2.5, py: 1.5, fontWeight: 800 }}>
         {lang === 'en' ? 'Missions' : 'Misiones'} · Iglesia Bautista Libertad
       </Box>
       <Typography component="div" sx={{ p: 2.5, whiteSpace: 'pre-wrap', lineHeight: 1.6, minHeight: 120 }}>{fill(body) || '…'}</Typography>
-      <Typography sx={{ px: 2.5, pb: 2, color: BRAND.muted, fontSize: '0.8rem' }}>
+      <Typography sx={{ px: 2.5, pb: 2, color: A.muted, fontSize: '0.8rem' }}>
         {lang === 'en' ? 'You can reply to this email; a member of our missions team reads every message.' : 'Puede responder a este correo; alguien de nuestro equipo de misiones lee cada mensaje.'}
       </Typography>
     </Box>
@@ -66,10 +65,10 @@ const CampaignDetail: React.FC<{ c: Campaign; onClose: () => void; onChanged: ()
     <Dialog open onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ fontWeight: 800 }}>
         {c.subject}
-        <Typography sx={{ color: BRAND.muted }}>{formatDate(c.createdAt, lang)} · {c.createdBy} · {c.audience}</Typography>
+        <Typography sx={{ color: A.muted }}>{formatDate(c.createdAt, lang)} · {c.createdBy} · {c.audience}</Typography>
       </DialogTitle>
       <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Typography sx={{ whiteSpace: 'pre-wrap', bgcolor: BRAND.page, p: 2, borderRadius: '12px' }}>{c.body}</Typography>
+        <Typography sx={{ whiteSpace: 'pre-wrap', bgcolor: A.page, p: 2, borderRadius: '12px' }}>{c.body}</Typography>
         {c.offline.length > 0 && (
           <Panel title={tr(`Sin correo: avisar por otro medio (${c.offline.filter((o) => done[o.missionaryId]).length}/${c.offline.length})`,
             `No email: reach another way (${c.offline.filter((o) => done[o.missionaryId]).length}/${c.offline.length})`)}>
@@ -82,7 +81,7 @@ const CampaignDetail: React.FC<{ c: Campaign; onClose: () => void; onChanged: ()
         )}
         <Panel title={tr('Destinatarios', 'Recipients')}>
           {mails === null ? <CircularProgress size={20} /> : mails.map((m) => (
-            <Box key={m.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.75, borderTop: `1px solid ${BRAND.line}` }}>
+            <Box key={m.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.75, borderTop: `1px solid ${A.line}` }}>
               <Typography sx={{ flex: 1, minWidth: 0 }} noWrap>{m.vars?.name ? `${m.vars.name} · ` : ''}{m.to}</Typography>
               {m.lang === 'en' && <Tag>EN</Tag>}
               <MailStatusTag status={m.status} error={m.error} />
@@ -195,8 +194,8 @@ const MailCenter: React.FC = () => {
 
   return (
     <Box>
-      <Typography component="h2" sx={{ fontWeight: 800, fontSize: '1.5rem', color: BRAND.ink }}>{tr('Correos', 'Email')}</Typography>
-      <Typography sx={{ color: BRAND.muted, mb: 2 }}>
+      <Typography component="h2" sx={{ fontWeight: 800, fontSize: '1.5rem', color: A.ink }}>{tr('Correos', 'Email')}</Typography>
+      <Typography sx={{ color: A.muted, mb: 2 }}>
         {tr('Se envían desde misiones@iblibertad.org; las respuestas llegan a ese buzón.', 'Sent from misiones@iblibertad.org; replies land in that inbox.')}
       </Typography>
 
@@ -231,9 +230,9 @@ const MailCenter: React.FC = () => {
             {audience === 'pick' && <Button onClick={() => setShowPick(!showPick)}>{showPick ? tr('Ocultar lista', 'Hide list') : tr('Mostrar lista', 'Show list')}</Button>}
           </Box>
           <Collapse in={audience === 'pick' && showPick}>
-            <Box sx={{ maxHeight: 260, overflowY: 'auto', border: `1px solid ${BRAND.line}`, borderRadius: '12px', p: 1, mb: 1.5 }}>
+            <Box sx={{ maxHeight: 260, overflowY: 'auto', border: `1px solid ${A.line}`, borderRadius: '12px', p: 1, mb: 1.5 }}>
               {active.map((e) => (
-                <FormControlLabel key={e.id} sx={{ display: 'flex' }} label={<>{fullName(e.page)}{!e.email && <Typography component="span" sx={{ color: BRAND.muted }}> · {tr('sin correo', 'no email')}</Typography>}</>}
+                <FormControlLabel key={e.id} sx={{ display: 'flex' }} label={<>{fullName(e.page)}{!e.email && <Typography component="span" sx={{ color: A.muted }}> · {tr('sin correo', 'no email')}</Typography>}</>}
                   control={<Checkbox size="small" checked={picked.has(e.id)} onChange={(ev) => setPicked((p) => {
                     const next = new Set(p);
                     if (ev.target.checked) next.add(e.id); else next.delete(e.id);
@@ -288,7 +287,7 @@ const MailCenter: React.FC = () => {
           <Panel title={tr('Recordatorios de informes', 'Report reminders')} action={remindersOn === null ? <CircularProgress size={18} /> : (
             <Switch checked={remindersOn} onChange={(e) => toggleReminders(e.target.checked)} />
           )}>
-            <Typography sx={{ color: BRAND.muted, fontSize: '0.9rem' }}>
+            <Typography sx={{ color: A.muted, fontSize: '0.9rem' }}>
               {tr(`Automáticos: una semana antes de la fecha límite, ese mismo día y una semana después (${reports.settings.dueDays} días después de cada trimestre). Dejan de llegar cuando el misionero envía su informe o pulsa "No tengo novedades". Los que no tienen correo aparecen en Inicio.`,
                 `Automatic: a week before the due date, on the day, and a week after (${reports.settings.dueDays} days after each quarter). They stop once the missionary sends the report or presses "I have no updates". Those without email show on Home.`)}
             </Typography>
@@ -296,13 +295,13 @@ const MailCenter: React.FC = () => {
           </Panel>
 
           <Panel title={tr('Historial', 'History')}>
-            {campaigns.length === 0 && <Typography sx={{ color: BRAND.muted }}>{tr('Todavía no se ha enviado ningún correo masivo.', 'No mass emails sent yet.')}</Typography>}
+            {campaigns.length === 0 && <Typography sx={{ color: A.muted }}>{tr('Todavía no se ha enviado ningún correo masivo.', 'No mass emails sent yet.')}</Typography>}
             {campaigns.map((c) => {
               const pendingOffline = c.offline.filter((o) => !c.offlineDone[o.missionaryId]).length;
               return (
-                <Box key={c.id} onClick={() => setOpen(c)} sx={{ py: 1.1, borderTop: `1px solid ${BRAND.line}`, cursor: 'pointer', '&:hover': { bgcolor: BRAND.page } }}>
+                <Box key={c.id} onClick={() => setOpen(c)} sx={{ py: 1.1, borderTop: `1px solid ${A.line}`, cursor: 'pointer', '&:hover': { bgcolor: A.page } }}>
                   <Typography sx={{ fontWeight: 700 }}>{c.subject}</Typography>
-                  <Typography sx={{ color: BRAND.muted, fontSize: '0.85rem' }}>
+                  <Typography sx={{ color: A.muted, fontSize: '0.85rem' }}>
                     {formatDate(c.createdAt, lang)} · {c.recipients.length} {tr('correos', 'emails')} · {c.audience}
                     {pendingOffline > 0 && ` · ${tr(`${pendingOffline} por avisar`, `${pendingOffline} to reach`)}`}
                   </Typography>
@@ -318,7 +317,7 @@ const MailCenter: React.FC = () => {
         <DialogContent>
           <Typography><strong>{msg.subject}</strong></Typography>
           <Typography sx={{ mt: 1 }}>{tr(`Se enviará a ${recipients.length} misioneros (${audienceLabel}).`, `It goes to ${recipients.length} missionaries (${audienceLabel}).`)}</Typography>
-          {offline.length > 0 && <Typography sx={{ mt: 1, color: '#991B1B' }}>{tr(`${offline.length} no tienen correo: quedan en el Historial para avisarles por otro medio.`, `${offline.length} have no email: they stay in History so you can reach them another way.`)}</Typography>}
+          {offline.length > 0 && <Typography sx={{ mt: 1, color: A.redText }}>{tr(`${offline.length} no tienen correo: quedan en el Historial para avisarles por otro medio.`, `${offline.length} have no email: they stay in History so you can reach them another way.`)}</Typography>}
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setConfirm(false)} color="inherit" disabled={!!busy}>{tr('Cancelar', 'Cancel')}</Button>
