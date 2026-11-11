@@ -167,6 +167,36 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
     }
 
+    // ── Email ────────────────────────────────────────────────────────────────
+    // The outbox: the sendQueuedMail function sends each new document and records the result
+    // (it uses the Admin SDK, so these rules don't apply to it). Admins may only queue emails they
+    // wrote themselves; automatic emails are queued by the functions. Never deleted: it is the log.
+    match /mail/{id} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['to', 'template', 'lang', 'vars', 'missionaryId', 'campaignId', 'status', 'createdAt', 'createdBy'])
+        && request.resource.data.to is string && request.resource.data.to.matches('^[^\\s@]+@[^\\s@]+[.][^\\s@]+$')
+        && request.resource.data.template == 'custom'
+        && request.resource.data.lang in ['es', 'en']
+        && request.resource.data.vars is map
+        && request.resource.data.vars.keys().hasOnly(['name', 'subject', 'body'])
+        && reqStr(request.resource.data.vars.subject, 300) && reqStr(request.resource.data.vars.body, 20000)
+        && str(request.resource.data.missionaryId, 100) && str(request.resource.data.campaignId, 100)
+        && request.resource.data.status == 'queued'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.createdBy == request.auth.token.email;
+    }
+
+    // Mass emails: what was sent, to whom, and who had no email and was reached another way.
+    match /mailCampaigns/{id} {
+      allow read, create, update: if isAdmin();
+    }
+
+    // Email switches the admins control (e.g. pausing report reminders).
+    match /settings/email {
+      allow read, write: if isAdmin();
+    }
+
     // Pages an admin "deleted": moved here so nothing is lost, and restorable.
     match /missionaryArchive/{id} {
       allow read, write: if isAdmin();

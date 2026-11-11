@@ -97,3 +97,6 @@ export const cleanUpVideo = onObjectDeleted({ region: 'us-east1' }, async (event
   if (stillThere) return;
   await Promise.all([out.web, out.poster].map((p) => files.file(p).delete({ ignoreNotFound: true })));
 });
+
+// Email: outbox, page-request confirmations, report reminders (see src/mail/).
+export { sendQueuedMail, onMissionaryRequest, sendReportReminders, onReportSubmitted } from './mail/index.js';

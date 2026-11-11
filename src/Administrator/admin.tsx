@@ -36,11 +36,14 @@ import { ReportsProvider, useReports } from './reports/reportsData';
 import ReportsBoard from './reports/ReportsBoard';
 import MissionaryReports from './reports/MissionaryReports';
 import { reportsSheet, useReportTasks } from './reports/reportTasks';
+import MailOutlineIcon from '@mui/icons-material/MailOutline';
+import MailCenter from './mail/MailCenter';
+import MissionaryMail from './mail/MailStatus';
 
 
 type AuthState = 'loading' | 'unauthenticated' | 'authenticated';
 
-const TABS = ['inicio', 'misioneros', 'informes', 'solicitudes', 'registros', 'recogidas', 'pantallas'] as const;
+const TABS = ['inicio', 'misioneros', 'informes', 'correos', 'solicitudes', 'registros', 'recogidas', 'pantallas'] as const;
 type AdminTab = (typeof TABS)[number];
 
 const Admin: React.FC = () => (
@@ -169,12 +172,13 @@ const AdminShell: React.FC<{
   setStorageUsedBytes: (n: number) => void;
 }> = ({ tab, userEmail, isMobile, archive, conferences, selectConference, storageRefresh, setStorageRefresh, storageUsedBytes, setStorageUsedBytes }) => {
   const { tr, lang, setLang } = useAdminLang();
-  const [, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { entries, requests, reload } = useDirectory();
   const reports = useReports();
   const reportTasks = useReportTasks();
   const lateReports = reportTasks.groups.find((g) => g.key === 'reportsLate')?.items.length ?? 0;
-  const profileSections = [{ key: 'informes', label: tr('Informes', 'Reports'), render: (e: Parameters<typeof MissionaryReports>[0]['entry']) => <MissionaryReports entry={e} /> }];
+  const profileSections = [{ key: 'informes', label: tr('Informes', 'Reports'), render: (e: Parameters<typeof MissionaryReports>[0]['entry']) => <MissionaryReports entry={e} /> },
+    { key: 'correos', label: tr('Correos', 'Email'), render: (e: Parameters<typeof MissionaryMail>[0]['entry']) => <MissionaryMail entry={e} /> }];
   const [pendingOverride, setPendingOverride] = useState<number | null>(null);
   const pendingRequests = pendingOverride ?? requests.filter((r) => r.status === 'pending' && !r.archived).length;
   // Stable: RequestTable reloads whenever this function changes.
@@ -226,6 +230,7 @@ const AdminShell: React.FC<{
           <Tab value="misioneros" label={tr('Misioneros', 'Missionaries')} icon={<PublicIcon fontSize="small" />} iconPosition="start" sx={tabSx} />
           <Tab value="informes" iconPosition="start" sx={tabSx} label={tr('Informes', 'Reports')}
             icon={<Badge badgeContent={lateReports} color="warning"><AssignmentOutlinedIcon fontSize="small" /></Badge>} />
+          <Tab value="correos" label={tr('Correos', 'Email')} icon={<MailOutlineIcon fontSize="small" />} iconPosition="start" sx={tabSx} />
           <Tab value="solicitudes" iconPosition="start" sx={tabSx}
             icon={<Badge badgeContent={pendingRequests} color="error"><InboxIcon fontSize="small" /></Badge>}
             label={tr('Solicitudes', 'Requests')} />
@@ -247,6 +252,8 @@ const AdminShell: React.FC<{
           />
         ) : tab === 'informes' ? (
           <ReportsBoard />
+        ) : tab === 'correos' ? (
+          <MailCenter key={searchParams.get('para') ?? ''} />
         ) : tab === 'solicitudes' ? (
           <RequestTable onPendingCount={onPendingCount} />
         ) : (tab === 'recogidas' || tab === 'registros') && !conferences.current ? (
